@@ -1,0 +1,978 @@
+
+
+					THIS IS THE 'Help_File' FOR Heegaard.
+
+NOTE: 	1)	Hold the mouse button down to keep this file from scrolling or....
+		2)	Hit the 'space-bar' to alternately stop and start scrolling.	
+		3)	Hit 'return' to go back to the main program.
+
+TOPICS APPEARING IN THIS FILE:
+
+	 1) "IDENTIFIERS" OF PRESENTATIONS IN THE FILE 'Input_Presentations'
+	 2) USING THE PROGRAM TO "REDUCE AND SIMPLIFY THE INITIAL PRESENTATION"
+	 3) USING THE PROGRAM TO LOOK FOR "ALL" MINIMAL PRESENTATIONS
+	 4) USING THE PROGRAM TO DELETE ONLY PRIMITIVE RELATORS OF LENGTH ONE AND TWO
+	 5) COMPUTING "SYMMETRIES" OF PRESENTATIONS 
+	 6)	CLOSING THE FILE 'Heegaard_Results' FOR EXTERNAL EDITING
+	 7) COMPUTING THE HOMOLOGY OF THE INITIAL PRESENTATION
+	 8)	REDUCING THE INITIAL PRESENTATION TO MINIMAL LENGTH
+	 9)	CHECKING WHETHER THE INITIAL PRESENTATION IS REALIZABLE
+	10) USING THE PROGRAM'S OPTION TO SORT PRESENTATIONS BY SUMMAND NUMBER, NUMGENERATORS,
+		NUMRELATORS, LENGTH AND 'LEXICOGRAPHIC' ORDER
+	11)	PERFORMING "EXPONENT SURGERY" ON A PRESENTATION
+	12)	RERUNNING A PRESENTATION
+	13) PRUNING THE SEARCH TREE
+	14) USING THE PROGRAM TO COMPUTE THE ORBIT OF A PRESENTATION UNDER LEVEL TRANSFORMATIONS
+	15) SAVING INFORMATION ABOUT STABILIZERS WHILE COMPUTING LEVEL TRANSFORMATIONS
+		A)	AN EXTENDED EXAMPLE: 	SYMMETRIES OF THE BORROMEAN RINGS.
+	16) THE MICRO_PRINT FEATURES
+		
+	17)	INTERRUPTING THE PROGRAM TO READ DATA BEING PRINTED ON THE SCREEN
+	18) INTERRUPTING THE PROGRAM WHILE IT IS RUNNING
+	19) CHANGING SIMPLIFICATION PARAMETERS WHILE THE PROGRAM IS RUNNING
+	20) CHECKING ON PROGRAM PROGRESS WHILE THE PROGRAM IS RUNNING
+	21) TURNING MICRO_PRINT FEATURES ON OR OFF WHILE THE PROGRAM IS RUNNING
+	
+	22) THE CANONICAL FORM IN WHICH PRESENTATIONS ARE REWRITTEN
+	23) HOW THE PROGRAM NUMBERS "SUMMANDS" OF MANIFOLDS
+	24) SUBROUTINE CODES PRINTED WHEN THE PROGRAM SAVES A PRESENTATION
+	
+	25)	"TRIVIAL GENERATORS" IN PRESENTATIONS
+	26)	"DEFINING RELATORS" IN PRESENTATIONS
+	27) "PRIMITIVES" IN PRESENTATIONS
+	28) "LENGTH" OF A PRESENTATION
+	29) "MINIMAL LENGTH" PRESENTATIONS
+	30) "PSEUDO-MINIMAL" PRESENTATIONS
+	31)	"QUASI-PSEUDO-MINIMAL" PRESENTATIONS	
+	
+	32) MAXIMUM NUMBER OF PRESENTATIONS SAVED BY THE PROGRAM
+	33) MAXIMUM AMOUNT OF MEMORY USED FOR STORING PRESENTATIONS
+	34) PROGRAM TERMINATION
+	35) RUNNING TIME OF THE PROGRAM
+	36)	PROGRAM RUNS SLOWLY
+	37)	HOW THE PROGRAM DEALS WITH "ERRORS"
+	38) RANDOMIZATION, OR: "WHY THE PROGRAM DOESN'T GIVE EXACTLY THE SAME ANSWERS EVERY TIME"
+	39) IF THE PROGRAM IS UNABLE TO DETERMINE WHETHER A PRESENTATION IS REALIZABLE
+		
+	40)	LENS SPACES
+		A)	HOW THE PROGRAM RECOGNIZES LENS SPACES
+		B) 	LENS SPACE CANONICAL FORM
+		
+	41) THE HEEGAARD DIAGRAMS PRODUCED BY THE PROGRAM
+		A)	DETERMINING HOW MANY EDGES JOIN EACH PAIR OF VERTICES IN A DIAGRAM	
+		B)	DETERMINING THE CYCLIC IDENTIFICATIONS OF PAIRS OF INVERSE VERTICES IN A DIAGRAM
+		C)	USING THE MOUSE TO ADJUST THE HEEGAARD DIAGRAM OF A PRESENTATION
+		D)	PRINTING HEEGAARD DIAGRAMS	 
+		E)	THE "DUAL" RELATORS ASSOCIATED WITH A DIAGRAM
+		F)	THE "OUT" RELATORS ASSOCIATED WITH A DIAGRAM
+			 
+ 1) "IDENTIFIERS" OF PRESENTATIONS IN THE FILE 'Input_Presentations'
+		The identifier, which the program asks you to enter when you want to run a particular
+	presentation from the file 'Input_Presentations', must consist of a sequence of one or
+	more complete words, including any terminal punctuation and any leading spaces or tabs.
+	Case is also important. For example, there is a presentation of the Borromean rings in
+	the file 'Input_Presentations'. The line in the file 'Input_Presentations' which is the
+	"complete" identifier for this presentation is:
+	
+		Borromean rings: 3-component link 6/3/2 (From Rolfsen)
+		
+	Suppose you want the program to find and run this presentation.
+	
+		If you enter:		Result:		Reason for failure:
+		________________________________________________________________________________
+		
+		Borromean			works
+		Borromean rings		fails: 		terminal colon on 'rings' is missing.
+		borromean			fails: 		case of the initial 'b' does not match.
+		Borromean rings:	works: 	
+		Borromean  rings:	fails:		too many spaces between 'Borromean' and 'rings'.
+		 Borromean			fails:		number of initial spaces or tabs doesn't match.
+		________________________________________________________________________________ 
+		 
+	Note that you do not necessarily have to enter the entire identifier in order to find a
+	presentation. Also note, however, that if the file contains other presentations whose
+	identifiers begin with 'Borromean', then entering 'Borromean' will always result in the
+	program returning with the first such presentation.	
+		
+
+ 2) USING THE PROGRAM TO "REDUCE AND SIMPLIFY THE INITIAL PRESENTATION"
+ 		If you select "REDUCE AND SIMPLIFY THE INITIAL PRESENTATION", the program will first
+ 	attempt to determine whether the initial presentation is realizable, and then it will
+ 	look for "simpler" diagrams and presentations by reducing the Heegaard genus, forming
+ 	new presentations by replacing relators with bandsums of other relators, and, if the
+ 	manifold is closed, dualizing the presentation. 	
+		This is the main mode to use when you want the program to try to simplify a
+	presentation. Since the program will generally not be able to recognize your manifold
+	explicitly and will therefore keep looking for new presentations in hopes of finding
+	ever simpler presentations, you will probably want to interrupt the program after you
+	think it has done about as well as it's going to do. (It never hurts to let the program
+	keep running, but it means you have to wade through more output.)
+		Note that, in this mode, the program's routine, which looks for new presentations
+	by sliding components of separations, by pairs of separating vertices, around, will
+	stop and return when it finds the first new presentation without any pairs of
+	separating vertices.
+
+	
+ 3) USING THE PROGRAM TO LOOK FOR "ALL" MINIMAL PRESENTATIONS
+		In this mode the program will do everything it does in "REDUCE AND SIMPLIFY THE
+	INITIAL PRESENTATION" and in addition will try to generate new presentations by
+	applying general level-transformations. When you are running the program, try "REDUCE
+	AND SIMPLIFY THE INITIAL PRESENTATION" first, and then if you are not satisfied try
+	"LOOK FOR ALL MINIMAL PRESENTATIONS". Note that in order to control potential
+	explosive growth of the number of presentations generated, the program is presently
+	configured to only look for general level-transformations of those presentations which
+	are "optimal" for their summand. This means the program will only seek general level-
+	transformations for those presentations of summand n which involve a minimal number
+	of generators and minimal number of relators among the presentations of summand n.	
+		Note also that, in this mode, the program's routine, which looks for new
+	presentations by sliding components of separations, by pairs of separating vertices,
+	around, will continue to search for new presentations after it finds the first new
+	presentation without any pairs of separating vertices.
+ 
+ 4) USING THE PROGRAM TO DELETE ONLY PRIMITIVE RELATORS OF LENGTH ONE AND TWO
+ 		Generally, when the program uses a relator, which represents a primitive element of
+ 	the underlying free group, in order to eliminate a generator from a presentation, the
+ 	length of the presentation will increase -- sometimes significantly. If you want the
+ 	program to try to reduce the number of generators which appear in presentations, and you
+ 	want it to do so in such a way that the lengths of the presentations monotonically
+ 	decrease, then select the option to delete only primitives of length one and two.
+ 
+
+ 5) COMPUTING "SYMMETRIES" OF PRESENTATIONS
+		This feature is actually a byproduct of the program's canonical rewriting process.
+	The routine Canonical_Rewrite() maintains a stack of substitutions. If Canonical_Rewrite()
+	terminates with more than one substitution on this stack, the 3-manifold has symmetries of
+	a special sort. Namely, there exist self-homeomorphisms of the manifold, which leave the
+	Heegaard diagram invariant. Or, in other words, there exist homeomorphisms of the
+	underlying handlebody H onto itself, which leave the set of cutting disks of H invariant
+	and also leave the set of attaching curves of the 2-handles invariant. The program
+	specifies these symmetries by listing the set of generators ABCDEF.... on one line and
+	their images under the symmetry on the next line in the same order. For example:
+	
+								ABCDEF
+								bdAFEC
+								
+	denotes the permutation: A -> b,B -> d,C -> A,D -> F,F -> C.
+	
+		The type and number of symmetries which this procedure finds depends, of course, 
+	strongly on the presentation, as the next example shows.
+	
+											EXAMPLE
+		_______________________________________________________________________________________
+			The following presentation is a Wirtinger presentation of the exterior of a Trefoil
+		knot, with one relator for each crossing.
+							
+		 				R  1:   ABCb 
+	 					R  2:   ABaC 
+	 					R  3:   ACbc
+	 					
+		This presentation has the following set of nontrivial symmetries:
+		
+					   	1)   A B C
+					         C b A
+					   	2)   A B C
+					         B c a
+					   	3)   A B C
+					         b a c
+					   	4)   A B C
+					         c A b
+					   	5)   A B C
+					         a C B
+					         
+			If the program is asked to reduce and simplify the above presentation, it produces
+		the following 2-generator, 1-relator presentation of the exterior of the knot.
+				        
+		 				R  1:   AABaB
+		 				
+		And this presentation has only one nontrivial symmetry, namely:
+		
+	        			1)	 A B
+	        				 a b
+	    ______________________________________________________________________________________   				 				    
+
+
+ 6)	CLOSING THE FILE 'Heegaard_Results' FOR EXTERNAL EDITING
+		Use this option if you are running 'Heegaard' under MultiFinder, you want to edit
+	the file 'Heegaard_Results' using an external word processor, and you want to resume
+	running 'Heegaard' after you are done editing. Normally the file 'Heegaard_Results'
+	remains open as long as 'Heegaard' is running. Selecting this option brings
+	'Heegaard_Results' up to date and then closes 'Heegaard_Results', so that an external
+	program can open and edit it. When you are done editing, close 'Heegaard_Results' while
+	still in the program you used to edit, and resume running 'Heegaard'. 'Heegaard' will
+	then reopen 'Heegaard_Results' for its own use.
+	
+
+ 7) COMPUTING THE HOMOLOGY OF THE INITIAL PRESENTATION
+		If you select the option: "FIND THE INTEGRAL FIRST HOMOLOGY OF THE INITIAL
+	PRESENTATION", the program will compute the Betti-number and Torsion coefficients of the
+	integral first homology group of the initial presentation and print the results to the
+	screen and to the file 'Heegaard_Results'. The torsion coefficients, as computed and
+	printed, have the property that each non-zero torsion coefficient divides any following
+	non-zero torsion coefficient. Note that if the program determines that a torsion
+	coefficient would exceed 4,294,967,290 and cause an overflow, the program will print a
+	warning message.
+
+
+ 8)	REDUCING THE INITIAL PRESENTATION TO MINIMAL LENGTH
+		Some of the program's routines require that the presentation they are passed have
+	minimal length. This option is included so that you can reduce a presentation to minimal
+	length before running these routines. For example, the routine that computes the orbit
+	of a presentation under level-transformations will object if it is passed a presentation
+	which does not have minimal length, and will refuse to proceed.
+		
+
+ 9)	CHECKING WHETHER THE INITIAL PRESENTATION IS REALIZABLE
+		Select this option if you are mainly interested in whether the initial presentation
+	is realizable. The program will stop after it has made a determination as to whether the
+	presentation is realizable, and if the presentation is realizable, the program will
+	present some options for continuing.
+	
+
+ 10) USING THE PROGRAM'S OPTION TO SORT PRESENTATIONS BY SUMMAND NUMBER, NUMGENERATORS,
+	NUMRELATORS, LENGTH AND 'LEXICOGRAPHIC' ORDER
+		You can use this feature to sort the presentations currently in memory. Then, after
+	sorting, you can review the sorted presentations and have the program save the sorted
+	presentations in 'Heegaard_Results'. The sorting routine uses a version of the quicksort
+	algorithm to perform its sort. It sorts the presentations first by summand number, then
+	by the number of generators, then by the number of relators, then by length, and finally
+	presentations with equal numbers of generators, equal numbers of relators and equal
+	length are put into "lexicographic" order, using the same convention used by the
+	program's Canonical_Rewrite() routine. Note that this sorted order is ephemeral, and the
+	presentations revert to their original order as soon as you leave this routine.
+	
+
+11)	PERFORMING "EXPONENT SURGERY" ON A PRESENTATION
+		This feature of the program provides a way to obtain presentations of different
+	manifolds from a given presentation. The feature is somewhat limited in scope, because
+	it requires that the presentation have certain special properties, but it can occasionally
+	be useful.	
+		Here is a description of how it works. Suppose P is a presentation which is
+	"realizable", G is a generator such that the associated pair of vertices G and g do not
+	separate the Heegaard diagram D, which realizes P, and G appears with exponent greater
+	than two in P. Then performing exponent surgery allows you to obtain a new presentation P'
+	from P. Under the circumstances described above, G can appear in P with at most three
+	distinct exponents, which must be of the form p,q and p+q, (up to sign), where p and q
+	are relatively prime. Exponent surgery on G amounts to replacing p and q with a new
+	relatively prime pair p' and q', of your choice. Note that topologically, this amounts to
+	performing Dehn-surgery on an unknotted simple closed curve c, in the interior of the
+	underlying handlebody H, where c is a "core" of the handle of H which corresponds to the
+	generator G.
+		
+										EXAMPLE
+	_________________________________________________________________________________________
+		Suppose you elect to try exponent surgery on the following presentation:
+		
+			R  1)	AAAAABB
+			R  2)	AAbbb
+		
+		The program will tell you that generator 'A' appears with exponents P = 2 and Q = 5,
+	and it will ask you to replace P and Q with your choice of a new relatively prime pair P'
+	and Q'. Suppose you choose P' = 3 and Q' = 5. Next, the program will tell you that
+	generator 'B' appears with exponents P = 2 and Q = 3, and it will again ask you to replace
+	P and Q with your choice of a new relatively prime pair P' and Q'. Suppose you choose
+	P' = -2 and Q' = 7. The program will make the appropriate replacements and display the
+	"surgered" presentation, which in this case is:
+	
+			R  1)	AAAAAbb
+			R  2)	AAAbbbbbbb
+			
+	You can now pass this new presentation to any of the program's routines.
+		Note that, in this example, because both generators appear with exponents greater
+	than two, the program offers you the opportunity to perform surgeries on "cores" of both
+	handles of the associated handlebody.
+	_________________________________________________________________________________________
+
+
+12)	RERUNNING A PRESENTATION
+		This feature of the program allows you to use the program to generate a set of
+	presentations, and then to select one of these presentations to use as input for another 
+	routine. It also allows you to have the program rerun a presentation a number of times in
+	succession. This is sometimes useful. Because the program performs some operations in a
+	random fashion, it will not necessarily produce the same output each time, and rerunning
+	a presentation several times may yield "different" results.
+		You can also use this feature to perform a sequence of Dehn surgeries on a knot or
+	link, without having to reenter the Wirtinger presentation of the knot or link.
+
+
+13) PRUNING THE SEARCH TREE
+		As the program runs, it saves a collection of presentations which form a tree with the
+	initial presentation at the root. The program selects the next presentation it will use by
+	using the following criteria in order:
+		1)	Largest summand number.
+		2)	Minimum number of generators.
+		3)	Minimum number of relators.
+		4)	Minimum length.
+		5)	Minimum number of times the presentation has previously been used.
+	If the tree is large, or the number of items on the program's Todo stack is large, the
+	program may spend a long time exploring a branch of the tree which you may feel will
+	not lead anywhere. In this case, you can force the program to abandon some branches of
+	the tree by using this option.
+		To use this option, interrupt the running program by hitting the 'space-bar', and
+	then select 'PRUNE THE SEARCH TREE' by hitting 'p'.	Note that you can have the program
+	list those presentations which are still active or have active proper descendants, so
+	you can get some idea of what the shape of this tree is currently.
+		 	
+
+14) USING THE PROGRAM TO COMPUTE THE ORBIT OF A PRESENTATION UNDER LEVEL TRANSFORMATIONS
+		The program includes a routine which will compute the orbit of a minimal length
+	presentation under level-preserving T-transformations. For example, if you pass the
+	following 3-generator, 2-relator presentation of the exterior of the Borromean rings
+	to this routine:
+	
+			R  1)    ABCbaBAcab 
+			R  2)    ABCbcaCBcb
+			
+	The routine will generate the following list of presentations -- which constitutes the
+	complete orbit of this presentation.
+
+			Presentation 1:
+			
+			R  1)    ABCbaBAcab 
+			R  2)    ABCbcaCBcb 
+			
+			Presentation 2:
+			
+			R  1)    ABCAbaBcab 
+			R  2)    ABacACbcaC 
+			
+			Presentation 3:
+			
+			R  1)    ABCAbaBcab 
+			R  2)    ABCAcabCac
+			
+	Each of these presentations has been rewritten using the program's Canonical_Rewrite()
+	routine. Thus presentations which are equivalent under the equivalence relation used by
+	the rewriting routine are identified to a single point, in the orbit.
+		Remark. Since the program can save a maximum of 1000 presentations, the routine
+	will be able to generate the complete orbit of a presentation only if the orbit has size
+	no larger than 1000.
+		
+	
+15) SAVING INFORMATION ABOUT STABILIZERS WHILE COMPUTING LEVEL TRANSFORMATIONS
+		When the program is being used to find all of the presentations obtainable from a
+	given initial presentation P1, via level-transformations, the program can simultaneously
+	save enough information about the orbit of P1 to enable determination of a set of
+	generators for the stabilizer of P1. If you select this option, as the program finds
+	level-transformations, it saves information, like that shown in the extended example that
+	follows, to the file 'Heegaard_Results'.
+
+	A)	AN EXTENDED EXAMPLE: 	SYMMETRIES OF THE BORROMEAN RINGS.
+		The file 'Input_Presentations' contains the following Wirtinger presentation of the
+		Borromean rings:
+	
+				Borromean rings: 3-component link 6/3/2 (From Rolfsen)
+				
+				R  1:	BCac
+				R  2:	CedE
+				R  3:	EAfa
+				R  4:	BFbe
+				R  5:	AdbD
+				R  6:	FcfD
+					
+		After starting the program, selecting this presentation to run, and having the program
+		try to reduce and simplify this presentation, a presentation, like the following
+		3-generator presentation of length 20, should soon appear:
+
+ 				R  1:   ABCbaBAcab 
+ 				R  2:   ABCbcaCBcb
+		
+		If this 2-relator presentation is selected, rerun, the program is asked to find the
+		orbit of this presentation under level-transformations, and the program is also asked
+		to save stabilizer information, then the following data appears in 'Heegaard_Results'.
+				______________________________________________________________________
+					 		
+				The initial presentation was:
+				
+				 R  1:   ABCbaBAcab 
+				 R  2:   ABCbcaCBcb 
+				
+				This presentation has length 20 and is freely reduced.
+				
+				     1) C->CB  
+				        Bac  1 -> 2.
+				     2) A->Ab  C->Cb  
+				        cAb  1 -> 3.
+				     3) C->bC  
+				        BAc  1 -> 2.
+				     4) A->BA  
+				        CAb  1 -> 2.
+				     5) A->BAb 
+				        AbC  1 -> 1.
+				     6) A->Ab  
+				        Cab  1 -> 2.
+				     7) B->AB  C->Ca  
+				        ACB  2 -> 2.
+				     8) C->aC  
+				        bAc  2 -> 1.
+				     9) B->aB  
+				        aBc  2 -> 3.
+				    10) B->Ba  C->Ca  
+				        aCB  2 -> 2.
+				    11) C->Ca  
+				        BAc  2 -> 1.
+				    12) B->aB  
+				        aBc  3 -> 2.
+				    13) B->Ba  C->Ca  
+				        bAC  3 -> 1.
+				    14) C->Ca  
+				        ACb  3 -> 2.
+				
+				The program found 14 level transformations(s).
+				
+				The orbit of presentation 1 under level transformations has 3 members.
+				______________________________________________________________________		 		
+
+		Note that first, the program automatically saves the initial presentation P1. And
+		then, each time the program finds a level-transformation, it prints two lines like:		
+
+				13) B->Ba  C->Ca 
+			        bAC  3 -> 1.
+			        
+		These two lines indicate that the 13th level-transformation, the program found,
+		transforms the third presentation P3, of the orbit, into the first presentation
+		P1, of the orbit. These lines also indicate that the automorphism involved first
+		carries B->Ba and C->Ca, while leaving the remaining generators fixed, and then the
+		automorphism performs substitutions on the generators according to the code bAC.
+		(The code bAC means the following replacements should be performed: A->b, B->A, C->C.)
+	
+		Remark. In principle, this data, together with any permutations of the generators
+		which leave P1 invariant --these can be found by checking P1 for symmetries, gives
+		enough information to allow one to find a set of generators for the stabilizer of P1,
+		although the remaining computations must be performed by hand. It may be worth
+		recalling that McCool has shown how to use this orbit data to obtain a presentation
+		for the stabilizer of P1.
+								
+		Continuing with the example: Asking the program to look for symmetries of P1,
+		yields the permutation:
+			
+			1)	A->c,B->b,C->a
+			
+		as the only permutation of the generators which induces a symmetry of P1. Finally,
+		hand computation, using the above data, shows the stabilizer of P1, (in the outer
+		automorphism group of the free group of rank 3, generated by A,B and C), is generated
+		by the following two automorphisms:
+	
+			1)	A->c,B->b,C->a
+			2)	A->A,B->b,C->BCb
+		
+		It follows that the stabilizer of P1 has order 6; which is presumably the expected
+		result.	
+
+
+16) THE MICRO_PRINT FEATURES
+		These features of the program allow you to have the program print a log, to the
+	screen or to the screen and to the file 'Heegaard_Results'. The log lists the
+	modifications the program makes to a presentation while the program is running. Note that,
+	using this option makes the program run much more slowly since the program spends most of
+	its time updating the screen and printing. And, of course, using this option in the mode
+	where it also prints to the file 'Heegaard_Results' can quickly cause 'Heegaard_Results'
+	to balloon in size, so use Micro_Print with some caution.
+	
+
+17)	INTERRUPTING THE PROGRAM TO READ DATA BEING PRINTED ON THE SCREEN
+		Occasionally, the program prints data to the screen so rapidly that some of it scrolls
+	off the top of the screen before you have a chance to read it. You can control this with
+	the mouse-button. Holding the mouse-button down stops the program for as long as the
+	button is held down. 
+	NOTE: Holding the mouse-button down will interrupt the program even if the program is not
+	currently printing anything on the screen.
+	
+		
+18) INTERRUPTING THE PROGRAM WHILE IT IS RUNNING
+		If you wish to interrupt the program while the program is running, hit the space-bar.
+	Program execution will then pause when the program returns to the part of the code where
+	the program selects the next presentation to investigate. (Depending on what the program
+	is currently doing, it may not pause immediately.) After the program has paused, it will
+	present a menu containing the following options:
+		1) 	Continuing the current run.
+		2) 	Discontinuing the current run.
+		3) 	Reviewing the presentations the program has generated and saved so far. 
+		4) 	Toggling the program's Micro_Printing features on and off.
+		5) 	Changing some of the parameters that determine how the program tries to simplify
+			a presentation.
+		6)	Pruning the search tree the program uses to select the next presentation it runs.	
+	NOTE: You can review the presentations generated so far, examine their Heegaard diagrams
+	etc., and after your review, you will still have the option of stopping or continuing to
+	run the current example.
+
+
+19) CHANGING SIMPLIFICATION PARAMETERS WHILE THE PROGRAM IS RUNNING
+		You can change some of the parameters, which determine how the program tries to
+	simplify a presentation, while the program is running, without having to stop the
+	program and start over. To do this, press the space-bar, and when the program pauses,
+	hit the 'c' key to bring up the menu which lists the parameters you can change. The
+	parameters you can change determine:
+		1)	Whether the program modifies presentations by forming bandsums.
+		2)	Whether the program deletes all primitives and proper powers from presentations.
+		3)	Whether the program deletes only primitives of length 1 and 2 from presentations.
+	NOTE: The program will not be able to recognize lens space summands of the manifold
+	unless the program is running in a mode where it can delete all primitives.	
+
+
+20) CHECKING ON PROGRAM PROGRESS WHILE THE PROGRAM IS RUNNING
+		To check on program progress while the program is running, without interrupting the
+	program, hit 's'. The major reason this feature is included, is that it often happens
+	that the program generates a flurry of presentations immediately after it has been
+	started and then nothing seems to be happening. You can have the program report that
+	it is still alive by hitting the 's' key.
+		If the 's' key has been hit, when program execution returns to the point where
+	the program selects the next presentation to investigate, a one-line "status" report
+	will be printed, to the screen, like this example:
+	
+		Status: TotalAuts 123 BandSums 456  NumDiagrams 789  NumDualized 23 ToDo 134.
+		
+	These numbers give the total number of automorphisms performed, the total number of
+	bandsums investigated, the total number of Heegaard diagrams which have been formed,
+	the number of dual presentations which have been investigated, and the number of items
+	left on the program's ToDo stack, for the current example the program is running.
+	(Again, depending on what the program is currently doing, this status message may not
+	be printed immediately.)
+	NOTE: Holding the 's' key down will generate a sequence of requests for repeated
+	"status" messages, which you can use to get some idea of how long execution is taking
+	to complete an average loop.
+
+
+21) TURNING MICRO_PRINT FEATURES ON OR OFF WHILE THE PROGRAM IS RUNNING
+		You can turn the Micro_Print features on or off, without aborting the current example
+	which the program is running, by hitting the space-bar to interrupt the running program
+	and then hitting 'x' when the program pauses. This will bring up a menu of options for
+	turning micro_printing to the screen and the file 'Heegaard_Results' on or off.
+		
+		
+22) THE CANONICAL FORM IN WHICH PRESENTATIONS ARE REWRITTEN
+		The program rewrites presentations in two different ways.
+		
+	A) 	The program rewrites the initial presentation so that generators come from the 
+	beginning of the alphabet, in sequence, without any gaps. This keeps the arrays used by
+	the program as small as possible.
+	
+	B) 	Whenever the program saves a presentation, the presentation is rewritten in a
+	canonical form so two presentations in canonical form correspond to isomorphic Heegaard
+	diagrams only if the two presentations are identical, letter for letter, and relator for
+	relator. More precisely, the program includes a routine called Canonical_Rewrite() which
+	is described, as follows, in the file in which it appears.
+	
+		______________________________________________________________________________________
+		
+		Canonical_Rewrite() rewrites presentations in a canonical form so that two
+		presentations have isomorphic Heegaard diagrams only if the two rewritten
+		presentations are identical. (The converse holds provided there are no pairs of
+		separating vertices or annuli.) The idea is to put a presentation into a canonical
+		form under the action of the group generated by:
+			1)	Permutations of the generators.
+			2)	Replacement of a generator by its inverse.
+			3)	Permutations of the relators.
+			4)	Replacement of a relator by its inverse.
+			5)	Replacement of a relator by a cyclic conjugate of itself.
+		To get a canonical form, we impose a partial ordering on presentations by making the
+		following definitions:
+			1)	If P = <  |R1, , , ,Rn> and P' = <  |R1', , ,Rn'> are presentations on the
+				same set of generators, with equal numbers of relators, say that P precedes
+				P' if there exists an integer i such that the length of Ri is greater than
+				the length of Ri'.
+			2)	If Ri and Ri' have the same length, say that Ri precedes Ri' if Ri precedes
+				Ri' in the lexicographic ordering induced by the ordering A,B,C,..Z,a,b,c,..z
+				of the generators and their inverses.
+		______________________________________________________________________________________
+		
+		Without some kind of canonical form like this, the program could easily generate and
+	save many superficially different presentations, all corresponding to the same Heegaard
+	diagram, while being unaware of the fact that it was not really exploring anything new.
+		Note that this canonical form is also convenient for the user, because it guarantees
+	that presentations saved by the program correspond to distinct Heegaard diagrams without
+	the user having to laboriously check this by hand. 
+		Unfortunately, there is a downside to rewriting presentations. Namely, it becomes
+	harder to trace the sequence of modifications the program made to a presentation.
+	To help deal with this problem, the program incorporates a feature called "Micro_Print"
+	which, when invoked, causes the program to print and save a fairly detailed log of its
+	activities. See "MICRO_PRINT" for further details.
+	
+
+23) HOW THE PROGRAM NUMBERS "SUMMANDS" OF MANIFOLDS
+		When the program is started, the initial presentation is deemed to be a presentation
+	of summand number 1 of some hypothetical 3-manifold M. If some subsequent presentation
+	of summand number 1 of M is found to have a Heegaard diagram which is not connected,
+	then M is a connected sum and the program splits the corresponding presentation of M into
+	two presentations, with one daughter presentation corresponding to each new summand of M.
+	These daughter presentations are then deemed to be summand 2 and summand 3 of M. Any
+	further splitting results in the creation of new summand numbers using the same rule.
+		We note that the summation may be either along a disk or a 2-sphere. The program will
+	attempt to determine which is the case. 
+		The program will also split the manifold into a connected sum if the program
+	discovers some empty relators. In this case, the manifold is a true connected sum, (not
+	a disk-connected sum), and the manifold may be split into more than two summands.	
+	
+									   	
+24) SUBROUTINE CODES PRINTED WHEN THE PROGRAM SAVES A PRESENTATION
+		When the program saves a presentation for future reference, it affixes a two-letter
+	code which indicates which subroutine of the program generated the presentation. A list
+	of these codes follows along with a brief description of what they mean.
+	
+	1G ->	This presentation has reduced to a 1-generator presentation of some lens space.
+		Next, the program will back up to see if it can find another presentation which will
+		allow it to determine explicitly which lens space this is.
+	A2 ->	The subroutine which looks for valence-2 annuli has determined that the diagram
+		of this presentation contains such an annulus.
+	BC ->	This presentation has been saved because it is currently the simplest
+		presentation in what is probably a descending chain of presentations. (Saving
+		presentations like this gives the program something to back up to in case the next
+		presentation generated has annuli or other problems which make it impossible for the
+		program to find the associated diagram.)
+	CF ->	The diagram associated with this presentation has a pair of separating vertices.
+		The program will next call the routine that performs level-transformations by 
+		sliding components of the separation around. Then, if the program regenerates this
+		presentation later, the program will know that it has already explored this
+		situation and the program can avoid recovering old ground. In particular, the
+		program won't waste time generating level-transformations, which can be a rather
+		lengthy process.
+	DR ->	This presentation was obtained from a previous presentation by deleting some
+		relators which the program has just discovered were redundant. (A relator R is 
+		"redundant" if R lies in the normal closure in the Heegaard surface of a subset
+		of the remaining relators.)
+	ER ->	This presentation was obtained from a previous presentation by deleting some
+		relators which have reduced to the empty relator. This can occur only under certain
+		circumstances.
+			NOTE: When this situation does occur, the manifold is a true connected sum
+		as opposed to a disk-connected sum, and the program will split the manifold into
+		summands and then investigate each summand.
+	FP ->	This presentation was obtained from a previous presentation by eliminating one
+		or more primitives.
+	IP ->	The initial presentation or a presentation closely related.
+	LS ->	The program has discovered that the diagram of this presentation is the diagram
+		of a lens space, and the program knows explicitly which lens space it is.
+	Lt ->	A presentation, without pairs of separating vertices in its diagram, which was
+		obtained, via level-transformations, from a previous presentation with pairs of
+		separating vertices in its diagram, by sliding components of separations around.
+	LT ->	A presentation produced from a previous presentation by the routine which
+		generates all level-transformations.
+	MG ->	Only n generators appear explicitly in this presentation, while more than n
+		generators appeared explicitly in the presentation from which this presentation was
+		obtained. Hence one or more generators is now missing.
+			Topologically, this means the 3-manifold has some handles: S1 x S2(s) or
+		S1 x D2(s) or I X D2(s) etc. The program will try to determine what type of handles
+		the manifold actually has.
+	NC ->	The program has discovered that the diagram of a presentation is not connected.
+		The program deals with this situation by splitting the relators of the original
+		presentation into two disjoint sets, yielding two new presentations with the property
+		that each new presentation has a diagram with fewer components than the original
+		diagram.
+	PM ->	This presentation has just been determined to be pseudo-minimal.
+	PP ->	The program has determined that this presentation contains a relator which is a
+		proper power of a free generator.
+	S3 ->	A routine which looks for canonical presentations of the 3-sphere has determined
+		that this is such a presentation.
+
+
+25)	"TRIVIAL GENERATORS" IN PRESENTATIONS
+		When the program tries to determine whether the original presentation passed to it is
+	realizable, it first attempts to do so without reducing the number of generators involved.
+	Then, if the program is not initially successful in determining whether the original
+	presentation is realizable, the program will start looking for primitive relators which
+	it can use to reduce the genus of the associated Heegaard diagram. However, some care is
+	required here for the following reasons.
+		Note that if P is a realizable presentation, and P' is any presentation obtained from
+	P by deleting a sequence of primitive relators, then P' is also realizable and P'
+	determines the same 3-manifold as P does. So, if P' turns out to be not realizable, then
+	neither is P. On the other hand, if P' is realizable, then one cannot conclude, in general,
+	that P is realizable. Under certain circumstances, however, one can infer the
+	realizability of P from the realizability of P'. This is the case, when P' was obtained
+	from P by deleting what the program calls "trivial generators". Here is the definition of
+	a "trivial generator".
+		
+		Def.	Let P be a presentation, a generator G appearing in P, is a "trivial generator"
+		if:
+			1)	The total number of appearances of G, together with its inverse g, in the
+				relators of P is less than or equal to two.
+			2)	There is exactly one relator in P of length one which has the form G or g.	
+	
+	It is not hard to see that P is realizable if and only if P' is realizable, provided P'
+	is obtained from P by deleting a sequence of "trivial generators".	So when the program
+	looks for primitive relators, which it can use to reduce the number of generators
+	appearing in the original presentation, it looks first for "trivial generators", and if
+	it obtains a realizable presentation P' from P by deleting a sequence of "trivial
+	generators", then the program asserts that the original presentation is realizable.
+		If the program is not successful in determining whether P is realizable by deleting
+	a sequence of "trivial generators", then the program looks for other primitive relators
+	which it can use to eliminate generators. In this case, if the program finds a
+	presentation P' which is realizable, the program will assert that P' is realizable, but
+	the program will not assert that the original presentation P is realizable. 		
+	
+
+26)	"DEFINING RELATORS" IN PRESENTATIONS
+		A "defining relator" is a relator R, which is freely and cyclically reduced, and
+	which has the property that there exists a generator say G, such that the total number
+	of appearances of G and g in R is one. This allows R to be used to express G in terms of
+	the other generators appearing in R. Then the resulting expression can be used to
+	eliminate all appearances of G and g from the remaining relators.
+
+
+27) "PRIMITIVES" IN PRESENTATIONS
+		A "primitive" is a relator which represents a free generator of the free group
+	generated by the generators of the presentation. By "deleting" or "eliminating" free
+	generators, the program can reduce the rank of this free group and reduce the Heegaard
+	genus of the associated manifold.
+
+	
+28) "LENGTH" OF A PRESENTATION
+		The "length" of a relator R, is the total number of letters which appear in R. The
+	"length" of a presentation P, is the sum of the lengths of the relators	which appear in P.
+
+
+29) "MINIMAL LENGTH" PRESENTATIONS
+		A presentation has "minimal length" if the presentation is freely and cyclically
+	reduced, and there do not exist any automorphisms of the free group, freely generated by
+	the generators of the presentation, which reduce the length of the presentation.
+	
+			  	
+30) "PSEUDO-MINIMAL" PRESENTATIONS
+		A Heegaard diagram D, of a closed orientable 3-manifold M, is "pseudo-minimal" if
+	there do not exist any automorphisms which reduce the length of either of the two dual
+	presentations of the fundamental group of M	associated with D.
+
+31)	"QUASI-PSEUDO-MINIMAL" PRESENTATIONS
+		A minimal length presentation of a 3-manifold with boundary is "quasi-pseudo-minimal"
+	if no relator of the presentation has a subword of length greater than one-half of its
+	length in common with another relator.
+
+32) MAXIMUM NUMBER OF PRESENTATIONS SAVED BY THE PROGRAM
+		The program is presently configured to save up to 1000 presentations in memory.
+
+
+33) MAXIMUM AMOUNT OF MEMORY USED FOR STORING PRESENTATIONS
+		The program keeps a running total of the number of bytes of storage used for storing
+	the presentations it has saved. If this number exceeds one megabyte, the program
+	pauses, and suggests that perhaps it is time to save and quit, but it gives you the
+	option of allocating more storage for presentations. If you allocate more storage,
+	the program will continue running until it has saved its maximum of 1000 presentations
+	or it exceeds the new storage limit, whereupon it will again request that you allocate
+	more space.		
+
+
+34) PROGRAM TERMINATION
+		The program is designed to eventually stop on any input. In particular, the program
+	stops looking for presentations under the following conditions:
+		1) 	It determines that the initial presentation is not realizable.
+		2) 	It has recognized each direct summand of the 3-manifold.
+		3) 	It has saved its maximum allotted number of presentations: (currently 1000).
+		4) 	It has performed the maximum number of bandsums allowed on each diagram.
+		5) 	It somehow generates a presentation which is not realizable from a presentation
+	   		which was realizable (This is a FATAL_ERROR).
+		6) 	You interrupt the program by hitting the space-bar, and then you ask the program
+			to terminate the current run.
+		7)	The program has used more than one megabyte of memory for storing presentations;
+			and you do not grant the request it generates, at that point, to allocate more
+			storage.	
+
+	
+35) RUNNING TIME OF THE PROGRAM
+		In principle, this should be a "fast" i.e. polynomial time program. All of the
+	basic routines run in polynomial time in the number of generators and the length of the
+	presentation. Other processes, such as the number of bandsums or "handleslides" which
+	the program performs, are bounded by a predetermined function of the number of generators
+	of the presentation. However, see "PROGRAM RUNS SLOWLY".
+
+	
+36)	PROGRAM RUNS SLOWLY
+ 		It is possible to create presentations which cause the canonical rewriting
+ 	procedure, Canonical_Rewrite(), to run slowly. This typically occurs when the
+ 	presentation has a long relator which contains a large number of overlapping copies
+ 	of a long substring. In the worst case, if L is the length of such a relator,
+ 	Canonical_Rewrite() might take time proportional to LxL. Fortunately, this situation
+ 	does not seem to occur too often. Canonical_Rewrite() already incorporates some features
+ 	designed to deal with this problem. However, a more efficient solution to this problem
+ 	would be welcome.
+ 		 Remark. If you wish to see an example of this behavior, try something like:
+ 		 -6001/1000 surgery on the Trefoil. 
+
+
+37)	HOW THE PROGRAM DEALS WITH "ERRORS"
+		We have, of course, tried to make the program bug free. But, even so, it is inevitable
+	that the program will, sooner or later, find itself in a situation where there is not
+	enough memory available for some operation, or some kind of potential data corrupting
+	situation is about to occur (or has occurred). The program has been designed to deal with
+	these situations in a way which is as transparent as possible, and the program makes every
+	effort to avoid corrupting data when such situations arise.
+		This means that you should generally not see any error messages or warnings, because
+	the program has been able to deal with the situation by itself. However, you might
+	occasionally see the message: "This presentation may be too long.". This message serves
+	as a kind of generic warning, and should not always be taken literally. For example, the
+	program may print this message for a relatively short presentation, which, however, has
+	so many potential symmetries, that a stack overflow is about to occur in the program's
+	Canonical_Rewrite() routine.
+	
+		
+38) RANDOMIZATION, OR: "WHY THE PROGRAM DOESN'T GIVE EXACTLY THE SAME ANSWERS EVERY TIME"
+		If you run the program more than once, using the same input presentation, you will
+	not necessarily see precisely the same output each time. However, you should get output
+	that is topologically equivalent or consistent. If not, there are some problems in the
+	program.
+		The operations, which the program performs and sometimes the order in which these
+	operations are performed, have been purposely randomized. In particular, wherever it
+	seemed reasonable to do so, and there was no overriding programming or heuristic
+	consideration, we have chosen to allow the program to make a random choice of which action
+	to perform. The fact that you get consistent, though not identical, results on repeated
+	runs, should increase your confidence in the overall correctness of the program.
+
+
+39) IF THE PROGRAM IS UNABLE TO DETERMINE WHETHER A PRESENTATION IS REALIZABLE
+		If the program reports it is unable to determine whether the initial presentation is
+	realizable, it may still be possible for you to coax the program into determining the
+	original presentation's realizability. Let P be the presentation of interest.
+	Do the following:
+		1) 	Rerun P and have the program start generating the complete orbit of P under level-
+			transformations. Let the routine run to completion, or interrupt it by hitting the
+			space-bar after it has generated a substantial number of presentations. 
+		2)	Select the option which lets you keep the presentations in memory for further
+			processing.
+		3)	Select the option which tests the presentations for pseudo-minimality and pairs
+			of separating vertices.
+		4)	If you are lucky, one or more of the level-presentations will have no pairs of
+			separating vertices.
+		5)	Select RERUN and select one of the presentations which has no pairs of separating
+			vertices as your choice of a presentation to rerun.
+		6)	Unless something else untoward occurs in this presentation, the program should
+			now be able to determine whether this presentation is realizable. This then
+			determines the realizability of the original presentation, since a minimal length
+			presentation is realizable iff any presentation obtainable from it via level
+			transformations is also realizable.			
+	
+	
+40)	LENS SPACES
+	A)	HOW THE PROGRAM RECOGNIZES LENS SPACES
+		The program looks for lens spaces by looking for genus two Heegaard diagrams of
+	closed manifolds with the additional property that either a relator or a dual relator of
+	the diagram represents a free generator of the free group of rank two. (Clearly, such a
+	manifold has Heegaard genus less than two and hence is a lens space of some sort.)
+		Suppose that D is such a diagram, of a 3-manifold M, with relators R1 and R2 attached
+	to a handlebody H of genus two, and that R2 represents a free generator of the free group
+	of rank two. In order to determine what lens space M represents, the program looks for
+	a simple closed curve T on the Heegaard surface, with the property that T intersects R1
+	transversely at a single point and T is disjoint from R2. Thus T can be thought of as
+	representing a core of one of the solid tori of a genus one Heegaard splitting of M. (We
+	mention that Hodgson and Rubinstein have shown that genus one Heegaard splittings of lens
+	spaces are unique up to isotopy.)
+		Next, the program considers R1, R2 and T as elements of the abelianized fundamental
+	group of H, which is free abelian of rank two. The quotient of this group by R2 is
+	infinite cyclic with generator say G. Then, in the quotient of this group by R1, the
+	equation [T] = Q[G] holds mod P, where P is the order of the fundamental group of M.
+	This determines Q, and M is homeomorphic to the lens space L(P,Q).
+		Thus once the program finds the transverse curve T, determining which lens space M
+	represents reduces to the following procedure:
+	
+		1)	Form a 3x2 matrix S, whose rows are the abelianized relators R1, R2 and T.
+		2)	Reduce R2 to either (1,0) or (0,1) by performing column operations on S.
+		 
+		The entries of R1 and T, in the column of S whose R2 entry is 0, then give P and Q.
+		
+										AN EXAMPLE:
+		__________________________________________________________________________________
+										
+		The presentation R1 = AABAAbAb, R2 = ABB gives a genus two Heegaard diagram D of a
+		3-manifold M, with R2 a primitive. The program finds T = ABA. Then:
+	
+						[ 5, -1 ] 	 						[ 5, -11 ]
+				S 	=	[ 1,  2 ] 		which becomes: 	 	[ 1,   0 ]
+		 				[ 2,  1 ]	 						[ 2,  -3 ]
+		 		
+		and hence M is homeomorphic to L(11,3).
+		__________________________________________________________________________________
+
+	NOTE: In order for the program to recognize that a manifold is a lens space, the program
+	must be running in a mode where it tests presentations for the presence of relators
+	which are primitives.	
+		
+	B) 	LENS SPACE CANONICAL FORM
+		If the program reports that a manifold is a lens space of the form L(P,Q) where Q has
+	a specific numerical value, then you can be assured that if L(P,Q) is homeomorphic to
+	L(P,Q'), then 0 <= Q <= Q'. That is, the program automatically minimizes the value of Q.	
+
+
+41) THE HEEGAARD DIAGRAMS PRODUCED BY THE PROGRAM
+	A)	DETERMINING HOW MANY EDGES JOIN EACH PAIR OF VERTICES IN A DIAGRAM	
+		For clarity, the diagrams which the program draws on the screen are "reduced" and
+	show at most a single edge joining a pair of vertices -- even though the actual Heegaard
+	diagram may contain multiple edges joining the same pair of vertices. To determine how
+	many edges join any given pair of vertices, in the true Heegaard diagram corresponding to
+	the diagram on display, hit 'm'. This will cause the program to print a table which gives
+	the number of edges joining each pair of vertices in the actual Heegaard diagram.
+	
+	B) 	DETERMINING THE CYCLIC IDENTIFICATIONS OF PAIRS OF INVERSE VERTICES IN A DIAGRAM
+		Here is the rule to use in order to determine how to identify a pair of inverse
+	vertices in a Heegaard diagram. If X is a vertex of the diagram, define the
+	"first-vertex" at X to be the first vertex in the ordered list {A,a,B,b,C,c, . . . }
+	which is joined to X by an edge. Then, if Y is the first vertex at X, define the
+	"first-edge" at X to be the first edge, in counter-clockwise order about X, which joins
+	X and Y. Finally, for each (X,x) pair of vertices:
+		1)	Number the edges, at vertex X, counter-clockwise about vertex X, giving the
+			"first-edge" at vertex X number 0.
+		2)	Number the edges, at vertex x, clockwise about vertex x, giving the "first-edge"
+			at vertex x the number shown in the list which the program prints when 'm' is
+			hit to display data for the diagram.
+	
+	C) 	USING THE MOUSE TO ADJUST THE HEEGAARD DIAGRAM OF A PRESENTATION
+		The program allows you to use the "mouse" to modify any Heegaard diagram drawn on the
+	screen by dragging the vertices of the diagram around. To do this, first point the cursor
+	at a vertex which you want to move and click the mouse button. Next, while holding the
+	mouse button down, drag the vertex to its new location and release the mouse button.
+	A brief description of the procedure used to draw diagrams follows. It indicates why it
+	is often necessary to "improve" diagrams which the program has drawn.
+		The basic procedure, which the program uses to draw diagrams, is based on an
+	algorithm suggested by Tutte. Tutte showed that a 3-connected graph can be embedded in
+	the plane so that all of the edges of the graph are represented by straight lines, if
+	each vertex, which is not in the boundary of the "infinite" face, is placed at the
+	barycenter of its neighbors. However, Tutte's algorithm does not suffice for all of the
+	diagrams which the program needs to draw, because not all of the diagrams are 3-connected.
+	Furthermore, Tutte's algorithm assumes that the boundary of the infinite face is strictly
+	convex, which is not always the case here. But, the biggest problem with Tutte's algorithm,
+	is that, while mathematically correct, it tends to produce embeddings in which groups of
+	vertices are clumped together in a small region of the screen. In an effort to ameliorate
+	this condition, the program adds some "virtual" edges to the graph, before applying
+	Tutte's procedure. This seems to help somewhat, but dragging vertices around with the
+	mouse is still often necessary, in order to obtain a visually satisfying embedding.
+		Here are some other things it might be useful to know about the diagrams that the
+	program draws.
+		1)	The program will not allow you to drag a vertex off screen.
+		2)	Any modifications you make to the diagram will appear in the printed version, if
+			you print the diagram.
+		3)	The program will occasionally draw a diagram in such a way that some vertices are
+			superimposed. In this case, you should see a vertex "blinking" on the screen. You
+			can then use the mouse to drag vertices off of each other, using the procedure
+			described above. A special case of this sometimes occurs when the diagram has
+			pairs of separating vertices, or the diagram is not connected. In this case, all
+			of the vertices of the graph may be superimposed on one vertex. Again, you can use
+			the mouse to drag the vertices off of each other and recover the graph, if you wish.
+		4) 	You should also be aware that when the Heegaard diagram has pairs of separating
+			vertices, it is possible for a vertex to appear in the middle of an edge which
+			joins two other vertices. Beware of diagrams which have pairs of separating
+			vertices. Remember however, that the program does not rely on diagrams which have
+			pairs of separating vertices, and so such problems, can often be ignored.
+
+	D) 	PRINTING HEEGAARD DIAGRAMS	 
+		The diagrams which appear on the screen can be printed and will print as they appear
+	on screen. You should select landscape mode if you print. And I would suggest selecting
+	font substitution if you are printing to a laserwriter. This will allow the laserwriter
+	to replace this font, which is Monaco 9, with Courier which generally looks better.
+	
+	E)	THE "DUAL" RELATORS ASSOCIATED WITH A DIAGRAM
+		When the program is displaying information about a diagram, you can have the program
+	also display the "dual" relators associated with the diagram, provided the diagram is
+	connected and does not have any pairs of separating vertices or annuli. When you select
+	the menu option to do this, the program will display a set of relators corresponding to
+	traversing the boundary of verticies A,B,C. . . of the diagram counter-clockwise starting
+	from the "first-edge" at each vertex. These relators record the oriented intersections of
+	the boundaries of these vertices with the labelled and oriented attaching curves of the
+	2-handles of the manifold.
+	
+	F)	THE "OUT" RELATORS ASSOCIATED WITH A DIAGRAM
+		When the program is displaying information about a diagram, you can have the program
+	also display the "out" relators associated with the diagram, provided the diagram is
+	connected and does not have any pairs of separating vertices or annuli. When you select
+	the menu option to do this, the program will display a set of relators corresponding to
+	traversing the oriented attaching curve of each 2-handle of the manifold. The order and
+	manner in which the program traces these curves is determined by the following inductive
+	procedure.
+		Suppose the attaching curves of relators R1,R2, , ,Rj have been traced. Let vertex X
+	be the first vertex, in the ordered list {A,B,C, . . .}, which meets an untraced edge of
+	the diagram. Let E be the first untraced edge meeting vertex X, counting counter-clockwise
+	from the "first-edge" at vertex X. Orient E so it points towards X. Then E is the first
+	edge of the next relator.
