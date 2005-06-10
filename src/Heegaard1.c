@@ -3629,6 +3629,6 @@ char WaitkbHit()
       c = 0;
       clearerr(stdin);
     }
-    return c;
+    return (char)c;
 #endif
 }
