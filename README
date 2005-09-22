@@ -1,0 +1,26 @@
+This package is meant to be installed in a user directory.
+Unpacking the tarball should create a directory named heegaard.
+
+After unpacking:
+
+cd heegaard
+
+To compile:
+
+cd src
+make
+make clean
+cd ..
+
+To run:
+
+./heegaard
+
+
+The executable will appear in the top level directory (heegaard) which
+was created when you unpacked the tarball.  The program must be run
+from this directory, in order for it to find its help files.  Also,
+this will ensure that the log files which are written for each session
+will be in the heegaard directory.
+
+- John, Marc and Nathan 
