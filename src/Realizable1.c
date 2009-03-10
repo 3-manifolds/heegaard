@@ -15,8 +15,10 @@ FILE
 
 char
     *ER;
+
     
 unsigned char
+    *Presentation_File_Name; 
     *CBC[MAXNUMCOMPONENTS],
     *BCF,
     *BCWG,
@@ -246,6 +248,10 @@ main(int argv, char **argc)
     
     long             Scratch;
 
+    Presentation_File_Name = argc[1];
+    printf(Presentation_File_Name);
+    printf("\n");
+
 #ifndef MAC
     struct termios newtermio;
 
@@ -408,7 +414,8 @@ _BEGIN:
         printf("\nHIT '?' FOR HELP.");
 	printf("\n");
         GET_RESPONSE2:
-        c = WaitkbHit();
+        // c = WaitkbHit();
+        c = 'f'; 
         switch(c)
             {
             case 'f':
@@ -580,7 +587,8 @@ _BEGIN:
         printf("\nHIT 'z' TO REDUCE THE INITIAL PRESENTATION TO MINIMAL LENGTH.");
         printf("\nHIT '?' FOR HELP.\n");
         GET_RESPONSE3:
-        c = WaitkbHit();
+        // c = WaitkbHit();
+        c ='c';;
         switch(c)
             {
             case 'c':
@@ -1195,8 +1203,8 @@ _RESTART:
                 }
             break;
         case TOO_LONG:
-            printf("\n\n                    This presentation may be too long!");
-            fprintf(myout,"\n\n                    This presentation may be too long!");
+            printf("\n\n                    This presentation may be too long!  HEEGAARD_ANS: (ERROR)");
+            fprintf(myout,"\n\n                    This presentation may be too long! HEEGAARD_ANS: (ERROR)");
             return(1);
         }
     
@@ -1244,8 +1252,8 @@ _RESTART:
         
     if(Length == 0L)
         {
-        printf("\n\nThe presentation has reduced to a presentation of length zero.");
-        fprintf(myout,"\n\nThe presentation has reduced to a presentation of length zero.");
+        printf("\n\nThe presentation has reduced to a presentation of length zero. HEEGAARD_ANS: (YES)");
+        fprintf(myout,"\n\nThe presentation has reduced to a presentation of length zero.  HEEGAARD_ANS: (YES)");
         Print_Realizability(Del_Only_Triv_Rel,NumFilled);
         if(On_File() == NumFilled)
         Save_Pres(ReadPres,0,Length,1,2,0,0,0);
@@ -1347,12 +1355,12 @@ _RESTART:
             NumReTries1 ++;
             if(NumReTries1 > 3)
                 {
-                printf("\n\n                    Unable to determine whether the presentation is realizable.");
-                fprintf(myout,"\n\n                    Unable to determine whether the presentation is realizable.");                        
+                printf("\n\n                    Unable to determine whether the presentation is realizable.  HEEGAARD_ANS: (ERROR)");
+                fprintf(myout,"\n\n                    Unable to determine whether the presentation is realizable.   HEEGAARD_ANS: (ERROR)");                        
                 if(Do_Not_Reduce_Genus || Delete_Only_Short_Primitives)
                     {
-                    printf("\n\n          Suggest rerunning the example and allowing the program to delete all primitives.");    
-                    fprintf(myout,"\n\n          Suggest rerunning the example and allowing the program to delete all primitives.");    
+                    printf("\n\n          Suggest rerunning the example and allowing the program to delete all primitives.  HEEGAARD_ANS: (ERROR)");    
+                    fprintf(myout,"\n\n          Suggest rerunning the example and allowing the program to delete all primitives.  HEEGAARD_ANS: (ERROR)");    
                     }    
                 return(1);                
                 }
@@ -1369,7 +1377,7 @@ _RESTART:
                 p = *Copy_Of_Input[i];
                 if((q = *Relators[i]) == NULL)
                     {
-                    printf("\n\n    Memory Error. Sorry!");
+                    printf("\n\n    Memory Error. Sorry!  HEEGAARD_ANS: (ERROR)");
                     return(1);
                     }
                 while(*q++ = *p++) ;
@@ -1547,8 +1555,8 @@ _RESTART:
                             Fatal_Error();        
                             return(1);
                         case TOO_LONG:
-                            printf("\n\n                    This presentation may be too long!");
-                            fprintf(myout,"\n\n                    This presentation may be too long!");
+                            printf("\n\n                    This presentation may be too long! HEEGAARD_ANS: (ERROR)");
+                            fprintf(myout,"\n\n                    This presentation may be too long! HEEGAARD_ANS: (ERROR)");
                             return(1);
                         case NON_UNIQUE_1:
                         case NON_UNIQUE_2:
@@ -1623,7 +1631,7 @@ _RESTART:
                 ReallocateHandle((char **) Relators[i],GetHandleSize((char **) SLR[0][i]));
                 if((p = *Relators[i]) == NULL)
                     {
-                    printf("\n\nAn out of memory condition has arisen. Sorry!");
+                    printf("\n\nAn out of memory condition has arisen. Sorry!  HEEGAARD_ANS: (ERROR)");
                     for(i = 0; i < NumCalled; i++)
                     for(j = 1; j <= NumRelators; j++) DisposeHandle((char **) SLR[i][j]);
                     return(1);
@@ -1711,8 +1719,8 @@ _RESTART:
                         Realization_Warning(stdout);
                         Realization_Warning(myout);
                         }
-                    printf("\n\n                    This manifold is a lens space.");
-                    fprintf(myout,"\n\n                    This manifold is a lens space.");
+                    printf("\n\n                    This manifold is a lens space. HEEGAARD_ANS: (YES)");
+                    fprintf(myout,"\n\n                    This manifold is a lens space.  HEEGAARD_ANS: (YES)");
                     return(REDUCE_GENUS);
                     }
                 if(FoundPrimitive)
@@ -1854,8 +1862,8 @@ _RESTART:
                 }
             }
                     
-        printf("\n\n                    Unable to determine whether the presentation is realizable.");
-        fprintf(myout,"\n\n                    Unable to determine whether the presentation is realizable.");                        
+        printf("\n\n                    Unable to determine whether the presentation is realizable. HEEGAARD_ANS: (ERROR)");
+        fprintf(myout,"\n\n                    Unable to determine whether the presentation is realizable. HEEGAARD_ANS: (ERROR)");                        
         if(Do_Not_Reduce_Genus || Delete_Only_Short_Primitives)
             {
             printf("\n\n          Suggest rerunning the example and allowing the program to delete all primitives.");    
@@ -2097,8 +2105,8 @@ int Non_Unique_Initial_Diagram(void)
     switch(Flag1)
         {
         case NO_ERROR:
-            printf("\n\n                    Presentation %d is realizable.",This_Pres + 1);
-            fprintf(myout,"\n\n                    Presentation %d is realizable.",This_Pres + 1);
+            printf("\n\n                    Presentation %d is realizable.   HEEGAARD_ANS: (YES)",This_Pres + 1);
+            fprintf(myout,"\n\n                    Presentation %d is realizable.  HEEGAARD_ANS: (YES)",This_Pres + 1);
             printf("\n\n                    But the realization is not unique.");
             fprintf(myout,"\n\n                    But the realization is not unique.");
             
@@ -2186,9 +2194,9 @@ int Non_Unique_Initial_Diagram(void)
                 }    
             return(1);
         case FATAL_ERROR:
-            printf("\n\n                    The initial presentation is not realizable.\n");
+            printf("\n\n                    The initial presentation is not realizable.   HEEGAARD_ANS: (NO)\n");
             Print_Relators(Relators,NumRelators,stdout);
-            fprintf(myout,"\n\n                    The initial presentation is not realizable.\n");
+            fprintf(myout,"\n\n                    The initial presentation is not realizable.   HEEGAARD_ANS: (NO)\n");
             Print_Relators(Relators,NumRelators,myout);
             return(1);
         }
@@ -2783,8 +2791,10 @@ Get_Presentation_From_File()
                             i;
                             
     long                    StrLength;                                                
+    unsigned char* RealPresName = "0"; 
     
-    if((input_relators = fopen("Input_Presentations","r+")) == NULL)
+
+    if((input_relators = fopen(Presentation_File_Name,"r+")) == NULL)
         {
         SysBeep(5);
         printf("\nUnable to open the file 'Input_Presentations'.");
@@ -2794,7 +2804,8 @@ Get_Presentation_From_File()
         }
     r = (unsigned char *) NewPtr((Size)(MAXLENGTH + 1));
     printf("\n\nPLEASE INDICATE WHICH PRESENTATION YOU WANT USED BY ENTERING ITS IDENTIFIER:\n\n    ");        
-    ReadString((char *)PresName, GetPtrSize(PresName));
+    // ReadString((char *)PresName, GetPtrSize(PresName));
+    PresName = RealPresName;
 
     /******************************************************************************************
                     Look for a presentation with the given identifier.
@@ -3009,7 +3020,9 @@ Check_Realizability_Of_The_Initial_Presentation()
     if(Get_Initial_Diagram(FALSE) == 2)
         NoReport = FALSE;
     else    
-        Report(0,NumDiagrams,0,0,0,0,1,0,1,0);
+        NoReport = FALSE;
+    printf("\n");
+    exit(0);
     printf("\n\nDISCARD ALL BUT THE INITIAL PRESENTATION ?  HIT 'y' OR 'n'.");
     GET_RESPONSE1:
     switch(WaitkbHit())
@@ -3190,7 +3203,7 @@ void Get_Simplification_Parameters_From_User(int Flag1,int Flag2)
     else        
     printf("\nDELETE ALL PRIMITIVE RELATORS ? HIT 'y' OR 'n'.\n");
     GET_RESPONSE3:
-    switch(WaitkbHit())
+    switch('y')
         {
         case 'y':
             Do_Not_Reduce_Genus = FALSE;
@@ -3253,7 +3266,7 @@ void Turn_Micro_Print_On(void)
 {
     printf("\nTURN Micro_Printing ON ? HIT 'y' OR 'n'.\n");
     GET_RESPONSE1:
-    switch(WaitkbHit())
+    switch('n')
         {
         case 'y':
             printf("\n    HIT 'b' TO MICRO_PRINT TO BOTH THE SCREEN AND 'Heegaard_Results'.");
@@ -3262,7 +3275,7 @@ void Turn_Micro_Print_On(void)
                 printf("\n    HIT 'o' TO TURN MICRO_PRINTING COMPLETELY OFF.    ");
             printf("\n");    
             GET_RESPONSE2:
-            switch(WaitkbHit())
+            switch('s')
                 {
                 case 'b':
                     Micro_Print = TRUE;
@@ -3536,9 +3549,9 @@ Initial_Realizability_Check()
         ReadPres = NumFilled - 1;
         Fatal_Error();
         printf("\n\n     The Whitehead graph is connected, has no cut-vertices and is non-planar.");
-        printf("\n     This is impossible if the presentation is realizable.");
+        printf("\n     This is impossible if the presentation is realizable.  HEEGAARD_ANS: (NO)");
         fprintf(myout,"\n\n     The Whitehead graph is connected, has no cut-vertices and is non-planar.");
-        fprintf(myout,"\n     This is impossible if the presentation is realizable.");
+        fprintf(myout,"\n     This is impossible if the presentation is realizable.  HEEGAARD_ANS: (NO)");
         return(TRUE);
         }
     return(FALSE);    
@@ -3562,19 +3575,19 @@ void Print_Realizability(int Del_Only_Triv_Rel, unsigned int WhichPres)
     fprintf(myout,"\n\n                    The data appears consistent.");            
     if(Del_Only_Triv_Rel)
         {
-        printf("\n\n                    The initial presentation is realizable.");
-        fprintf(myout,"\n\n                    The initial presentation is realizable.");
+        printf("\n\n                    The initial presentation is realizable.   HEEGAARD_ANS: (YES)");
+        fprintf(myout,"\n\n                    The initial presentation is realizable.  HEEGAARD_ANS: (YES)");
         }
     else
         {    
-        printf("\n\n                    Presentation %d is realizable.",WhichPres);
-        fprintf(myout,"\n\n                    Presentation %d is realizable.",WhichPres);
+        printf("\n\n                    Presentation %d is realizable.  HEEGAARD_ANS: (YES)",WhichPres);
+        fprintf(myout,"\n\n                    Presentation %d is realizable.  HEEGAARD_ANS: (YES)",WhichPres);
         }
 }
 
 void Realization_Warning(FILE * fptr)
 {
-    fprintf(fptr,"\n\n    NOTE: The program has not directly verified that the initial presentation is realizable.");
+    fprintf(fptr,"\n\n    NOTE: The program has not directly verified that the initial presentation is realizable.   HEEGAARD_ANS: (ERROR)");
     fprintf(fptr,"\n          This means it is possible that the initial presentation is not realizable,");
     fprintf(fptr,"\n          even though 'derived' presentations are realizable.");  
 }

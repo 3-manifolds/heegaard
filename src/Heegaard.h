@@ -199,7 +199,7 @@ extern  int             Level_Transformations_2(int,int,int,unsigned int,int);
 extern  int             Long_Mult(unsigned char,unsigned char,unsigned int,unsigned int,
                           unsigned int,unsigned int,unsigned int,unsigned int,
                           unsigned int,long int,unsigned long);
-extern  int             main(void);
+extern  int             main(int argv, char **argc);
 extern  void            Mark_As_Duplicate(unsigned int);
 extern  void            Mark_As_Found_Elsewhere(int);
 extern  int             MG_Bdry_Comp_Data(unsigned int);
