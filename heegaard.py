@@ -17,8 +17,10 @@ http://peak.telecommunity.com/DevCenter/EasyInstall
 
 and then do 'easy_install pexpect' at the command line.
 
-Finally, if the 'heegaard' binary is not in your path, you'll need to
-edit the variable 'heegaard_program' below.
+Finally, you need to build the extra program 'heegaard_is_realizable'
+by doing 'make all' in the 'heegaard/src' directory.  Moreover, if
+'heegaard_is_realizable' is not in your path, you'll need to edit the
+variable 'heegaard_program' below.
 
 To test if everything is working fine, do 'python heegaard.py'.  
 
@@ -26,21 +28,12 @@ Written by Nathan Dunfield (nathan@dunfield.info).  This code is in
 the public domain.
 """
 
-import pexpect, re
+import pexpect, re, os, tempfile
 
 # If the 'heegaard' binary is not in your path, edit the below to
-# reflect it's full location, e.g. "/Users/dunfield/work/heegaard/heegaard"
+# reflect it's full location, e.g. "/Users/dunfield/work/heegaard/heegaard_is_realizable"
 
-heegaard_program = "heegaard"
-
-def start_heegaard(relations):
-    H = pexpect.spawn(heegaard_program)
-    H.expect("HIT")
-    H.send("k")
-    for rel in relations:
-        H.send(rel + "\n")
-    H.send("\n\n")
-    return H
+heegaard_program = "heegaard_is_realizable"
 
 def is_realizable(relations, maxtime = 10, full_answer=False):
     """
@@ -63,18 +56,30 @@ def is_realizable(relations, maxtime = 10, full_answer=False):
     Finally, if the 'full_answer' flag is set, the function returns
     the pair (answer, heegaard output).
     """
-    
-    H = start_heegaard(relations)
+
+    temp_file_name = tempfile.mktemp()
+    tempf = open(temp_file_name, "w")
+    tempf.write("0\n")
+    for rel in relations:
+        tempf.write("\t" + rel + "\n")
+    tempf.write("\n")
+    tempf.close()
+
+    H = pexpect.spawn(heegaard_program + "  " + temp_file_name)
     H.timeout = maxtime
-    for command in ["c", "y", "n", "\n", "\n", "y", "q", "\n", "y", "q", "\n", "y", "q", "\n", "y", "q"]:
-        H.send(command)
     try:
         raw_data = H.read()
         H.close()
-        ans = re.search("is not realizable",  raw_data) == None
-        return (ans, raw_data) if full_answer else ans
+        ans = re.search("HEEGAARD_ANS:\s*\(([A-Z]+)\)", raw_data).groups(1)
     except pexpect.TIMEOUT:
-        raise RuntimeError
+        raise RuntimeError, "Heegaard timedout"
+
+    if not ans in [("NO",), ("YES",)]:
+        raise RuntimeError, "Heegaard failed" 
+    ans = ans[0] == "YES"
+    os.remove(temp_file_name)
+    return (ans, raw_data) if full_answer else ans
+
 
 # Code for testing
 
