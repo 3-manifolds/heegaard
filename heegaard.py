@@ -46,6 +46,8 @@ def is_realizable(relations, maxtime = 10, full_answer=False):
     True
     >>> is_realizable(['bbaaccabc'])
     False
+    >>> is_realizable(['AABCab','ACCBcb'])
+    False
 
     Despite my best efforts, every once and awhile heegaard get
     confused at the input and hang; not sure why. In this case,
