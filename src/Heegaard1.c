@@ -3599,7 +3599,7 @@ char mykbhit()
     struct termios oldtermio, newtermio;
     tcgetattr(0, &oldtermio);
     newtermio = oldtermio;
-    newtermio.c_cc[VTIME]=2;
+    newtermio.c_cc[VTIME]=0;
     newtermio.c_cc[VMIN]=0;
     tcsetattr(0, 0, &newtermio);
     c = getchar();
