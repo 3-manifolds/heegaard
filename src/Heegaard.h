@@ -296,3 +296,22 @@ extern  unsigned int    Whitehead_Graph(void);
 extern  int             Wirtinger(void);              
 
 extern  char            *ReadString(char *buffer, int size);
+
+#ifndef MAC
+/* From utils.c */
+extern void   SysBeep(int seconds);
+extern void   ObscureCursor(void);
+extern char   **NewHandle(size_t);
+extern void   DisposeHandle(char **);
+extern void   ReallocateHandle(char **, size_t);
+extern size_t GetHandleSize(char **);
+extern void   SetHandleSize(char **, size_t);
+extern void   EmptyHandle(char **);
+extern void   HLock(char **);
+extern void   HUnlock(char **);
+extern void   *NewPtr(size_t);
+extern void   DisposePrt(void *);
+extern size_t GetPtrSize(void *);
+extern void   ReadDateTime(unsigned long *);
+extern char   *ReadString(char *buffer, int size);
+#endif
