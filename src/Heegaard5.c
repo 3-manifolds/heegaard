@@ -1374,6 +1374,7 @@ _UPDATE:			{
 									Temp = RWR[Stack_Ptr];
 									RWR[Stack_Ptr] = RWR[NumDups];
 									RWR[NumDups] = Temp;
+									HUnlock((char **) RWR[NumDups]);
 									DisposeHandle((char **) RWR[NumDups]);
 									NumDups --;
 									}
