@@ -7,14 +7,14 @@ extern struct termios normal_termio;
 
 void   SysBeep(int seconds);
 void   ObscureCursor(void);
-void   **NewHandle(size_t);
-void   DisposeHandle(void **);
-void   ReallocateHandle(void **, size_t);
-size_t GetHandleSize(void **);
-void   SetHandleSize(void **, size_t);
-void   EmptyHandle(void **);
-void   HLock(void **);
-void   HUnlock(void **);
+char   **NewHandle(size_t);
+void   DisposeHandle(char **);
+void   ReallocateHandle(char **, size_t);
+size_t GetHandleSize(char **);
+void   SetHandleSize(char **, size_t);
+void   EmptyHandle(char **);
+void   HLock(char **);
+void   HUnlock(char **);
 void   *NewPtr(size_t);
 void   DisposePrt(void *);
 size_t GetPtrSize(void *);
@@ -39,7 +39,7 @@ void ObscureCursor(void){
   return;
 }
 
-void **NewHandle(size_t size){
+char **NewHandle(size_t size){
   Handle_t *handle;
   
   handle = (Handle_t *)malloc(sizeof(Handle_t));
@@ -48,17 +48,17 @@ void **NewHandle(size_t size){
   handle->data = malloc(size);
   handle->size = size;
   handle->lock = 0;
-  return (void **)handle;
+  return (char **)handle;
 }
 
-void ReallocateHandle(void **h, size_t size){
+void ReallocateHandle(char **h, size_t size){
   Handle_t *handle = (Handle_t *)h;
   
   handle->data = realloc(handle->data, size);
   handle->size = size;
 }
 
-void DisposeHandle(void **h){
+void DisposeHandle(char **h){
   Handle_t *handle = (Handle_t *)h;
   if (handle == NULL)
     return;
@@ -71,27 +71,27 @@ void DisposeHandle(void **h){
   free(handle);
 }
 
-size_t GetHandleSize(void **h){
+size_t GetHandleSize(char **h){
   Handle_t *handle = (Handle_t *)h;
   return handle->size;
 }
 
-void SetHandleSize(void **h, size_t size){
+void SetHandleSize(char **h, size_t size){
   Handle_t *handle = (Handle_t *)h;
   handle->data = realloc(handle->data, size);
   handle->size = size;
 }
 
-void EmptyHandle(void **h){
+void EmptyHandle(char **h){
   SetHandleSize(h, 0);
 }
 
-void HLock(void **h){
+void HLock(char **h){
   Handle_t *handle = (Handle_t *)h;
   handle->lock = 1;
 }
 
-void HUnlock(void **h){
+void HUnlock(char **h){
   Handle_t *handle = (Handle_t *)h;
   handle->lock = 0;
 }
@@ -139,7 +139,8 @@ char *ReadString(char *buffer, int size){
   tcsetattr(0, 0, &this_termio);
 }
 
-/*
+/* 
+
 main(){
   void **p;
   unsigned long time;
@@ -159,8 +160,7 @@ main(){
   DisposeHandle(p);
   p = NewPtr(100);
   printf("Allocated %d bytes\n\r", GetPtrSize(p));
-  SetPtrSize(p,200);
-  printf("Now allocated %d bytes\n\r", GetPtrSize(p));
   DisposePtr(p);
 }
+
 */
