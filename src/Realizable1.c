@@ -18,7 +18,7 @@ char
 
     
 unsigned char
-    *Presentation_File_Name; 
+    *Presentation_File_Name,
     *CBC[MAXNUMCOMPONENTS],
     *BCF,
     *BCWG,
@@ -249,7 +249,7 @@ main(int argv, char **argc)
     long             Scratch;
 
     Presentation_File_Name = argc[1];
-    printf(Presentation_File_Name);
+    printf("%s", Presentation_File_Name);
     printf("\n");
 
 #ifndef MAC
