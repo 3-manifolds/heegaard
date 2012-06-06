@@ -18,7 +18,7 @@ char
 
     
 unsigned char
-    *Presentation_File_Name,
+    *Presentation_File_Name, 
     *CBC[MAXNUMCOMPONENTS],
     *BCF,
     *BCWG,
@@ -462,14 +462,10 @@ _BEGIN:
         Micro_Print = FALSE;
         Micro_Print_F = FALSE;
         ObscureCursor();
-        fprintf(myout,"\n\nThe initial presentation was:");
-        fprintf(myout," %s\n",PresName);
-        Print_Relators(Relators,NumRelators,myout);    
         for(i = 1,Scratch = 0L; i <= NumRelators; i++)
             Scratch += GetHandleSize((char **) Relators[i]);
         Scratch -= NumRelators;
         printf("\n\nThis presentation has length %ld ",Scratch);
-        fprintf(myout,"\n\nThis presentation has length %ld ",Scratch);
         if(Freely_Reduce() == TOO_LONG)
             {
             printf("\n\nThis presentation is too long!!");
@@ -481,16 +477,12 @@ _BEGIN:
             {
             printf("\nand freely reduces to the following presentation of length %lu.\n",
                 OrigLength);
-            fprintf(myout,"\nand freely reduces to the following presentation of length %lu.\n",
-                OrigLength);
             Print_Relators(Relators,NumRelators,stdout);
-            Print_Relators(Relators,NumRelators,myout);    
             Scratch = OrigLength;
             }
         else
             {
             printf("and is freely reduced.");
-            fprintf(myout,"and is freely reduced.");
             }
         Micro_Print = TRUE;
         Micro_Print_F = TRUE;    
@@ -545,8 +537,6 @@ _BEGIN:
             {
             printf("\n\nThe rewritten initial presentation is:\n");
             Print_Relators(Relators,NumRelators,stdout);
-            fprintf(myout,"\n\nThe rewritten initial presentation is:\n");
-            Print_Relators(Relators,NumRelators,myout);
             }
         
         /**************************************************************************************
@@ -657,8 +647,6 @@ _BEGIN:
             case 's':
                 printf("\n\n    This is the initial presentation:\n");
                 Print_Relators(Relators,NumRelators,stdout);
-                fprintf(myout,"\n\n   This was the initial presentation:\n");
-                Print_Relators(Relators,NumRelators,myout);
                 i = NoReport;
                 NoReport = FALSE;
                 Find_Symmetries(TRUE);
@@ -1253,7 +1241,6 @@ _RESTART:
     if(Length == 0L)
         {
         printf("\n\nThe presentation has reduced to a presentation of length zero. HEEGAARD_ANS: (YES)");
-        fprintf(myout,"\n\nThe presentation has reduced to a presentation of length zero.  HEEGAARD_ANS: (YES)");
         Print_Realizability(Del_Only_Triv_Rel,NumFilled);
         if(On_File() == NumFilled)
         Save_Pres(ReadPres,0,Length,1,2,0,0,0);
@@ -1356,11 +1343,9 @@ _RESTART:
             if(NumReTries1 > 3)
                 {
                 printf("\n\n                    Unable to determine whether the presentation is realizable.  HEEGAARD_ANS: (ERROR)");
-                fprintf(myout,"\n\n                    Unable to determine whether the presentation is realizable.   HEEGAARD_ANS: (ERROR)");                        
                 if(Do_Not_Reduce_Genus || Delete_Only_Short_Primitives)
                     {
                     printf("\n\n          Suggest rerunning the example and allowing the program to delete all primitives.  HEEGAARD_ANS: (ERROR)");    
-                    fprintf(myout,"\n\n          Suggest rerunning the example and allowing the program to delete all primitives.  HEEGAARD_ANS: (ERROR)");    
                     }    
                 return(1);                
                 }
@@ -1440,8 +1425,6 @@ _RESTART:
         Print_Relators(Relators,NumRelators,stdout);        
         if(Micro_Print_F)
             {        
-            fprintf(myout,"\n\nAt Get_Initial_Diagram(), the presentation is currently:\n");        
-            Print_Relators(Relators,NumRelators,myout);
             }
         }                                            
     if(This_Pres == NumFilled)
@@ -1473,13 +1456,11 @@ _RESTART:
         {
         case NON_PLANAR:
             printf("\n\n                    The Whitehead graph is nonplanar.");
-            fprintf(myout,"\n\n                    The Whitehead graph is nonplanar.");
         case FATAL_ERROR:
             Fatal_Error();        
             return(1);
         case TOO_LONG:
             printf("\n\n                    This presentation may be too long!");
-            fprintf(myout,"\n\n                    This presentation may be too long!");
             return(1);
         case TOO_MANY_COMPONENTS:
             return(1);        
@@ -1503,11 +1484,9 @@ _RESTART:
             if(!Del_Only_Triv_Rel)
                 {
                 Realization_Warning(stdout);
-                Realization_Warning(myout);
                 }
             printf("\n\n                    The Whitehead graph is not connected.");
             printf("\n\n                    Please check each summand separately.");
-            fprintf(myout,"\n\n                    The Whitehead graph is not connected.");
             BdryData = FALSE;
             return(1);
                         
@@ -1521,7 +1500,6 @@ _RESTART:
                 
         case SEP_PAIRS:
             printf("\n\n                    The Whitehead graph has a pair of separating vertices.\n");
-            fprintf(myout,"\n\n                    The Whitehead graph has a pair of separating vertices.");
             UDV[This_Pres] = SEP_PAIRS;
             if(V1 & 1)
                 LSP[This_Pres] = V1/2 + 97;
@@ -1550,13 +1528,11 @@ _RESTART:
                         {
                         case NON_PLANAR:
                             printf("\n\n                    The Whitehead graph is nonplanar.");
-                            fprintf(myout,"\n\n                    The Whitehead graph is nonplanar.");
                         case FATAL_ERROR:
                             Fatal_Error();        
                             return(1);
                         case TOO_LONG:
                             printf("\n\n                    This presentation may be too long! HEEGAARD_ANS: (ERROR)");
-                            fprintf(myout,"\n\n                    This presentation may be too long! HEEGAARD_ANS: (ERROR)");
                             return(1);
                         case NON_UNIQUE_1:
                         case NON_UNIQUE_2:
@@ -1571,12 +1547,10 @@ _RESTART:
                             return(REDUCE_GENUS);    
                         case NO_ERROR:
                             printf("\n\n                    After some level transformations:");
-                            fprintf(myout,"\n\n                    After some level transformations:");
                             Print_Realizability(Del_Only_Triv_Rel,ReadPres + 1);
                             if(UDV[This_Pres] == V2_ANNULUS_EXISTS)
                                 {
                                 printf("\n\n                    However, the realization is not unique because an annulus exists.");    
-                                fprintf(myout,"\n\n                    However, the realization is not unique because an annulus exists.");
                                 }
                             for(i = 0; i < NumCalled; i++)
                             for(j = 1; j <= NumRelators; j++) DisposeHandle((char **) SLR[i][j]);
@@ -1598,7 +1572,6 @@ _RESTART:
                     for(i = 0; i < NumCalled; i++)
                     for(j = 1; j <= NumRelators; j++) DisposeHandle((char **) SLR[i][j]);
                     printf("\n\n                    The Whitehead graph is nonplanar.");
-                    fprintf(myout,"\n\n                    The Whitehead graph is nonplanar.");
                     Fatal_Error();        
                     return(1);
                 case 4:
@@ -1606,8 +1579,6 @@ _RESTART:
                 case 5:
                     printf("\n\n          After some level transformations, ");
                     printf("the presentation contains a trivial generator.");
-                    fprintf(myout,"\n\n          After some level transformations, ");
-                    fprintf(myout,"the presentation contains a trivial generator.");        
                     if(!Do_Not_Reduce_Genus)
                         {
                         for(i = 0; i < NumCalled; i++)
@@ -1658,7 +1629,6 @@ _RESTART:
                 if(NumReTries1 <= 3 && !Do_Not_Reduce_Genus)
                     {
                     printf("\n\n                    Trying to reduce the genus of the presentation.");
-                    fprintf(myout,"\n\n                    Trying to reduce the genus of the presentation.");
                     }
                 }
             
@@ -1717,7 +1687,6 @@ _RESTART:
                     if(SNumRelators > NumRelators)
                         {
                         Realization_Warning(stdout);
-                        Realization_Warning(myout);
                         }
                     printf("\n\n                    This manifold is a lens space. HEEGAARD_ANS: (YES)");
                     fprintf(myout,"\n\n                    This manifold is a lens space.  HEEGAARD_ANS: (YES)");
@@ -1728,16 +1697,12 @@ _RESTART:
                     FoundPrimitive = FALSE;
                     printf("\n\n                    The program found relator(s) which are primitive");
                     printf("\n                    and deleted their consequences from the presentation.");
-                    fprintf(myout,"\n\n                    The program found relator(s) which are primitive");
-                    fprintf(myout,"\n                    and deleted their consequences from the presentation.");
                     }
                 if(FoundPower)
                     {
                     FoundPower = FALSE;
                     printf("\n\n                    The program found relator(s) which are proper powers");
                     printf("\n                    and deleted their consequences from the presentation.");
-                    fprintf(myout,"\n\n                    The program found relator(s) which are proper powers");
-                    fprintf(myout,"\n                    and deleted their consequences from the presentation.");
                     }
                 if(EmtyRel)
                     {
@@ -3572,16 +3537,13 @@ void Edit_MyOut(void)
 void Print_Realizability(int Del_Only_Triv_Rel, unsigned int WhichPres)
 {
     printf("\n\n                    The data appears consistent.");
-    fprintf(myout,"\n\n                    The data appears consistent.");            
     if(Del_Only_Triv_Rel)
         {
         printf("\n\n                    The initial presentation is realizable.   HEEGAARD_ANS: (YES)");
-        fprintf(myout,"\n\n                    The initial presentation is realizable.  HEEGAARD_ANS: (YES)");
         }
     else
         {    
         printf("\n\n                    Presentation %d is realizable.  HEEGAARD_ANS: (YES)",WhichPres);
-        fprintf(myout,"\n\n                    Presentation %d is realizable.  HEEGAARD_ANS: (YES)",WhichPres);
         }
 }
 
