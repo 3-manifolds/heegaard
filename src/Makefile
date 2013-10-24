@@ -9,6 +9,8 @@ OBJS2=Realizable1.o Heegaard2.o Heegaard3.o Heegaard4.o Realizable5.o Heegaard6.
 
 HDRS=Heegaard.h Heegaard_Dec.h
 
+CFLAGS = -Wall  -Wno-return-type -Wno-implicit-int -w
+
 heegaard: $(OBJS) $(HDRS)
 	cc -o heegaard -lm -lc $(OBJS)
 	cp heegaard ..
