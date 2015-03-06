@@ -1,10 +1,33 @@
 #include "Heegaard.h"
 #include "Heegaard_Dec.h"
 
-#define MAX_COUNT    5                    
-#define MTLK        100
+/****************************** function prototypes *****************************************
+L   30 Get_Diagrams(void)
+L 2003 Fill_A(int MyNumRelators)
+L 2055 Fill_AA(int NumRelators)
+L 2106 UpDate_Fill_A(void)
+L 2177 Find_Flow_A(int Input,int F1)
+L 2428 Find_Primitives(flag)
+L 2760 Connected_AJ3(i,k)
+L 2796 ComputeValences_A(void)
+L 2829 Do_Aut(Source,NumReps,NumRelators)
+L 2938 Do_Auts(Source, NumReps, NumRelators)
+L 3154 Freely_Reduce(void)
+L 3221 CheckPrimitivity(void)
+L 3251 Test_New_Pres(void)
+L 3809 Check_Level_Transformations(void)
+L 3896 Get_MinExp(unsigned int Source,int MyNumRelators)
+L 3970 Mark_As_Duplicate(Dup_On_File)
+L 3991 Mark_As_Found_Elsewhere(TheComp)
+L 4006 SetUp_TopOfChain(void)
+L 4030 Get_Relators_From_SUR(MyReadPres)		
+********************************************************************************************/
 
-Get_Diagrams()
+#define MAX_COUNT   5                    
+#define MTLK        100
+#define UDVX		2
+
+int Get_Diagrams()
 {
     char                    c;
     
@@ -24,11 +47,14 @@ Get_Diagrams()
                             SMicro_Print_F,
                             SRNumGenerators,
                             SRNumRelators,
-                            SRReadPres;
+                            SRReadPres,
+                            SSReadPres;
                              
     unsigned int            DoingDup,
                             Flag2,
                             ii,
+                            k,
+                            m,
                             MaxUDV,
                             MinNR,
                             NumBandSum,
@@ -40,20 +66,22 @@ Get_Diagrams()
                             SRLength,
                             SRSLength;                            
 
-    unsigned int Whitehead_Graph();
-    unsigned int Reduce_Genus();
+    unsigned int 			Whitehead_Graph();
+    unsigned int 			Reduce_Genus();
 
 /**********************************************************************************************
                             THIS IS THE BEGINNING OF THE MAIN PROGRAM.
 **********************************************************************************************/
 
-    OnStack = 0;                                                                                    
+    OnStack 	= 0; 
+    SSReadPres 	= 0;
+
     if(Input == RESET) goto _RESET;
     if(Input == REDUCE_GENUS)
         {
-        SReadPres = ReadPres;
-        Input = NORMAL;
-        SRError = TRUE;
+        SReadPres 	= ReadPres;
+        Input 		= NORMAL;
+        SRError 	= TRUE;
         goto _REDUCE_GENUS;
         }    
 _DUALIZE:                                                                                                                    
@@ -61,19 +89,19 @@ _DUALIZE:
         {
         if(NumGenerators != NumRelators)
             {
-            SaveMinima = TRUE;
-            Input = RESET;
+            SaveMinima 	= TRUE;
+            Input 		= RESET;
             goto _RESET;
             }
             
         /**************************************************************************************
-            If the program is here, then the manifold is closed, and we are going to swap
+            If Heegaard is here, then the manifold is closed, and we are going to swap
             relators and dual relators to see if reductions in length are possible.
         **************************************************************************************/
         
         for(i = 1; i <= NumRelators; i++)
             { 
-            Temp             = Relators[i];
+            Temp            = Relators[i];
             Relators[i]     = DualRelators[i];
             DualRelators[i] = Temp;    
             }
@@ -106,7 +134,7 @@ _BANDSUM:
         **************************************************************************************/
         
         SLength = Length;
-        if(OnlyReducingBandsums) GoingUp = FALSE;
+        if(OnlyReducingBandsums) GoingUp = GoingUpDown = FALSE;
         if(FormBandsums)
             New_Relator(TRUE);
         else
@@ -116,21 +144,17 @@ _BANDSUM:
             }
             
         /**************************************************************************************
-            If FormBandsums is false, the program is put into a mode in which it will attempt
+            If FormBandsums is false, Heegaard is put into a mode in which it will attempt
             to simplify a presentation only by dualizing (when that is possible) and by
             looking for primitives, proper powers and lens spaces.
         **************************************************************************************/    
         
         if(Minimum < BIG_NUMBER)
             {
-            if(OnlyReducingBandsums && Minimum >= 0L)
+            if(OnlyReducingBandsums && Minimum >= 0)
                 {
                 if(Micro_Print)
-                    {
                     printf("\n\nThere is no reducing bandsum for the current presentation.");
-                    if(Micro_Print_F)
-                        fprintf(myout,"\n\nThere is no reducing bandsum for the current presentation.");
-                    }
                 if(Boundary)
                     {
                     Length += Minimum;
@@ -143,12 +167,10 @@ _BANDSUM:
             SRError = TRUE;    
             LR[0] = GetHandleSize((char **) OutRelators[Word1]) - 1;
             i = Word1;
-            HLock((char **) OutRelators[i]);
             Word1 = abs(Compare(*OutRelators[i]));
-            HUnlock((char **) OutRelators[i]);
             if(Word1 == 0)
                 {
-                SysBeep(5);
+                if(Batch == FALSE) SysBeep(5);
                 printf("\n\nError in forming a bandsum. Relators are probably too long.");
                 SaveMinima = TRUE;
                 Input = RESET;
@@ -158,26 +180,24 @@ _BANDSUM:
                 {
                 LR[0] = GetHandleSize((char **) OutRelators[Word2]) - 1;
                 i = Word2;
-                HLock((char **) OutRelators[i]);
                 Word2 = abs(Compare(*OutRelators[i]));
-                HUnlock((char **) OutRelators[i]);
                 if(Word2 == 0)
                     {
-                    SysBeep(5);
+                    if(Batch == FALSE) SysBeep(5);
                     printf("\n\nError in forming a bandsum. Relators are probably too long.");
                     SaveMinima = TRUE;
                     Input = RESET;
                     goto _RESET;
                     }
                 }        
-            Temp             = Temp3;
+            Temp              = Temp3;
             Temp3             = Relators[Word1];    
-            Relators[Word1] = Relators[1];
-            Relators[1]     = Temp2;
+            Relators[Word1]   = Relators[1];
+            Relators[1]       = Temp2;
             Temp2             = Temp;
-            LR[Word1]        = LR[1];
-            LR[1]            = GetHandleSize((char **) Relators[1]) - 1;
-            OrigLength         = Length - GetHandleSize((char **) Temp3) + GetHandleSize((char **) Relators[1]);
+            LR[Word1]         = LR[1];
+            LR[1]             = GetHandleSize((char **) Relators[1]) - 1;
+            OrigLength        = Length - GetHandleSize((char **) Temp3) + GetHandleSize((char **) Relators[1]);
             Length            = OrigLength;
             if(Micro_Print) Micro_Print_Bandsum();
             }
@@ -186,17 +206,15 @@ _BANDSUM:
             Input = RESET;
             if(OnlyReducingBandsums) SaveMinima = TRUE;
             goto _RESET;
-            }
-        
+            }        
         From_BANDSUM ++;
-        NumBandSum ++;    
-        
+        NumBandSum ++;            
         if(EmtyRel)
             {
-            EmtyRel = FALSE;
+            EmtyRel 	= FALSE;
             Empty_Relator_BS();
-            SaveMinima = TRUE;
-            Input = RESET;
+            SaveMinima 	= TRUE;
+            Input 		= RESET;
             goto _RESET;
             }
         }
@@ -217,22 +235,20 @@ _BANDSUM:
                                 Save a copy of the current relators.
             **********************************************************************************/
             
-            SRLength = Length;
-            SRSLength = SLength;
-            SRNumRelators = NumRelators;
+            SRLength 		= Length;
+            SRSLength 		= SLength;
+            SRNumRelators 	= NumRelators;
             SRNumGenerators = NumGenerators;
-            SRError = FALSE;
-            SRReadPres = ReadPres;
+            SRError 		= FALSE;
+            SRReadPres 		= ReadPres;
             for(i = 1; i <= NumRelators; i++)
                 {
-                ReallocateHandle((char **) Copy_Of_Rel_2[i],GetHandleSize((char **) Relators[i]));
-                if((p = *Copy_Of_Rel_2[i]) == NULL)
-                    {
-                    SRError = TRUE;
-                    break;
-                    }
+                if(Copy_Of_Rel_2[i] != NULL) DisposeHandle((char **) Copy_Of_Rel_2[i]);
+                Copy_Of_Rel_2[i] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[i]));
+                if(Copy_Of_Rel_2[i] == NULL) Mem_Error();
+                p = *Copy_Of_Rel_2[i];    
                 q = *Relators[i];
-                while(*p++ = *q++) ;                    
+                while( (*p++ = *q++) ) ;                    
                 }    
             }
         else
@@ -247,11 +263,7 @@ _BANDSUM:
             case TOO_LONG:
             case CAN_NOT_DELETE:
                 if(Micro_Print)
-                    {
                     printf("\n\nUnable to delete a primitive.");
-                    if(Micro_Print_F)
-                        fprintf(myout,"\n\nUnable to delete a primitive.");
-                    }
                 if(TP[ReadPres]) TP[ReadPres] --;    
                 FoundPower = FoundPrimitive = LensSpace = EmtyRel = FALSE;
                 SaveMinima = TRUE;
@@ -262,7 +274,7 @@ _REDUCE_GENUS:
         if(LensSpace)
             {
             /********************************************************************************** 
-                If LensSpace = NOT_CONNECTED, the program found that a genus two diagram of a
+                If LensSpace = NOT_CONNECTED, Heegaard found that a genus two diagram of a
             lens space is not connected and split it into two genus one diagrams. Otherwise,
             LensSpace is true only when the routine Lens_Space() was passed a presentation of
             a lens space and succesfully discovered which lens space it was.
@@ -292,9 +304,6 @@ _REDUCE_GENUS:
                     UDV[NumFilled - 1] = DUPLICATE;                    
                     if(UDV[Dup_On_File] <= UNKNOWN)
                         {
-                        if(UDV[Dup_On_File] == ANNULUS_EXISTS
-                            || UDV[Dup_On_File] == V2_ANNULUS_EXISTS)
-                            DisposeHandle((char **) SUR[Dup_On_File][0]);   /* Can this happen? */
                         BDY[Dup_On_File] = 0;        
                         UDV[Dup_On_File] = KNOWN_LENS_SPACE;
                         LSP[Dup_On_File] = P;
@@ -313,10 +322,7 @@ _REDUCE_GENUS:
                     }                                
                 }            
             else if(UDV[h] <= UNKNOWN)
-                {
-                if(UDV[h] == ANNULUS_EXISTS
-                    || UDV[h] == V2_ANNULUS_EXISTS)
-                        DisposeHandle((char **) SUR[h][0]);   /* Can this happen? */                    
+                {                 
                 BDY[h]  = 0;    
                 UDV[h]  = KNOWN_LENS_SPACE;
                 LSP[h]  = P;
@@ -347,7 +353,7 @@ _REDUCE_GENUS:
     ******************************************************************************************/    
 
 _FIND_FLOW:    
-    if(i = Find_Flow_A(Input,FALSE))
+    if( (i = Find_Flow_A(Input,FALSE)) )
         {
         FoundPrimitive = FoundPower = FALSE;        
         if(i == 1 && Missing_Gen() == TOO_MANY_COMPONENTS) return(1);
@@ -365,21 +371,10 @@ _FIND_FLOW:
             printf("\n\n%lu automorphism(s) reduced the length to %lu.",
                 Automorphisms,Length);
             printf("\n\nThe presentation is currently:\n");
-            Print_Relators(Relators,NumRelators,stdout);
-            if(Micro_Print_F)
-                {    
-                fprintf(myout,"\n\n%lu automorphism(s) reduced the length to %lu.",
-                    Automorphisms,Length);
-                fprintf(myout,"\n\nThe presentation is currently:\n");
-                Print_Relators(Relators,NumRelators,myout);
-                }
+            Print_Relators(Relators,NumRelators);
             }
         else
-            {
-            printf("\n\nThe current set of relators has minimal length of %lu.",Length);
-            if(Micro_Print_F)
-                fprintf(myout,"\n\nThe current set of relators has minimal length of %lu.",Length);
-            }        
+            printf("\n\nThe current set of relators has minimal length of %lu.",Length);   
         }
         
     /******************************************************************************************
@@ -396,7 +391,7 @@ _FIND_FLOW:
             "lens-space" of some sort. Try to determine which "lens-space", and save a copy
             of the presentation.
         **************************************************************************************/    
-        
+         
         FoundPrimitive = FoundPower = FALSE;
         TP[ReadPres] = FALSE;
         if((DistinctNonEmpty = Delete_Dups()) > 1)
@@ -470,11 +465,8 @@ _FIND_FLOW:
                     UDV[NumFilled] = GENERIC_LENS_SPACE;
                     BDY[NumFilled] = FALSE;
                     if(Micro_Print)
-                        {
-                        printf("\n\nThe current presentation presents a manifold of Heegaard genus one.");
-                        if(Micro_Print_F)                        
-                            fprintf(myout,"\n\nThe current presentation presents a manifold of Heegaard genus one.");
-                        }                    
+                        printf("\n\nThe current presentation presents a manifold of Heegaard genus one."); 
+                    for(i = 0; i < NumFilled; i++) if((ComponentNum[i] == ComponentNum[ReadPres]) && UDV[i] < DONE) UDV[i] = DONE;                      
                     if(Dup_On_File < INFINITE)
                         {
                         if(Save_Pres(ReadPres,Dup_On_File,Length,1,4,0,0,0)) return(1);
@@ -487,11 +479,8 @@ _FIND_FLOW:
                     goto _RESET;                
                 }
             if(Micro_Print)
-                {
-                printf("\n\nThe current presentation presents a manifold of Heegaard genus one.");
-                if(Micro_Print_F)                
-                    fprintf(myout,"\n\nThe current presentation presents a manifold of Heegaard genus one.");
-                }                
+                printf("\n\nThe current presentation presents a manifold of Heegaard genus one."); 
+            for(i = 0; i < NumFilled; i++) if((ComponentNum[i] == ComponentNum[ReadPres]) && UDV[i] < DONE) UDV[i] = DONE;              
             if(Dup_On_File < INFINITE)
                 {
                 if(Save_Pres(ReadPres,Dup_On_File,Length,1,4,0,0,0)) return(1);
@@ -503,7 +492,7 @@ _FIND_FLOW:
             Mark_As_Found_Elsewhere(CurrentComp);                                        
             Input = RESET;
             goto _RESET;    
-            }
+            }   
         }
         
     /******************************************************************************************    
@@ -516,15 +505,11 @@ _FIND_FLOW:
         {
         FoundPrimitive = FoundPower = FALSE;        
         for(i = 1; i <= NumRelators; i++)
-            if(GetHandleSize((char **) Relators[i]) != 2L) break;
+            if(GetHandleSize((char **) Relators[i]) != 2) break;
         if(i > NumRelators && Delete_Dups() == NumRelators)
             {
             if(Micro_Print)
-                {
-                printf("\n\nThe current presentation presents the 3-Sphere.");
-                if(Micro_Print_F)                
-                    fprintf(myout,"\n\nThe current presentation presents the 3-Sphere.");
-                }            
+                printf("\n\nThe current presentation presents the 3-Sphere.");        
             if(On_File() == NumFilled)    
                 {
                 if(Dup_On_File < INFINITE)
@@ -610,29 +595,24 @@ _FIND_FLOW:
             if(TP[ReadPres]) TP[ReadPres] --;
             if(SRError == FALSE)
                 {
-                FoundPrimitive = FoundPower = FALSE;
-                Length = SRLength;
-                SLength = SRSLength;
-                NumRelators = SRNumRelators;
-                NumGenerators = SRNumGenerators;
-                Vertices = 2*NumGenerators;
-                ReadPres = SRReadPres;
+                FoundPrimitive 	= FoundPower = FALSE;
+                Length 			= SRLength;
+                SLength 		= SRSLength;
+                NumRelators 	= SRNumRelators;
+                NumGenerators 	= SRNumGenerators;
+                Vertices 		= 2*NumGenerators;
+                ReadPres 		= SRReadPres;
                 for(i = 1; i <= NumRelators; i++)
                     { 
                     Temp                 = Relators[i];
-                    Relators[i]         = Copy_Of_Rel_2[i];
+                    Relators[i]          = Copy_Of_Rel_2[i];
                     Copy_Of_Rel_2[i]     = Temp;    
                     }
                 SRError = 2;
                 if(Micro_Print)
                     {
                     printf("\n\nReverting to the presentation formed by the last bandsum:\n");
-                    Print_Relators(Relators,NumRelators,stdout);
-                    if(Micro_Print_F)
-                        {
-                        fprintf(myout,"\nReverting to the presentation formed by the last bandsum:\n");
-                        Print_Relators(Relators,NumRelators,myout);
-                        }
+                    Print_Relators(Relators,NumRelators);
                     }                                                
                 goto _FIND_FLOW;
                 }
@@ -647,38 +627,29 @@ _FIND_FLOW:
         not closed. We want to save a copy of the previous presentation P1, which has minimal
         length equal to SLength, provided the current presentation P2, which was obtained from
         P1 by forming a bandsum and then reducing via automorphisms, has minimal length greater
-        than or equal to SLength. (Note that the program automatically saves a copy of P1 in
+        than or equal to SLength. (Note that Heegaard automatically saves a copy of P1 in
         the array OutRelators[]. Note this copy is valid provided SRError != 3)
     ******************************************************************************************/    
         
-    if(Boundary && Input == BANDSUM && !GoingUp && SLength <= Length && SRError != 3)
+    if(Boundary && Input == BANDSUM && GoingDown && SLength <= Length && SRError != 3)
         {
         QUASI_PSEUDO_MINIMAL:
         Length = SLength;
         for(i = 1; i <= NumRelators; i++)
             {
-            Temp             = Relators[i];
-            Relators[i]     = OutRelators[i];
-            OutRelators[i]     = Temp;
+            Temp             	= Relators[i];
+            Relators[i]     	= OutRelators[i];
+            OutRelators[i]     	= Temp;
             }
         if(Micro_Print)
-            {
-            printf("\n\nRecalled the previous set of relators and made them current.\n");
-            if(Micro_Print_F)            
-                fprintf(myout,"\n\nRecalled the previous set of relators and made them current.\n ");
-            }            
+            printf("\n\nRecalled the previous set of relators and made them current.\n");        
         j = On_File();        
         if(j == NumFilled)
             {
             if(Micro_Print)
                 {
                 printf("\n\nSaving the current presentation, which has length %lu and is quasi-pseudo-minimal:\n",Length);
-                Print_Relators(Relators,NumRelators,stdout);
-                if(Micro_Print_F)
-                    {
-                    fprintf(myout,"\n\nSaving the current presentation, which has length %lu and is quasi-pseudo-minimal:\n",Length);    
-                    Print_Relators(Relators,NumRelators,myout);
-                    }
+                Print_Relators(Relators,NumRelators);
                 }                
             if(Dup_On_File < INFINITE)
                 {
@@ -733,11 +704,7 @@ _FIND_FLOW:
                      **************************************************************************/    
                      
                      if(Micro_Print)
-                        {
                         printf("\n\nNow rewriting the original presentation.");
-                        if(Micro_Print_F)
-                            fprintf(myout,"\n\nNow rewriting the original presentation.");
-                        }    
                              
                     BDY[NumFilled] = BDY[ReadPres];
                     UDV[NumFilled] = 0;
@@ -768,11 +735,7 @@ _FIND_FLOW:
                         if(Dup_On_File < INFINITE)
                             {
                             if(Micro_Print)
-                                {
-                                printf("\n\nReverted to the undualized presentation.");
-                                if(Micro_Print_F)
-                                    fprintf(myout,"\n\nReverted to the undualized presentation.");
-                                }                            
+                                printf("\n\nReverted to the undualized presentation.");                          
                              if(Save_Pres(ReadPres,Dup_On_File,Length,0,108,1,0,0)) return(1);                                
                              Mark_As_Duplicate(Dup_On_File);                             
                              }
@@ -789,11 +752,7 @@ _FIND_FLOW:
                             else
                                 {
                                 if(Micro_Print)
-                                    {
-                                    printf("\n\nReverted to the undualized presentation.");
-                                    if(Micro_Print_F)
-                                        fprintf(myout,"\n\nReverted to the undualized presentation.");
-                                    }                
+                                    printf("\n\nReverted to the undualized presentation.");          
                                 if(Save_Pres(ReadPres,NumFilled - 1,Length,0,108,1,0,0)) return(1);         
                                 BDY[NumFilled - 1] = BDY[ReadPres];
                                 UDV[NumFilled - 1] = 0;
@@ -813,11 +772,6 @@ _FIND_FLOW:
                             {
                             printf("\n\nThe current presentation is on file, but the dual presentation is not.");
                             printf("\nSwapping the current presentation with the dual presentation.");
-                            if(Micro_Print_F)
-                                {
-                                fprintf(myout,"\n\nThe current presentation is on file, but the dual presentation is not.");
-                                fprintf(myout,"\nSwapping the current presentation with the dual presentation.");
-                                }
                             }
                         if(Save_Pres(ReadPres,i,Length,1,108,1,0,0)) return(1);                        
                         if(PRIM[i] < 100) PRIM[i] += 100;
@@ -836,11 +790,7 @@ _FIND_FLOW:
                 ******************************************************************************/
         
                 if(Micro_Print)
-                    {
                     printf("\n\nReverted to the undualized presentation.");
-                    if(Micro_Print_F)
-                        fprintf(myout,"\n\nReverted to the undualized presentation.");
-                    }    
                 
                 if(PRIM[h] < 100) PRIM[h] += 100;        
                 Canonical_Rewrite(DualRelators,FALSE,FALSE);
@@ -889,11 +839,7 @@ _FIND_FLOW:
                     **************************************************************************/    
 
                     if(Micro_Print)
-                        {
                         printf("\n\nBoth the current presentation and its dual presentation are already on file.");
-                        if(Micro_Print_F)
-                            fprintf(myout,"\n\nBoth the current presentation and its dual presentation are already on file.");
-                        }
                                 
                     if(UDV[h] != SPLIT && UDV[h] != DUPLICATE) Daughters[h] = i;
                     if(PRIM[i] < 100) PRIM[i] += 100;
@@ -934,7 +880,7 @@ _FIND_FLOW:
         }
         
     /******************************************************************************************
-        Next, we do some crude checking designed to keep the program from getting "hung up" or
+        Next, we do some crude checking designed to keep Heegaard from getting "hung up" or
         otherwise spending too much time looking for something that may not be there.
     ******************************************************************************************/
                     
@@ -952,14 +898,14 @@ _FIND_FLOW:
                 }
             else
                 {
-                if(Length >= SLength || (NumBandSum > (Vertices << 4) && Minimum >= 0L))
+                if(Length >= SLength || (NumBandSum > (Vertices << 4) && Minimum >= 0))
                     {
                     Input = RESET;
                     goto _RESET;
                     }                
                 }
             }
-        else if(NumBandSum > (Vertices << 2) || (!GoingUp && SLength == Length))
+        else if(NumBandSum > (Vertices << 2) || (GoingDown && SLength == Length))
             {
             SaveMinima = TRUE;
             Input = RESET;
@@ -974,10 +920,10 @@ _FIND_FLOW:
 
 _RESET:                        
     /******************************************************************************************
-        When the program is finished processing one presentation and is ready for another it
+        When Heegaard is finished processing one presentation and is ready for another it
         jumps to or returns to this point. Here we update some of the running data kept by the
         program, select the next presentation to be investigated and set some of the flags and
-        parameters used by the rest of the program in processing a presentation.
+        parameters used by the rest of Heegaard in processing a presentation.
     ******************************************************************************************/
     
     if((c = mykbhit()) || Level_Interrupt)
@@ -987,139 +933,320 @@ _RESET:
             {
             #ifdef DEBUGGING
             case 'd':
-                fptr = stdout;
                 Debug();
                 break;
             case 'r':
-                Print_Relators(Relators,NumRelators,stdout);
+                Print_Relators(Relators,NumRelators);
                 break;
             #endif    
             case 's':
-                printf("\n  Status: TotalAuts %lu  BandSums %ld  NumDiagrams %ld  NumDualized %lu  ToDo %u",
-                    TotalAuts,Band_Sums,NumDiagrams,NumDualized,OnStack);
+            	if(Batch == FALSE)
+					{	
+					printf("\n  Status: NumFilled %u  Auts %lu  BandSums %ld  Diagrams %ld  Dualized %lu  Mergers %u ToDo %u",
+						NumFilled,TotalAuts,Band_Sums,NumDiagrams,NumDualized,Mergers,OnStack);
+					if(NumSepAnnuli == 1)
+						printf("\nHeegaard found one diagram containing a separating annulus. Scroll back for details.");  
+					if(NumSepAnnuli > 1)
+						printf("\nHeegaard found %u diagrams containing a separating annulus. Scroll back for details.",NumSepAnnuli); 
+					if(NumNonSepAnnuli == 1)
+						printf("\nHeegaard found one diagram containing a nonseparating annulus. Scroll back for details.");			       		
+					if(NumNonSepAnnuli > 1)
+						printf("\nHeegaard found %u diagrams containing a nonseparating annulus. Scroll back for details.",NumNonSepAnnuli);
+					if(NumRelTooLong == 1)
+						printf("\nDeleting primitives produced one relator which was too long. Scroll back for details.");				
+					if(NumRelTooLong > 1)
+						printf("\nDeleting primitives produced %u relators which were too long. Scroll back for details.",NumRelTooLong);	
+					if(CouldNotRemove == 1)
+						printf("\nHeegaard could not remove all pairs of separating vertices from one presentation. Scroll back for details.");			
+					if(CouldNotRemove > 1)
+						printf("\nHeegaard could not remove all pairs of separating vertices from %u presentations. Scroll back for details.",CouldNotRemove);								
+					if(NumErrors == 1)
+						printf("\nOne error was detected. Scroll back for details.");
+					if(NumErrors > 1)
+						printf("\n%lu errors were detected. Scroll back for details.",NumErrors);
+					}
+	            if(Batch)
+					{
+					printf("\n  Status: NumPresExamined %u  NumFilled %u  Auts %lu  BandSums %ld  Diagrams %ld  Dualized %lu  Mergers %u ToDo %u",
+						NumPresExamined,NumFilled,TotalAuts,Band_Sums,NumDiagrams,NumDualized,Mergers,OnStack);
+					if(NumSepAnnuli == 1)
+						printf("\nHeegaard found one diagram containing a separating annulus.");  
+					if(NumSepAnnuli > 1)
+						printf("\nHeegaard found %u diagrams containing a separating annulus.",NumSepAnnuli); 
+					if(NumNonSepAnnuli == 1)
+						printf("\nHeegaard found one diagram containing a nonseparating annulus.");			       		
+					if(NumNonSepAnnuli > 1)
+						printf("\nHeegaard found %u diagrams containing a nonseparating annulus.",NumNonSepAnnuli);
+					if(NumNotConnected == 1)
+						printf("\nHeegaard found one diagram that was not connected.");			       		
+					if(NumNotConnected > 1)
+						printf("\nHeegaard found %u diagrams that were not connected.",NumNotConnected);	
+					if(NumRelTooLong == 1)
+						printf("\nDeleting primitives produced one relator which was too long.");				
+					if(NumRelTooLong > 1)
+						printf("\nDeleting primitives produced %u relators which were too long.",NumRelTooLong);	
+					if(CouldNotRemove == 1)
+						printf("\nHeegaard could not remove all pairs of separating vertices from one presentation.");			
+					if(CouldNotRemove > 1)
+						printf("\nHeegaard could not remove all pairs of separating vertices from %u presentations.",CouldNotRemove);								
+					if(NumErrors == 1)
+						printf("\nOne error was detected.");
+					if(NumErrors > 1)
+						printf("\n%lu errors were detected.",NumErrors);	            
+				
+					}	
                 break;                        
             case ' ':
-                SMicro_Print = Micro_Print;
-                SMicro_Print_F = Micro_Print_F;
-                Micro_Print = FALSE;
-                Micro_Print_F = FALSE;
-                LIST_OPTIONS2:
-                printf("\n\nHIT 'c' TO CHANGE SIMPLIFICATION PARAMETERS.");
-                printf("\nHIT 'd' TO VIEW HEEGAARD DIAGRAMS OF THESE PRESENTATIONS.");
-                printf("\nHIT 'p' TO PRUNE THE SEARCH TREE.");
-                printf("\nHIT 't' TO TERMINATE THIS RUN.");
-                printf("\nHIT 'v' TO REVIEW THE PRESENTATIONS.");
-                if(NumFilled > 1)
-                    {
-                    printf("\nHIT 'w' TO SORT THE PRESENTATIONS NOW IN MEMORY BY SUMMAND NUMBER,");
-                    printf("\n        NUMGENERATORS, NUMRELATORS, LENGTH AND 'LEXICOGRAPHIC' ORDER.");
-                    }
-                printf("\nHIT 'x' TO TOGGLE MICRO_PRINTING ON AND OFF.");
-                printf("\nHIT 'r' TO RESUME RUNNING THIS EXAMPLE.");
-                GET_RESPONSE:
-                switch(WaitkbHit())
-                    {
-                    case 'c':
-                        printf("\n");
-                        Get_Simplification_Parameters_From_User(TRUE,TRUE);
-                        break;
-                    case 'd':
-                        Display_Diagrams();
-                        SaveMinima = TRUE;
-                        Input = RESET;
-                        goto LIST_OPTIONS2;                        
-                    case 'p':
-                        Prune_Search_Tree();
-                        SaveMinima = TRUE;
-                        Input = RESET;
-                        goto LIST_OPTIONS2;
-                    case 'r':
-                        break;    
-                    case 't':
-                        return(1);
-                    case 'v':
-                        Report(Band_Sums,NumDiagrams,OnStack,0,0,0,1,0,1,0);
-                        SaveMinima = TRUE;
-                        Input = RESET;
-                        goto LIST_OPTIONS2;
-                    case 'w':
-                        printf("\n\n     Sorting presentations. . . .");
-                        Sort_Presentations_In_Memory();
-                        SaveMinima = TRUE;
-                        Input = RESET;
-                        goto LIST_OPTIONS2;    
-                    case 'x':
-                        printf("\n\n    HIT 'b' TO MICRO_PRINT TO BOTH THE SCREEN AND 'Heegaard_Results'.");
-                        printf("\n    HIT 's' TO MICRO_PRINT ONLY TO THE SCREEN.");
-                        if(SMicro_Print)
-                            printf("\n    HIT 'o' TO TURN MICRO_PRINTING COMPLETELY OFF.");        
-                        GET_RESPONSE1:
-                        switch(WaitkbHit())
-                            {
-                            case 'b':
-                                SMicro_Print = TRUE;
-                                SMicro_Print_F = TRUE;
-                                break;
-                            case 's':
-                                SMicro_Print = TRUE;
-                                SMicro_Print_F = FALSE;
-                                break;                            
-                            case 'o':
-                                if(!SMicro_Print)
-                                    {
-                                    SysBeep(5);
-                                    goto GET_RESPONSE1;                                
-                                    }
-                                SMicro_Print = FALSE;
-                                SMicro_Print_F = FALSE;
-                                break;                        
-                            default:
-                                SysBeep(5);
-                                goto GET_RESPONSE1;
-                            }    
-                        break;                
-                    default:
-                        SysBeep(5);
-                        goto GET_RESPONSE;    
-                    }
+            	if(Batch == FALSE)
+					{
+					printf("\n\n  Status: NumFilled %u  Auts %lu  BandSums %ld  Diagrams %ld  Dualized %lu Sep_Vert_Slides %lu Mergers %u ToDo %u",
+						NumFilled,TotalAuts,Band_Sums,NumDiagrams,NumDualized,Num_Level_Slides,Mergers,OnStack);
+					if(NumSepAnnuli == 1)
+						printf("\nHeegaard found one diagram containing a separating annulus. Scroll back for details.");  
+					if(NumSepAnnuli > 1)
+						printf("\nHeegaard found %u diagrams containing a separating annulus. Scroll back for details.",NumSepAnnuli); 
+					if(NumNonSepAnnuli == 1)
+						printf("\nHeegaard found one diagram containing a nonseparating annulus. Scroll back for details.");			       		
+					if(NumNonSepAnnuli > 1)
+						printf("\nHeegaard found %u diagrams containing a nonseparating annulus. Scroll back for details.",NumNonSepAnnuli);
+					if(NumRelTooLong == 1)
+						printf("\nDeleting primitives produced one relator which was too long. Scroll back for details.");				
+					if(NumRelTooLong > 1)
+						printf("\nDeleting primitives produced %u relators which were too long. Scroll back for details.",NumRelTooLong);	
+					if(CouldNotRemove == 1)
+						printf("\nHeegaard could not remove all pairs of separating vertices from one presentation. Scroll back for details.");			
+					if(CouldNotRemove > 1)
+						printf("\nHeegaard could not remove all pairs of separating vertices from %u presentations. Scroll back for details.",CouldNotRemove);								
+					if(NumErrors == 1)
+						printf("\nOne error was detected. Scroll back for details.");
+					if(NumErrors > 1)
+						printf("\n%lu errors were detected. Scroll back for details.",NumErrors);
+					}
+				if(Batch)
+					{
+					printf("\n\n  Status: NumPresExamined %u  NumFilled %u  Auts %lu  BandSums %ld  Diagrams %ld  Dualized %lu Sep_Vert_Slides %lu Mergers %u ToDo %u",
+						NumPresExamined,NumFilled,TotalAuts,Band_Sums,NumDiagrams,NumDualized,Num_Level_Slides,Mergers,OnStack);
+					if(NumSepAnnuli == 1)
+						printf("\nHeegaard found one diagram containing a separating annulus.");  
+					if(NumSepAnnuli > 1)
+						printf("\nHeegaard found %u diagrams containing a separating annulus.",NumSepAnnuli); 
+					if(NumNonSepAnnuli == 1)
+						printf("\nHeegaard found one diagram containing a nonseparating annulus.");			       		
+					if(NumNonSepAnnuli > 1)
+						printf("\nHeegaard found %u diagrams containing a nonseparating annulus.",NumNonSepAnnuli);
+					if(NumNotConnected == 1)
+						printf("\nHeegaard found one diagram that was not connected.");			       		
+					if(NumNotConnected > 1)
+						printf("\nHeegaard found %u diagrams that were not connected.",NumNotConnected);						
+					if(NumRelTooLong == 1)
+						printf("\nDeleting primitives produced one relator which was too long.");				
+					if(NumRelTooLong > 1)
+						printf("\nDeleting primitives produced %u relators which were too long.",NumRelTooLong);	
+					if(CouldNotRemove == 1)
+						printf("\nHeegaard could not remove all pairs of separating vertices from one presentation.");			
+					if(CouldNotRemove > 1)
+						printf("\nHeegaard could not remove all pairs of separating vertices from %u presentations.",CouldNotRemove);								
+					if(NumErrors == 1)
+						printf("\nOne error was detected.");
+					if(NumErrors > 1)
+						printf("\n%lu errors were detected.",NumErrors);					
+					}
+				if(Batch == FALSE)
+					{		
+					LIST_OPTIONS2:
+					printf("\n\nHIT 'c' TO CHANGE SIMPLIFICATION PARAMETERS.");
+					printf("\nHIT 'd' TO VIEW HEEGAARD DIAGRAMS OF THESE PRESENTATIONS.");
+					printf("\nHIT 't' TO TERMINATE THIS RUN.");
+					printf("\nHIT 'v' TO REVIEW THE PRESENTATIONS.");
+					if(NumFilled > 1)
+						{
+						printf("\nHIT 'w' TO SORT THE PRESENTATIONS NOW IN MEMORY BY SUMMAND NUMBER,");
+						printf("\n        NUMGENERATORS, NUMRELATORS, LENGTH AND 'LEXICOGRAPHIC' ORDER.");
+						}
+					printf("\nHIT 'x' TO TOGGLE MICRO_PRINTING ON AND OFF.");
+					printf("\nHIT 'r' TO RESUME RUNNING THIS EXAMPLE.");
+					GET_RESPONSE:               
+					switch(WaitkbHit())
+						{
+						case 'c':
+							printf("\n");
+							Get_Simplification_Parameters_From_User(TRUE,TRUE);
+							break;
+						case 'd':
+							Display_Diagrams();
+							SaveMinima = TRUE;
+							Input = RESET;
+							goto LIST_OPTIONS2; 
+						case 'r':
+							break;    
+						case 't':
+							return(1);
+						case 'v':
+							Report(Band_Sums,NumDiagrams,OnStack,0,0,0,1,0,1,NULL);
+							SaveMinima = TRUE;
+							Input = RESET;
+							goto LIST_OPTIONS2;
+						case 'w':
+							printf("\n\n     Sorting presentations. . . .");
+							Sort_Presentations_In_Memory(1);
+							SaveMinima = TRUE;
+							Input = RESET;
+							goto LIST_OPTIONS2;    
+						case 'x':
+							printf("\n    HIT 's' TO MICRO_PRINT TO THE SCREEN.");
+							if(SMicro_Print)
+								printf("\n    HIT 'o' TO TURN MICRO_PRINTING COMPLETELY OFF.");        
+							GET_RESPONSE1:                      
+							switch(WaitkbHit())
+								{
+								case 's':
+									SMicro_Print = TRUE;
+									SMicro_Print_F = FALSE;
+									break;                            
+								case 'o':
+									if(!SMicro_Print)
+										{
+										if(Batch == FALSE) SysBeep(5);
+										goto GET_RESPONSE1;                                
+										}
+									SMicro_Print = FALSE;
+									SMicro_Print_F = FALSE;
+									break;                        
+								default:
+									SysBeep(5);
+									goto GET_RESPONSE1;
+								}    
+							break;                
+						default:
+							SysBeep(5);
+							goto GET_RESPONSE;    
+						}
+					Micro_Print 	= SMicro_Print;
+					Micro_Print_F 	= SMicro_Print_F;	
+					}
+				if(Batch)
+					{
+					printf("\n\nHIT 't' TO TERMINATE THIS RUN.");
+					printf("\nHIT 'r' TO RESUME RUNNING THIS EXAMPLE.");
+					GET_RESPONSE3:               
+					switch(WaitkbHit())
+						{
+						case 'r':
+							break;    
+						case 't':
+							return(INTERRUPT);            
+						default:
+							SysBeep(5);
+							goto GET_RESPONSE3;    
+						}					
+					}		
                 printf("\n\n     Resumed running. . . .\n");
                 NoReport = TRUE;
-                Micro_Print = SMicro_Print;
-                Micro_Print_F = SMicro_Print_F;
                 break;            
             }
         }    
                     
     if(Input == RESET)
         {
-        if(SaveMinima || ++Count >= MAX_COUNT)                                                
+        if(SaveMinima || ++Count >= MAX_COUNT || Check_If_HS_Rep == 7)                                                
             {
-            if(NumFilled >= MAX_SAVED_PRES - 3)
+            if(NumFilled >= (MAX_SAVED_PRES - 3) || Check_If_HS_Rep == 7 || (Batch && NumFilled >= MyMaxSavedPres) )
                 {
-                SysBeep(5);
-                printf("\n\nThe program has saved the maximum number of presentations presently allowed.");
-                return(STOP);
+                for(i = j = k = m = 0; i < NumFilled; i++) 
+					{
+					j += SURNumX[i];
+					k += NumLoops[i];
+					if(PRIM[i] == 6 || PRIM[i] == 106) m++;
+					}
+                if(Check_If_HS_Rep != 7)
+                	{
+                	if(Batch == FALSE) 
+                		{
+                		SysBeep(5);
+                		printf("\n\nHeegaard has saved the maximum number of presentations presently allowed.");
+                		}
+                	else
+                		printf("\n\nHeegaard has saved %u presentations, the maximum number allowed for this run.",MyMaxSavedPres);	
+                	}
+                Check_If_HS_Rep = FALSE;	
+                printf("\n\nHeegaard performed %lu automorphism(s), %lu Sep-Vert-Slide(s), examined %ld bandsum(s),",
+            		TotalAuts,Num_Level_Slides,Band_Sums);
+        		printf("\nexamined %ld diagram(s), dualized %lu diagram(s), Hits %u, Loops %u, Mergers %u,",
+            		NumDiagrams,NumDualized,j,k,Mergers);
+        		printf("\nNumFP %u, ToDo %u.",m,OnStack);
+        		if(Batch == FALSE)
+        			{
+					if(NumSepAnnuli == 1)
+						printf("\nHeegaard found one diagram containing a separating annulus. Scroll back for details."); 
+					if(NumSepAnnuli > 1)
+						printf("\nHeegaard found %u diagrams containing a separating annulus. Scroll back for details.",NumSepAnnuli);
+					if(NumNonSepAnnuli == 1)
+						printf("\nHeegaard found one diagram containing a nonseparating annulus. Scroll back for details.");			       		
+					if(NumNonSepAnnuli > 1)
+						printf("\nHeegaard found %u diagrams containing a nonseparating annulus. Scroll back for details.",NumNonSepAnnuli);
+					if(NumRelTooLong == 1)
+						printf("\nDeleting primitives produced one relator which was too long. Scroll back for details.");
+					if(NumRelTooLong > 1)
+						printf("\nDeleting primitives produced %u relators which were too long. Scroll back for details.",NumRelTooLong);
+					if(CouldNotRemove == 1)
+						printf("\nHeegaard could not remove all pairs of separating vertices from one presentation. Scroll back for details.");			
+					if(CouldNotRemove > 1)
+						printf("\nHeegaard could not remove all pairs of separating vertices from %u presentations. Scroll back for details.",CouldNotRemove);
+					if(NumErrors == 1)
+						printf("\nOne error was detected. Scroll back for details.");
+					if(NumErrors > 1)
+						printf("\n%lu errors were detected. Scroll back for details.",NumErrors);
+	            	}
+	            if(Batch)
+	            	{
+					if(NumSepAnnuli == 1)
+						printf("\nHeegaard found one diagram containing a separating annulus."); 
+					if(NumSepAnnuli > 1)
+						printf("\nHeegaard found %u diagrams containing a separating annulus.",NumSepAnnuli);
+					if(NumNonSepAnnuli == 1)
+						printf("\nHeegaard found one diagram containing a nonseparating annulus.");			       		
+					if(NumNonSepAnnuli > 1)
+						printf("\nHeegaard found %u diagrams containing a nonseparating annulus.",NumNonSepAnnuli);
+					if(NumNotConnected == 1)
+						printf("\nHeegaard found one diagram that was not connected.");			       		
+					if(NumNotConnected > 1)
+						printf("\nHeegaard found %u diagrams that were not connected.",NumNotConnected);						
+					if(NumRelTooLong == 1)
+						printf("\nDeleting primitives produced one relator which was too long.");
+					if(NumRelTooLong > 1)
+						printf("\nDeleting primitives produced %u relators which were too long.",NumRelTooLong);
+					if(CouldNotRemove == 1)
+						printf("\nHeegaard could not remove all pairs of separating vertices from one presentation.");			
+					if(CouldNotRemove > 1)
+						printf("\nHeegaard could not remove all pairs of separating vertices from %u presentations.",CouldNotRemove);
+					if(NumErrors == 1)
+						printf("\nOne error was detected.");
+					if(NumErrors > 1)
+						printf("\n%lu errors were detected.",NumErrors);
+					printf("\n");	
+	            	}	
+	            return(STOP);
                 }
-            if(BytesUsed > BytesAvailable)
+            if((Batch == FALSE) && (BytesUsed > BytesAvailable))
                 {
                 if(UserSaidQuit)
                     {
                     UserSaidQuit = FALSE;
                     return(STOP);
                     }
-                if(UserSaidQuit = User_Says_Quit())
+                if( (UserSaidQuit = User_Says_Quit()) )
                     {
                     UserSaidQuit = FALSE;
                     return(STOP);
                     }
                 }
             RESTART:            
-            Count         = 0;
-            SaveMinima     = FALSE;
-            NumBandSum     = 0;
-            TheComp     = 0;
-            DoingDup     = FALSE;
-            for(h = i = 0,j = VERTICES,MinLength = BIG_NUMBER; i < NumFilled; i++)
+            Count         	= 0;
+            SaveMinima     	= FALSE;
+            NumBandSum     	= 0;
+            TheComp     	= 0;
+            DoingDup     	= FALSE;            
+			if(DepthFirstSearch) for(h = i = 0,j = VERTICES,MinLength = BIG_NUMBER; i < NumFilled; i++)
                 {
                 if(UDV[i] == SPLIT && CS[ComponentNum[i]] < 2)
                     {
@@ -1161,36 +1288,36 @@ _RESET:
                             }
                         if(NG[ii] < j)
                             {
-                            j             = NG[ii];
-                            MinNR        = NR[ii];
-                            MinLength     = SURL[ii];
-                            MaxUDV         = UDV[ii];
-                            ReadPres     = ii;
+                            j             	= NG[ii];
+                            MinNR       	= NR[ii];
+                            MinLength     	= SURL[ii];
+                            MaxUDV         	= UDV[ii];
+                            ReadPres     	= ii;
                             }
                         else
                         if(NG[ii] == j)
                             {
                             if(NR[ii] < MinNR)
                                 {
-                                MinNR         = NR[ii];
-                                MinLength     = SURL[ii];
-                                MaxUDV         = UDV[ii];
-                                ReadPres     = ii;
+                                MinNR      	= NR[ii];
+                                MinLength  	= SURL[ii];
+                                MaxUDV     	= UDV[ii];
+                                ReadPres   	= ii;
                                 }
                             else
                             if(NR[ii] == MinNR)
                                 {
                                 if(SURL[ii] < MinLength)
                                     {
-                                    MinLength     = SURL[ii];
-                                    MaxUDV         = UDV[ii];
-                                    ReadPres     = ii;
+                                    MinLength  	= SURL[ii];
+                                    MaxUDV     	= UDV[ii];
+                                    ReadPres   	= ii;
                                     }
                                 else
                                 if(SURL[ii] == MinLength && UDV[ii] < MaxUDV)
                                     {
-                                    MaxUDV         = UDV[ii];
-                                    ReadPres     = ii;
+                                    MaxUDV     	= UDV[ii];
+                                    ReadPres   	= ii;
                                     }
                                 }    
                             }    
@@ -1211,36 +1338,36 @@ _RESET:
                         }
                     if(NG[i] < j)
                         {
-                        j             = NG[i];
-                        MinNR        = NR[i];
-                        MinLength     = SURL[i];
-                        MaxUDV         = UDV[i];
-                        ReadPres     = i;
+                        j          	= NG[i];
+                        MinNR     	= NR[i];
+                        MinLength  	= SURL[i];
+                        MaxUDV     	= UDV[i];
+                        ReadPres   	= i;
                         }
                     else
                     if(NG[i] == j)
                         {
                         if(NR[i] < MinNR)
                             {
-                            MinNR         = NR[i];
-                            MinLength     = SURL[i];
-                            MaxUDV         = UDV[i];
-                            ReadPres     = i;
+                            MinNR      	= NR[i];
+                            MinLength  	= SURL[i];
+                            MaxUDV     	= UDV[i];
+                            ReadPres   	= i;
                             }
                         else
                         if(NR[i] == MinNR)
                             {
                             if(SURL[i] < MinLength)
                                 {
-                                MinLength     = SURL[i];
-                                MaxUDV         = UDV[i];
-                                ReadPres     = i;
+                                MinLength  	= SURL[i];
+                                MaxUDV     	= UDV[i];
+                                ReadPres   	= i;
                                 }
                             else
                             if(SURL[i] == MinLength && UDV[i] < MaxUDV)
                                 {
-                                MaxUDV         = UDV[i];
-                                ReadPres     = i;
+                                MaxUDV     	= UDV[i];
+                                ReadPres  	= i;
                                 }
                             }    
                         }    
@@ -1248,10 +1375,93 @@ _RESET:
                 else
                     if(UDV[i] == 2*NG[i]) UDV[i] = DONE;
                 }    
-            OnStack = h - 1;
+                            
+            if(BreadthFirstSearch) for(i = SSReadPres; i < NumFilled; i++)
+                {
+                if(UDV[i] == SPLIT && CS[ComponentNum[i]] < 2)
+                    {
+                    jj = ComponentNum[Daughters[i]];
+                    hh = jj + NCS[i];
+                    for( ; jj < hh && CS[jj] == 2; jj++) ;
+                    if(jj >= hh)
+                        {
+                        Mark_As_Found_Elsewhere(ComponentNum[i]);
+                        goto RESTART;
+                        }
+                    }    
+                if(UDV[i] == DUPLICATE)
+                    {
+                    ii = Daughters[i];
+                    if(CS[ComponentNum[i] + 1] == 3 &&
+                        (CBC[ComponentNum[ii]][0] < BDRY_UNKNOWN ||
+                        CBC[ComponentNum[i]][0] < BDRY_UNKNOWN))
+                        {
+                        hh = ComponentNum[i];
+                        jj = ComponentNum[ii];
+                        if(CBC[jj][0] != BDRY_UNKNOWN && CBC[hh][0] == BDRY_UNKNOWN)
+                        for(kk = 0; (CBC[hh][kk] = CBC[jj][kk]) < BDRY_UNKNOWN; kk++) ;    
+                        if(MG_Bdry_Comp_Data(i)) goto RESTART;
+                        }                    
+                    if(UDV[ii] > UNKNOWN && CS[ComponentNum[i]] < 2)
+                        {
+                        Mark_As_Found_Elsewhere(ComponentNum[i]);
+                        goto RESTART;
+                        }
+                    if(UDV[ii] < UDVX*NG[ii])
+                        {
+                        if(ComponentNum[i] < TheComp) continue;
+                        if(ComponentNum[i] > TheComp)
+                            {
+                            TheComp = ComponentNum[i];
+                            DoingDup = TRUE;
+                            }
+                      	if(SURL[ii] == 0) UDV[ii] = DONE;
+                        SSReadPres = ReadPres = ii;
+                        if(ReadPres > i) SSReadPres = i;
+                        break;  
+                        }
+                    if(UDV[ii] == UDVX*NG[ii]) UDV[ii] = DONE;
+                    continue;
+                    } 
+                if(NumFilled <= 32)
+                	{ 
+                	if(UDV[i] < 64*UDVX*NG[i])
+						{
+						if(ComponentNum[i] < TheComp && !DoingDup) continue;
+						if(ComponentNum[i] > TheComp)
+							{
+							TheComp = ComponentNum[i];
+							DoingDup = FALSE;
+							} 
+						if(SURL[i] == 0) UDV[i] = DONE;                     
+						SSReadPres = ReadPres = i;               	
+						break;
+						}
+					if(UDV[i] >= 64*UDVX*NG[i] && UDV[i] < DONE) UDV[i] = DONE;
+                	}
+                else
+                	{       
+					if(UDV[i] < UDVX*NG[i])
+						{
+						if(ComponentNum[i] < TheComp && !DoingDup) continue;
+						if(ComponentNum[i] > TheComp)
+							{
+							TheComp = ComponentNum[i];
+							DoingDup = FALSE;
+							} 
+						if(SURL[i] == 0) UDV[i] = DONE;                     
+						SSReadPres = ReadPres = i;               	
+						break;
+						}
+					if(UDV[i] >= UDVX*NG[i] && UDV[i] < DONE) UDV[i] = DONE;
+                	}
+                }
+                        
+            if(BreadthFirstSearch) OnStack = NumFilled - SSReadPres - 1;
+            if(DepthFirstSearch) OnStack = h - 1;
             SReadPres = ReadPres;
-                                        
-            if(j == VERTICES && MinLength == BIG_NUMBER)
+            
+			if((BreadthFirstSearch && i == NumFilled) || (DepthFirstSearch && j == VERTICES && MinLength == BIG_NUMBER))            
                 {
                 OnStack = 0;
                 if(Find_All_Min_Pres) switch(Check_Level_Transformations())
@@ -1268,18 +1478,19 @@ _RESET:
                         From_BANDSUM = 0;    
                         From_DUALIZE = 0;
                         goto _REDUCE_GENUS;
-                    }        
-                SysBeep(5);
-                Report(Band_Sums,NumDiagrams,OnStack,Starting_Pres,0,0,1,0,1,0);
-                return(1);
+                    }	          
+				if(Batch == FALSE) SysBeep(5);
+				if(Batch != 10 && Batch != 11 && Batch != 53)
+				Report(Band_Sums,NumDiagrams,OnStack,Starting_Pres,0,0,1,0,1,NULL);
+				return(1);
                 }
                                 
-            CurrentComp         = ComponentNum[ReadPres];
-            NumGenerators         = NG[ReadPres];
+            CurrentComp       	= ComponentNum[ReadPres];
+            NumGenerators      	= NG[ReadPres];
             NumRelators         = NR[ReadPres];
-            Vertices             = NumGenerators << 1;
+            Vertices          	= NumGenerators << 1;
             if(SURL[ReadPres] < MTLK)
-                MaxTotalLength     = SURL[ReadPres] << 4;
+                MaxTotalLength 	= SURL[ReadPres] << 4;
             else
                 MaxTotalLength  = SURL[ReadPres] << 3;    
                         
@@ -1308,7 +1519,8 @@ _RESET:
                 }
                 
             From_BANDSUM = 0;    
-            From_DUALIZE = 0;    
+            From_DUALIZE = 0; 
+            SSSReadPres = ReadPres;   
             
             /**********************************************************************************
                 If this is a new presentation, as indicated by the fact that UDV[ReadPres] =
@@ -1326,20 +1538,20 @@ _RESET:
                     case TOO_MANY_COMPONENTS:    
                         return(STOP);
                     case DUALIZE:
-                        Input = DUALIZE;
+                        Input 			= DUALIZE;
                         goto _DUALIZE;
                     case BANDSUM:
-                        Input = BANDSUM;
-                        From_BANDSUM = 0;
-                        NumBandSum = 0;
+                        Input 			= BANDSUM;
+                        From_BANDSUM 	= 0;
+                        NumBandSum 		= 0;
                         goto _BANDSUM;    
                     case REDUCE_GENUS:
-                        Input = NORMAL;
-                        SRError = TRUE;
+                        Input 			= NORMAL;
+                        SRError 		= TRUE;
                         goto _REDUCE_GENUS;
                     case RESET:
-                        SaveMinima = TRUE;
-                        Input = RESET;
+                        SaveMinima 		= TRUE;
+                        Input 			= RESET;
                         goto _RESET;    
                     }
                 }            
@@ -1347,19 +1559,28 @@ _RESET:
             if(Boundary)
                 {
                 if(UDV[ReadPres])
+                    {
                     GoingUp = TRUE;
+                    GoingUpDown = GoingDown = FALSE;
+                    }
                 else
-                    GoingUp = FALSE;
+                    {
+                    GoingDown = TRUE;
+                    GoingUp = GoingUpDown = FALSE;
+                    }
                 }
             else
-                GoingUp = TRUE;    
+                {
+                GoingUp = TRUE;
+                GoingUpDown = GoingDown = FALSE;
+                }   
             UDV[ReadPres] ++;
             
             if(ER[ReadPres] < 0 && NumGenerators > 1)
                 {
                 /******************************************************************************
                     Since ER[ReadPres] < 0, this presentation contains redundant relator(s).
-                    Check whether the program can find a new way to delete one or more of these
+                    Check whether Heegaard can find a new way to delete one or more of these
                     relators.
                 ******************************************************************************/
                 
@@ -1370,8 +1591,7 @@ _RESET:
                     SaveMinima = TRUE;
                     Input = RESET;
                     goto _RESET;                    
-                    }
-    
+                    }  
                 Fill_A(NumRelators);
                 NumDiagrams ++;
                 DrawingDiagrams = TRUE;
@@ -1423,16 +1643,12 @@ _RESET:
                         break;
                     case FATAL_ERROR:
                         Fatal_Error();    
-                        Report(Band_Sums,NumDiagrams,OnStack,Starting_Pres,0,0,1,0,1,0);    
+                        Report(Band_Sums,NumDiagrams,OnStack,Starting_Pres,0,0,1,0,1,NULL);
                         return(STOP);
                     case TOO_LONG:
                     case CAN_NOT_DELETE:
                         if(Micro_Print)
-                            {
                             printf("\n\nUnable to delete a primitive.");
-                            if(Micro_Print_F)
-                                fprintf(myout,"\n\nUnable to delete a primitive.");
-                            }
                         TP[ReadPres] --;                            
                         FoundPrimitive = FoundPower = LensSpace = EmtyRel = FALSE;
                         SaveMinima = TRUE;
@@ -1481,33 +1697,26 @@ _RESET:
             }                    
         else    
             {
-            NumGenerators     = NG_TOC;
+            NumGenerators  	= NG_TOC;
             NumRelators     = NR_TOC;
-            Vertices         = 2*NG_TOC;
-            Length             = TOCLength;
+            Vertices       	= 2*NG_TOC;
+            Length         	= TOCLength;
             for(i = 1; i <= NumRelators; i++)
                 {
-                ReallocateHandle((char **) Relators[i],GetHandleSize((char **) TopOfChain[i]));
-                if((q = *Relators[i]) == NULL)
-                    {
-                    SaveMinima = TRUE;
-                    Input = RESET;
-                    goto _RESET;
-                    }                
+                if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+                Relators[i] = (unsigned char **) NewHandle(GetHandleSize((char **) TopOfChain[i]));
+                if(Relators[i] == NULL) Mem_Error();
+                q = *Relators[i];                   
                 p = *TopOfChain[i];
-                while(*q++ = *p++) ;        
+                while( (*q++ = *p++) ) ;        
                 }
-            GoingUp     = TRUE;    
-            NumBandSum     = 0;
+            GoingUp     = TRUE;
+            GoingUpDown = GoingDown = FALSE;   
+            NumBandSum 	= 0;
             if(Micro_Print)
                 {
                 printf("\n\nSet Relators[] = TopOfChain[], Length = %lu:\n",Length);
-                Print_Relators(Relators,NumRelators,stdout);
-                if(Micro_Print_F)
-                    {
-                    fprintf(myout,"\n\nSet Relators[] = TopOfChain[], Length = %lu:\n",Length);
-                    Print_Relators(Relators,NumRelators,myout);
-                    }
+                Print_Relators(Relators,NumRelators);
                 }    
             }        
         Fill_A(NumRelators);
@@ -1521,11 +1730,11 @@ _RESET:
         Heegaard diagram.
     ******************************************************************************************/    
     
-    if(Flag2 = Whitehead_Graph())
+    if( (Flag2 = Whitehead_Graph()) )
         {
         /**************************************************************************************
             If Whitehead_Graph() returns a non-zero value, it indicates either a fatal error
-            of some sort has occured, or the program had some difficulty finding the
+            of some sort has occured, or Heegaard had some difficulty finding the
             diagram. The actual return value indicates what the problem was.
         **************************************************************************************/    
         
@@ -1534,10 +1743,7 @@ _RESET:
             case NON_PLANAR:
             case FATAL_ERROR:
                 if(Flag2 == NON_PLANAR)
-                    {
                     fprintf(stdout,"\n\n                    The Whitehead graph is nonplanar.");
-                    fprintf(myout,"\n\n                    The Whitehead graph is nonplanar.");
-                    }
                 Fatal_Error();        
                 return(1);
             case TOO_LONG:
@@ -1559,7 +1765,7 @@ _RESET:
             case SEP_PAIRS:
             
             /**********************************************************************************
-                We are in a descending chain of diagrams, and the program cannot determine
+                We are in a descending chain of diagrams, and Heegaard cannot determine
                 what the diagram associated with the current presentation should be.
                 So this descending chain must be terminated. However we want to save this
                 presentation if it is not already on file and if the problem is that the 
@@ -1590,7 +1796,7 @@ _RESET:
                         case SEP_PAIRS:
                             Fill_A(NumRelators);
                             Get_Matrix();
-                            Sep_Pairs(0,0);
+                            Sep_Pairs(0,0,1);
                             UDV[NumFilled - 1] = SEP_PAIRS;
                             if(V1 & 1)
                                 LSP[NumFilled - 1] = V1/2 + 97;
@@ -1610,13 +1816,17 @@ _RESET:
                         }    
                     if(Flag2 == SEP_PAIRS)
                         {
-                        NumCalled     = 0;
-                        NotNewPres     = 0;
-                        SNumFilled     = NumFilled;
-                        ReadPres     = NumFilled - 1;
-                        h = Level_Transformations(TRUE,!Find_All_Min_Pres,FALSE,0,0);                                                                                
-                        for(i = 0; i < NumCalled; i++)
-                        for(j = 1; j <= NumRelators; j++) DisposeHandle((char **) SLR[i][j]);
+                        Num_Saved_LPres     = 0;
+                        NotNewPres     		= 0;
+                        SNumFilled     		= NumFilled;
+                        ReadPres     		= NumFilled - 1;
+                        h = Level_Transformations(TRUE,!Find_All_Min_Pres,FALSE);                                                                                
+                     	for(i = 0; i < Num_Saved_LPres; i++)
+                  		for(j = 0; j <= NumRelators; j++) if(SLR[i][j] != NULL) 
+                  			{
+                  			DisposeHandle((char **) SLR[i][j]);
+                  			SLR[i][j] = NULL;
+                  			}
                         if(Level_Interrupt == 1)
                             {
                             Input = RESET;
@@ -1630,12 +1840,7 @@ _RESET:
                         if(Micro_Print && h != 2)
                             {
                             printf("\n\nThe current Presentation is:\n");
-                            Print_Relators(Relators,NumRelators,stdout);
-                            if(Micro_Print_F)
-                                {
-                                fprintf(myout,"\n\nThe current Presentation is:\n");
-                                Print_Relators(Relators,NumRelators,myout);
-                                }
+                            Print_Relators(Relators,NumRelators);
                             }
                         if(h == 5 && !Do_Not_Reduce_Genus)
                         switch(Delete_Trivial_Generators(FALSE))
@@ -1650,7 +1855,7 @@ _RESET:
                                 SaveMinima = TRUE;
                                 Input = RESET;
                                 goto _RESET;    
-                            }
+                            } 
                         if(Find_All_Min_Pres && SNumFilled == NumFilled
                             && !Init_Find_Level_Transformations(FALSE))
                             {
@@ -1661,7 +1866,6 @@ _RESET:
                                 case 2:
                                     break;
                                 case 3:
-                                    Free_Memory_For_Find_Level_Transformations(FALSE,1000);
                                     ReadPres = NumFilled - 1;
                                     switch(Reduce_Genus(NORMAL,FALSE,FALSE))
                                         {
@@ -1673,11 +1877,7 @@ _RESET:
                                         case TOO_LONG:
                                         case CAN_NOT_DELETE:
                                             if(Micro_Print)
-                                                {
                                                 printf("\n\nUnable to delete a primitive.");
-                                                if(Micro_Print_F)
-                                                    fprintf(myout,"\n\nUnable to delete a primitive.");
-                                                }
                                             FoundPrimitive = FoundPower = LensSpace = EmtyRel = FALSE;                                        
                                             SaveMinima = TRUE;
                                             Input = RESET;
@@ -1686,14 +1886,16 @@ _RESET:
                                     SRError = TRUE;                
                                     goto _REDUCE_GENUS;
                                 case 5:
-                                    Free_Memory_For_Find_Level_Transformations(FALSE,1000);
                                     SaveMinima = TRUE;
                                     Input = RESET;
                                     goto _RESET;
+                                case FULL_HOUSE:
+                                	SaveMinima = TRUE;
+                                    Input = RESET;
+                                    goto _RESET;   
                                 default:
                                     break;    
                                 }
-                            Free_Memory_For_Find_Level_Transformations(FALSE,1000);
                             }            
                         if(SNumFilled < NumFilled) SaveMinima = TRUE;        
                         }        
@@ -1712,11 +1914,20 @@ _RESET:
                 been "split" by Whitehead_Graph().
             **********************************************************************************/
             
+            if(Batch == 4)
+            	{
+            	printf("\nDiagram %d is not connected. Hence the initial presentation is not a Heegaard Splitting Rep!",
+            	ReadPres + 1);
+				if(H_Results != NULL) fprintf(H_Results,"\n\n%s <-- Not a HS Rep!",PresName);            	
+            	return(STOP);
+            	}
+            
             if(NumFilled >= MAX_SAVED_PRES - 3)
                 {
                 fprintf(stdout,"\n\nWe have run out of memory set aside for presentations!!!!");
-                SysBeep(5);
-                Report(Band_Sums,NumDiagrams,OnStack,Starting_Pres,0,0,1,0,1,0);
+                if(Batch == FALSE) SysBeep(5);
+                if(Batch != 10 && Batch != 11)
+                Report(Band_Sums,NumDiagrams,OnStack,Starting_Pres,0,0,1,0,1,NULL);
                 return(1);
                 }    
             Input = RESET;
@@ -1728,6 +1939,14 @@ _RESET:
                 The Whitehead graph is not connected, but there are primitives present which
                 means that the genus of the diagram can be reduced.
             **********************************************************************************/    
+            
+            if(Batch == 4)
+            	{
+            	printf("\nDiagram %d is not connected. Hence the initial presentation is not a Heegaard Splitting Rep!",
+            	ReadPres + 1);
+				if(H_Results != NULL) fprintf(H_Results,"\n\n%s <-- Not a HS Rep!",PresName);            	
+            	return(STOP);
+            	}          
             
             Input = NORMAL;
             if(TestRealizability1 || TestRealizability2)
@@ -1741,7 +1960,7 @@ _RESET:
         }    
         
         /**************************************************************************************
-            After returning from Whitehead_Graph(), if the program was able to find the
+            After returning from Whitehead_Graph(), if Heegaard was able to find the
             Heegaard diagram without problems, execution returns to this point.
         **************************************************************************************/    
                                                     
@@ -1751,7 +1970,8 @@ _RESET:
                 {
                 if(GoingUp)
                     {
-                    GoingUp = FALSE;
+                    GoingUp = GoingUpDown = FALSE;
+                    GoingDown = TRUE;
                     if(SetUp_TopOfChain())
                         {
                         SaveMinima = TRUE;
@@ -1776,11 +1996,11 @@ _RESET:
         goto _BANDSUM;
             
 /**********************************************************************************************
-                     THIS IS THE END OF THE MAIN LOOP OF THE PROGRAM.
+                     THIS IS THE END OF THE MAIN LOOP OF HEEGAARD.
 **********************************************************************************************/                         
 }                
 
-void Fill_A(int NumRelators)
+void Fill_A(int MyNumRelators)
 {
     /******************************************************************************************
         This routine takes the cyclic relator pointed to by "p" and examines each pair of 
@@ -1789,16 +2009,17 @@ void Fill_A(int NumRelators)
         appropriate edge to the array A[][].
     ******************************************************************************************/
     
-    register unsigned char     i,
-                            j,
-                            *p,
-                            x;
+    register unsigned char     	i,
+                            	j,
+                            	*p,
+                            	x;
                             
-    register unsigned int    *q;                            
+    register unsigned int    	*q;                            
     
+    if((MyNumRelators < 1) || (MyNumRelators > NumRelators)) MyNumRelators = NumRelators;
     for(i = 0; i < Vertices; i++)
     for(j = 0,q = A[i]; j < Vertices; j++,q++) *q = 0;
-    for(j = 1; j <= NumRelators; j++)
+    for(j = 1; j <= MyNumRelators; j++)
         {
         p = *Relators[j];
         if(*p == EOS) continue;
@@ -1807,7 +2028,7 @@ void Fill_A(int NumRelators)
         else x -= 194;
         i = x;
         p++;
-        while(x = *p)
+        while( (x = *p) )
             {
             x = x << 1;
             if(x < 194) x -= 130;
@@ -1840,12 +2061,12 @@ void Fill_AA(int NumRelators)
         appropriate edge to the array AA[][].
     ******************************************************************************************/
     
-    register unsigned char     i,
-                            j,
-                            *p,
-                            x;
+    register unsigned char     	i,
+                            	j,
+                            	*p,
+                            	x;
                             
-    register unsigned int     *q;                        
+    register unsigned int     	*q;                        
     
     for(i = 0; i < Vertices; i++)
     for(j = 0,q = AA[i]; j < Vertices; j++,q++) *q = 0;
@@ -1858,7 +2079,7 @@ void Fill_AA(int NumRelators)
         else x -= 194;
         i = x;
         p++;
-        while(x = *p)
+        while( (x = *p) )
             {
             x = x << 1;
             if(x < 194) x -= 130;
@@ -1892,9 +2113,9 @@ void UpDate_Fill_A(void)
         from New_Relator().
     ******************************************************************************************/
     
-    register unsigned char     i,
-                            *p,
-                            x;    
+    register unsigned char     	i,
+                            	*p,
+                            	x;    
     
     p = *Temp3;
     if(*p)
@@ -1904,7 +2125,7 @@ void UpDate_Fill_A(void)
         else x -= 194;
         i = x;
         p++;
-        while(x = *p)
+        while( (x = *p) )
             {
             x = x << 1;
             if(x < 194) x -= 130;
@@ -1930,7 +2151,7 @@ void UpDate_Fill_A(void)
         else x -= 194;
         i = x;
         p++;
-        while(x = *p)
+        while( (x = *p) )
             {
             x = x << 1;
             if(x < 194) x -= 130;
@@ -1947,10 +2168,13 @@ void UpDate_Fill_A(void)
         else x -= 193;
         A[i][x] ++;
         A[x][i] ++;
-        }                
+        } 
+        
+	if(Temp3 != NULL) DisposeHandle((char **) Temp3);
+	Temp3 = NULL;                       
 }
 
-Find_Flow_A(Input,F1)
+int Find_Flow_A(Input,F1)
 int     Input,
         F1;
 {
@@ -1962,9 +2186,11 @@ int     Input,
         realizable. While if the presentation is realizable, then the T-transformation
         produced by this procedure is a geometric T-transformation--provided the Whitehead
         graph is connected, and there are no edges of the Heegaard diagram which form "waves".
+        	If 0 < F1 < NumRelators, Find_Flow_A() will minimize the length of the first F1
+        relators, the remaining relators are just carried along.
     ******************************************************************************************/
             
-    register unsigned int     i,
+    register unsigned int   i,
                             j,
                             max,
                             min,
@@ -1972,7 +2198,7 @@ int     Input,
                             *q,
                             *r;
                             
-    unsigned int             Flow,
+    unsigned int            Flow,
                             GL[VERTICES/2],
                             h,
                             k,
@@ -1982,15 +2208,22 @@ int     Input,
                             Sink,
                             Source;
                             
-    unsigned int            Get_MinExp();                        
+    unsigned int            Get_MinExp();                      
     
     if(NumGenerators == 0) return(TOO_LONG);
     
     if(Input == BANDSUM)
         UpDate_Fill_A();
-    else
-        Fill_A(NumRelators);        
-    if(ComputeValences_A()) return(TOO_LONG);                    
+    else					
+    	{
+    	if(F1)
+			Fill_A(F1);
+		else
+			Fill_A(NumRelators);
+		}	
+	    
+    if(ComputeValences_A() && F1 == 0) return(TOO_LONG);
+             
     for(i = 0; i < Vertices; i++)
         {
         for(j = k = 0; j < Vertices; j++) if(A[i][j])
@@ -2002,7 +2235,8 @@ int     Input,
         }    
     for(i = 0; i < NumGenerators; i++) GL[i] = i;
     k = NumGenerators;
-    Automorphisms = 0L;        
+    Automorphisms = 0L;  
+          
     while(1)
         {
         do
@@ -2015,11 +2249,11 @@ int     Input,
             }
         while(k && VA[h] == 0);        /* Choose a random generator with non-zero valance to work on. */
         if(k == 0 && VA[h] == 0) return(TRUE);
-        Source             = h << 1;
+        Source           = h << 1;
         Sink             = Source + 1;
-        MaxFlow         = VA[h];
+        MaxFlow          = VA[h];
         Flow             = A[Source][Sink];
-        A[Source][Sink] = 0;
+        A[Source][Sink]  = 0;
         A[Sink][Source] *= 2;
         if(Flow && (MaxFlow > Flow))
             MinExp = Flow/(MaxFlow - Flow) + 1;
@@ -2110,28 +2344,42 @@ int     Input,
         /**************************************************************************************
                 If MaxFlow is greater than Flow,then the flow from source to sink is less 
                 than the valence of the source. Hence there is a T-transformation which 
-                reduces the length of the relators.Increment the number of automorphisms. 
+                reduces the length of the relators. Increment the number of automorphisms. 
                 Set k = NumGenerators.
         **************************************************************************************/
         
         if(MaxFlow > Flow)    
-            {
-            if(F1) return(2);    
+            {    
             k = NumGenerators;
             if(MinExp > 1) MinExp = Get_MinExp(Source,NumRelators);
             Automorphisms += MinExp;
             if(MinExp > 2)
-                {
+            	{
                 if(Do_Auts(Source,MinExp,NumRelators) == TOO_LONG) return(TOO_LONG);
                 }
             else
+                {
                 if(Do_Aut(Source,MinExp,NumRelators) == TOO_LONG) return(TOO_LONG);
+                }	
             }    
         if(k == NumGenerators)
-            {                                                
-            Fill_A(NumRelators);        
-            Length -= MinExp*(MaxFlow - Flow);
+            { 
+            if(F1)
+            	{
+            	Fill_A(F1);
+            	for(i = 1, Length1 = 0L; i <= F1; i++) Length1 += GetHandleSize((char**) Relators[i]);
+            	Length1 -= F1;
+            	Length2 = Length1;
+            	for( ; i<= NumRelators; i++) Length2 += GetHandleSize((char**) Relators[i]) - 1;
+            	Length = Length2;
+            	}
+            else	                                               
+            	{
+            	Fill_A(NumRelators);
+            	Length -= MinExp*(MaxFlow - Flow);
+            	}
             VA[h] -= MinExp*(MaxFlow - Flow);
+            
             for(i = 0; i < Vertices; i++)
                 {
                 for(j = 0,p = AJ3[i]; j < Vertices; j++) if(A[i][j])
@@ -2154,12 +2402,21 @@ int     Input,
                     finding any (new) automorphism that reduces the length. Hence the current
                     set of relators has minimal length. Next we check whether there are any
                     generators which no longer appear in the relators. This condition may have
-                    occured through the action of an automorphism or by the replacement of a
+                    occurred through the action of an automorphism or by the replacement of a
                     relator with a new relator via New_Relator() or Reduce_Genus(). If this has
                     happened, Find_Flow_A returns TRUE and we call Missing_Gen() in order to
                     guarantee that the Whitehead graph of the presentation Relators[] has no
                     isolated vertices.
                 ******************************************************************************/
+                
+                if(F1)
+					{
+					for(i = 1, Length1 = 0L; i <= F1; i++) Length1 += GetHandleSize((char**) Relators[i]);
+					Length1 -= F1;
+					Length2 = Length1;
+					for( ; i<= NumRelators; i++) Length2 += GetHandleSize((char**) Relators[i]) - 1;
+					Length = Length2;
+					}
                 
                 for(i = 0 ; i < NumGenerators; i++) if(VA[i] == 0) return(TRUE);
                 return(FALSE);        
@@ -2168,7 +2425,7 @@ int     Input,
         }
 }
 
-Find_Primitives(flag)
+int Find_Primitives(flag)
 int flag;
 {
     /******************************************************************************************
@@ -2189,20 +2446,20 @@ int flag;
         and then make the appropriate substitutions in the remaining relators.
     ******************************************************************************************/
     
-    register unsigned char    *p;
+    register unsigned char  *p;
         
-    register unsigned int     i,
+    register unsigned int  	i,
                             j,
                             k,
                             *q;
                             
-    unsigned int             C[125],
+    unsigned int            C[125],
                             MinExp,
                             VG[VERTICES],
                             NumIV,
                             root;
                             
-    unsigned long            SLength1,
+    unsigned long           SLength1,
                             SLength2,
                             SLength3;
                             
@@ -2307,18 +2564,18 @@ int flag;
         else
             {
             /**********************************************************************************
-                When the program gets here, the graph is connected, but may have isolated
+                When Heegaard gets here, the graph is connected, but may have isolated
                 vertices. Find the first non-isolated vertex and use this vertex as the root
                 of a depth-first-search of the graph.
             **********************************************************************************/    
             
             for(i = 0; i < Vertices && IV[i]; i += 2) ;
             for(j = 0; j < Vertices; j++) Number[j] = 0;
-            NumVert     = 1;
-            Number[i]     = 1;
-            Lowpt[i]     = 1;
-            Father[i]     = i;
-            VG[i]         = 0;
+            NumVert    	= 1;
+            Number[i]   = 1;
+            Lowpt[i]    = 1;
+            Father[i]   = i;
+            VG[i]       = 0;
             root        = i;
             for(q = UpDate,*q = root; q >= UpDate; q--)
                 {
@@ -2328,15 +2585,15 @@ int flag;
                     {
                     if(Number[j] == 0)
                         {
-                        NumVert     ++;
-                        Number[j]     = NumVert;
-                        Lowpt[j]     = NumVert;
-                        Father[j]     = i;
-                        VG[j]         = 0;
-                        VG[i]         = k + 1;
-                        q             ++;
-                        *q             = j;
-                        goto         NEW_VERT;        
+                        NumVert    	++;
+                        Number[j]   = NumVert;
+                        Lowpt[j]    = NumVert;
+                        Father[j]   = i;
+                        VG[j]       = 0;
+                        VG[i]       = k + 1;
+                        q           ++;
+                        *q          = j;
+                        goto NEW_VERT;        
                         }
                     if(j != Father[i] && Number[j] < Lowpt[i]) Lowpt[i] = Number[j];        
                     }
@@ -2391,7 +2648,7 @@ int flag;
                         ZZ[j] = 1;
                     }
                 SLength3 = AA[i-1][i];
-                if(SLength3 == 0L)
+                if(SLength3 == 0)
                     MinExp = 1;
                 else
                     {
@@ -2446,7 +2703,7 @@ int flag;
                 Connected_AJ3(i+1,NumIV+1);
                 ZZ[i] = 0;
                 SLength3 = AA[i][i+1];
-                if(SLength3 == 0L)
+                if(SLength3 == 0)
                     MinExp = 1;
                 else
                     {
@@ -2500,8 +2757,8 @@ int flag;
         }    
 }
     
-Connected_AJ3(i,k)
-register unsigned int     i,
+int Connected_AJ3(i,k)
+register unsigned int   i,
                         k;
 {
     /******************************************************************************************
@@ -2512,7 +2769,7 @@ register unsigned int     i,
         The routine returns FALSE if the graph is not connected and TRUE if it is connected.
     ******************************************************************************************/    
      
-    register unsigned int     h,
+    register unsigned int   h,
                             j,
                             *p,
                             *r;
@@ -2536,37 +2793,41 @@ register unsigned int     i,
     return(FALSE);        
 }
                         
-ComputeValences_A()
+int ComputeValences_A()
 {
     /******************************************************************************************
         This routine is called by Find_Flow_A(). It computes the valences of the vertices of
         the Whitehead graph of the presentation given by the relators in Relators[]. The
-        valence of vertex j is left in the array VA[] at VA[j]. The routine also checks the
+        valence of vertex 2j is left in the array VA[] at VA[j]. The routine also checks the
         total length of the relators and returns TOO_LONG in case of an error.
     ******************************************************************************************/
         
-    register unsigned int     i,
+    register unsigned int   i,
                             j;
     
-    register unsigned long     CheckLength,
+    register unsigned long  CheckLength,
                             Valence;                        
-    
+                                
     for(i = 0; i < Vertices; i++) A[i][i] = 0;
     for(i = 0,CheckLength = 0L; i < Vertices; i += 2)
         {
         Valence = 0L;
         for(j = 0; j < Vertices; j++) Valence += A[i][j];
         CheckLength += Valence;    
-        j = (i >> 1);
         if(Valence > MAXLENGTH) return(TOO_LONG);
-        VA[j] = Valence;
-        }
-    if(CheckLength != Length) return(TOO_LONG);
+        j = (i >> 1);        
+        VA[j] = Valence;                
+        }    
+	if(CheckLength != Length) 
+		{
+		printf("\n\nLength discrepancy in ComputeValences_A()");		
+		return(TOO_LONG);
+		} 										
     return(0);    
 }                
 
-Do_Aut(Source,NumReps,NumRelators)
-unsigned int     Source,
+int Do_Aut(Source,NumReps,NumRelators)
+unsigned int    Source,
                 NumReps;
 int             NumRelators;
 {        
@@ -2578,7 +2839,7 @@ int             NumRelators;
         into two subsets: those vertices accessible from the "sink" and the remaining vertices.
         If 'A' is the source vertex and 'a' is the sink vertex. and X is a generator, (X != A),
         then the T-transformation acts on X according to the following table.
-            1)    If 'X' not accessible and 'x' not accessible, then X: --> AXa.
+            1)  If 'X' not accessible and 'x' not accessible, then X: --> AXa.
             2)  If 'X' not accessible and 'x'     accessible, then X: --> AX.
             3)  If 'X'     accessible and 'x'     accessible, then X: --> X.
             4)  If 'X'     accessible and 'x' not accessible, then X: --> Xa.
@@ -2595,23 +2856,22 @@ int             NumRelators;
         freely reduced, then the modified relators are also freely reduced.    
     ******************************************************************************************/
     
-    register unsigned char     A,
-                            a,
-                            *p,
-                            *q,
-                            *r,
-                            x,
-                            y;
+    register unsigned char  	A,
+                            	a,
+                            	*p,
+                            	*q,
+                            	*r,
+                            	x,
+                            	y;
                             
-    register                 int i;
+    register                 	int i;
     
-    unsigned char             TX[125],
-                            TY[125],
-                            **Temp;
+    unsigned char             	TX[125],
+                                TY[125];
                             
-    unsigned int            j;
+    unsigned int            	j;
     
-    unsigned long            HS;                        
+    unsigned long            	HS;                        
             
     for(i = 0; i < NumGenerators; i++)
         if(ZZ[i << 1])
@@ -2635,13 +2895,15 @@ int             NumRelators;
             HS = GetHandleSize((char **) Relators[i]);
             if(HS > MAXLENGTH) return(TOO_LONG);
             HS += HS;
-            ReallocateHandle((char **) Temp5,HS);
-            if((p = *Temp5) == NULL) return(TOO_LONG);
+            if(Temp5 != NULL) DisposeHandle((char **) Temp5);
+            Temp5 = (unsigned char **) NewHandle(HS);
+            if(Temp5 == NULL) Mem_Error();
+            p = *Temp5;
             q = *Relators[i];
             r = q;
             if(*r == EOS) continue;
             x = *q++;
-            while(y = *q++)
+            while( (y = *q++) )
                 {
                 if(x != A && x != a) *p++ = x;
                 if(TX[x] && !TY[y])
@@ -2661,24 +2923,26 @@ int             NumRelators;
             q = *Temp5;
             HS = p + 1 - q;
             if(HS > MAXLENGTH) return(TOO_LONG);
-            SetHandleSize((char **) Temp5,HS);
-            Temp = Relators[i];
-            Relators[i] = Temp5;
-            Temp5 = Temp;                    
+            if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+            Relators[i] = (unsigned char **) NewHandle(HS);
+            if(Relators[i] == NULL) Mem_Error();
+            p = *Temp5;
+            q = *Relators[i];
+            while( (*q++ = *p++) ) ; 
             }
         }
     TotalAuts += NumReps;    
     return(0);                
 }    
 
-Do_Auts(Source, NumReps, NumRelators)
-  unsigned int Source, NumReps,  NumRelators;
+int Do_Auts(Source, NumReps, NumRelators)
+unsigned int Source, NumReps,  NumRelators;
 {        
     /******************************************************************************************
-            Do_Auts() is used when the program has determined that it can perform the same
+            Do_Auts() is used when Heegaard has determined that it can perform the same
         T-transformation several times in succession. This can be done when the smallest
         absolute value with which the generator, corresponding to the "Source", appears in
-        the relators is greater than one. Before calling Do_Auts(), the program called
+        the relators is greater than one. Before calling Do_Auts(), Heegaard called
         Get_MinExp() which determined the value of this minimal exponent. If the minimal
         exponent has value MinExp, then the T-transformation can be composed with itself
         MinExp times.
@@ -2688,7 +2952,7 @@ Do_Auts(Source, NumReps, NumRelators)
         unless MinExp is greater than two. 
     ******************************************************************************************/
     
-    register unsigned char     A,
+    register unsigned char  A,
                             a,
                             *p,
                             *q,
@@ -2696,11 +2960,10 @@ Do_Auts(Source, NumReps, NumRelators)
                             x,
                             y;
                             
-    register long int        h;
+    register long int       h;
     
-    unsigned char             TX[125],
-                            TY[125],
-                            **Temp;
+    unsigned char           TX[125],
+                            TY[125];
                             
     unsigned int            i;
     
@@ -2731,7 +2994,7 @@ Do_Auts(Source, NumReps, NumRelators)
         if(*r == EOS)
             continue;
         x = *q++;
-        while(y = *q++)
+        while( (y = *q++) )
             {
             if(x != A && x != a) h++;
             if(TX[x] && !TY[y])
@@ -2754,15 +3017,17 @@ Do_Auts(Source, NumReps, NumRelators)
         {
         HS = GetHandleSize((char **) Relators[i]) + NumReps*Diff[i];
         if(HS > MAXLENGTH) return(TOO_LONG);
-        ReallocateHandle((char **) Temp5,HS);
-        if((p = *Temp5) == NULL ) return(TOO_LONG);
+        if(Temp5 != NULL) DisposeHandle((char **) Temp5);
+        Temp5 = (unsigned char **) NewHandle(HS);
+        if(Temp5 == NULL ) Mem_Error();
+        p = *Temp5;
         q = *Relators[i];
         r = q;
         x = *q;
         h = 0;
         if(x == A)
             {
-            while(*q == x)
+	      	while(*q == x)
                 {
                 h++;
                 q++;
@@ -2811,7 +3076,7 @@ Do_Auts(Source, NumReps, NumRelators)
         sexp = h;
         h = 0;    
         x = *q++;
-        while(y = *q++)
+        while( (y = *q++) )
             {
             if(x != A && x != a)
                 *p++ = x;
@@ -2874,42 +3139,46 @@ Do_Auts(Source, NumReps, NumRelators)
         *p = EOS;
         q = *Temp5;
         HS = p + 1 - q;
-        if(HS > MAXLENGTH) return(TOO_LONG);
-        SetHandleSize((char **) Temp5,HS);
-        Temp = Relators[i];
-        Relators[i] = Temp5;
-        Temp5 = Temp;                    
+        if(HS > MAXLENGTH) return(TOO_LONG); 
+        if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+		Relators[i] = (unsigned char **) NewHandle(HS);
+		if(Relators[i] == NULL) Mem_Error();
+		p = *Temp5;
+		q = *Relators[i];
+		while( (*q++ = *p++) ) ;                    
         }
     TotalAuts += NumReps;    
     return(0);                
 }    
 
-Freely_Reduce()
+int Freely_Reduce()
 {
     /******************************************************************************************
                         This routine freely reduces the input relators.
     ******************************************************************************************/
     
-    register unsigned char     *p,
+    register unsigned char  *p,
                             *q;
     
     register char            x;
                             
     register int             i;
             
-    int                        NumEmptyRelators = 0;
+    int                      NumEmptyRelators = 0;
     
     unsigned long            HS,
-                            length;
+                             length;
     
     if(Micro_Print) for(i = 1,length = 0L; i <= NumRelators; i++)
         length += GetHandleSize((char **) Relators[i]) - 1;
             
     for(i = 1,OrigLength = 0L; i <= NumRelators; i++)
         {
-        HS = GetHandleSize((char **) Relators[i]);        
-        ReallocateHandle((char **) Temp5,HS + 2);
-        if((p = *Temp5) == NULL) return(TOO_LONG);
+        HS = GetHandleSize((char **) Relators[i]); 
+        if(Temp5 != NULL) DisposeHandle((char **) Temp5); 
+        Temp5 = (unsigned char **) NewHandle(HS + 2);      
+        if(Temp5 == NULL) Mem_Error();
+        p = *Temp5;
         q = *Relators[i];
         *p = '@';
         while(*q)
@@ -2937,9 +3206,12 @@ Freely_Reduce()
         OrigLength += p - q;
         if(HS > p + 1 - q)
             {
-            SetHandleSize((char **) Relators[i],p + 1 - q);
-            if((p = *Relators[i]) == NULL) return(TOO_LONG);
-            while(*p++ = *q++) ;
+            if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]); 
+        	Relators[i] = (unsigned char **) NewHandle(p + 1 - q);
+            if(Relators[i] == NULL) Mem_Error();
+            LR[i] = p - q;
+            p = *Relators[i];
+            while( (*p++ = *q++) ) ;
             }                    
         }
     if(Micro_Print && OrigLength < length) Micro_Print_Freely_Reduce(length,OrigLength);    
@@ -2954,7 +3226,7 @@ int CheckPrimitivity(void)
         power of a generator and otherwise returns 0.
     ******************************************************************************************/            
 
-    register unsigned char     *p,
+    register unsigned char  *p,
                             x;
     
     if(GetHandleSize((char **) Relators[1]) <= 1) return(0);        
@@ -2976,7 +3248,7 @@ int CheckPrimitivity(void)
     return(0);                                                                        
 }
 
-Test_New_Pres()
+int Test_New_Pres()
 {
     /******************************************************************************************
         Test_New_Pres() is called when RESET has chosen a new presentation to investigate.
@@ -2984,15 +3256,15 @@ Test_New_Pres()
         tests on the new presentation as detailed below.
     ******************************************************************************************/
         
-    register unsigned char     *p,
+    register unsigned char  *p,
                             *q;
                             
-    register unsigned int     i,
+    register unsigned int   i,
                             j;
     
-    unsigned char            **Temp;
+    unsigned char           **Temp;
     
-    int                        DistinctNonEmpty,
+    int                     DistinctNonEmpty,
                             k,
                             SRBoundary,
                             SRDelete_Only_Short_Primitives,
@@ -3003,11 +3275,11 @@ Test_New_Pres()
     unsigned int            SNumFilled,
                             RVWG;
                             
-    unsigned long            HS,
+    unsigned long           HS,
                             SRLength;                        
 
-    unsigned int Whitehead_Graph();
-    unsigned int Reduce_Genus();
+    unsigned int 			Whitehead_Graph();
+    unsigned int 			Reduce_Genus();
     
     NumDiagrams ++;
     Input = NORMAL;
@@ -3092,11 +3364,7 @@ Test_New_Pres()
                 break;
             }
         if(Micro_Print)
-            {
-            printf("\n\nThe current presentation presents a manifold of Heegaard genus one.");
-            if(Micro_Print_F)
-                fprintf(myout,"\n\nThe current presentation presents a manifold of Heegaard genus one.");
-            }                
+            printf("\n\nThe current presentation presents a manifold of Heegaard genus one.");              
         return(RESET);            
         }
 
@@ -3107,7 +3375,7 @@ Test_New_Pres()
                 whether this is a canonical presentation of the 3-Sphere.
         **************************************************************************************/
             
-        for(i = 1; i <= NumRelators; i++) if(GetHandleSize((char **) Relators[i]) != 2L) break;
+        for(i = 1; i <= NumRelators; i++) if(GetHandleSize((char **) Relators[i]) != 2) break;
         if(i > NumRelators && Delete_Dups() == NumRelators)
             {
             UDV[ReadPres] = THREE_SPHERE;
@@ -3117,11 +3385,7 @@ Test_New_Pres()
                 CBC[CurrentComp][1] = BDRY_UNKNOWN;
                 }
             if(Micro_Print)
-                {
                 printf("\n\nThe current presentation presents the 3-Sphere.");
-                if(Micro_Print_F)
-                    fprintf(myout,"\n\nThe current presentation presents the 3-Sphere.");
-                }    
             Mark_As_Found_Elsewhere(CurrentComp);
             return(RESET);
             }
@@ -3205,7 +3469,8 @@ Test_New_Pres()
                 {
                 if(Boundary || NumGenerators != NumRelators) 
                     {
-                    GoingUp = FALSE;
+                    GoingUp = GoingUpDown = FALSE;
+                    GoingDown = TRUE;
                     return(BANDSUM);
                     }
                 return(DUALIZE);
@@ -3221,10 +3486,12 @@ Test_New_Pres()
             SRReadPres = ReadPres;
             for(i = 1; i <= NumRelators; i++)
                 {
-                ReallocateHandle((char **) Copy_Of_Rel_2[i],GetHandleSize((char **) Relators[i]));
-                if((p = *Copy_Of_Rel_2[i]) == NULL) return(RESET);
+                if(Copy_Of_Rel_2[i] != NULL) DisposeHandle((char **) Copy_Of_Rel_2[i]);
+                Copy_Of_Rel_2[i] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[i]));
+                if(Copy_Of_Rel_2[i] == NULL) Mem_Error();
+                p = *Copy_Of_Rel_2[i];
                 q = *Relators[i];
-                while(*p++ = *q++) ;                    
+                while( (*p++ = *q++) ) ;                    
                 }                
             
             SRBoundary = Boundary;
@@ -3251,27 +3518,24 @@ Test_New_Pres()
                     case TOO_LONG:
                     case CAN_NOT_DELETE:
                         FoundPrimitive = FoundPower = LensSpace = EmtyRel = FALSE;
-                        ReadPres = SRReadPres;
-                        NumGenerators = SRNumGenerators;
-                        NumRelators = SRNumRelators;
-                        Vertices = 2*NumGenerators;
-                        Length = SRLength;
-                        Boundary = SRBoundary;                    
+                        ReadPres 		= SRReadPres;
+                        NumGenerators 	= SRNumGenerators;
+                        NumRelators 	= SRNumRelators;
+                        Vertices 		= 2*NumGenerators;
+                        Length 			= SRLength;
+                        Boundary 		= SRBoundary;                    
                         for(i = 1; i <= NumRelators; i++)
                             {
-                            ReallocateHandle((char **) Relators[i],GetHandleSize((char **) Copy_Of_Rel_2[i]));
-                            if((q = *Relators[i]) == NULL) return(RESET);        
+                            if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+                            Relators[i] = (unsigned char **) NewHandle(GetHandleSize((char **) Copy_Of_Rel_2[i]));
+                            if(Relators[i] == NULL) Mem_Error(); 
+                            q = *Relators[i];      
                             p = *Copy_Of_Rel_2[i];
-                            while(*q++ = *p++) ;                                    
+                            while( (*q++ = *p++) ) ;                                    
                             }                        
                         if(Micro_Print)
-                            {
                             printf("\n\nUnable to delete a primitive. Reverting to Presentation %d: Length %lu",
                                 ReadPres + 1,Length);
-                            if(Micro_Print_F)
-                                fprintf(myout,"\n\nUnable to delete a primitive. Reverting to Presentation %d: Length %lu",
-                                    ReadPres + 1,Length);
-                            }
                     }
                 Delete_Only_Short_Primitives = SRDelete_Only_Short_Primitives;                    
                 if(FoundPrimitive || FoundPower || LensSpace || EmtyRel) return(REDUCE_GENUS);        
@@ -3301,13 +3565,8 @@ Test_New_Pres()
                         FoundPrimitive = FoundPower = LensSpace = EmtyRel = FALSE;
                         TP[ReadPres] --;            
                         if(Micro_Print)
-                            {
                             printf("\n\nUnable to delete a primitive. Reverting to Presentation %d: Length %lu.",
                                 ReadPres + 1,SRLength);
-                            if(Micro_Print_F)
-                                fprintf(myout,"\n\nUnable to delete a primitive. Reverting to Presentation %d: Length %lu.",
-                                    ReadPres + 1,SRLength);
-                            }
                     }
                     
                 if(LensSpace || EmtyRel)
@@ -3341,12 +3600,12 @@ Test_New_Pres()
                             Restore the initial presentation we saved.
             **********************************************************************************/
 
-            ReadPres = SRReadPres;
-            NumGenerators = SRNumGenerators;
-            NumRelators = SRNumRelators;
-            Vertices = 2*NumGenerators;
-            Length = SRLength;
-            Boundary = SRBoundary;                    
+            ReadPres 		= SRReadPres;
+            NumGenerators 	= SRNumGenerators;
+            NumRelators 	= SRNumRelators;
+            Vertices 		= 2*NumGenerators;
+            Length 			= SRLength;
+            Boundary 		= SRBoundary;                    
             for(i = 1; i <= NumRelators; i++)
                 {
                 Temp = Relators[i];
@@ -3355,13 +3614,8 @@ Test_New_Pres()
                 }            
 
             if(Micro_Print && (FoundPrimitive || FoundPower || LensSpace || EmtyRel) )
-                {
                 printf("\n\nReverting to Presentation %d: Length %lu.",
                     ReadPres + 1,Length);
-                if(Micro_Print_F)
-                    fprintf(myout,"\n\nReverting to Presentation %d: Length %lu.",
-                        ReadPres + 1,Length);
-                }
         
             FoundPrimitive = FoundPower = LensSpace = EmtyRel = FALSE;
             Fill_A(NumRelators);
@@ -3369,10 +3623,12 @@ Test_New_Pres()
             if(NumGenerators == NumRelators && BDY[ReadPres] == FALSE)
                 {
                 if(PRIM[ReadPres] != 108) return(DUALIZE);
-                GoingUp = TRUE;
+                GoingUp 	= TRUE;
+                GoingUpDown = GoingDown = FALSE;
                 return(BANDSUM);    
                 }
-            GoingUp = FALSE;            
+            GoingUp = GoingUpDown = FALSE;
+            GoingDown = TRUE;          
             return(BANDSUM);             
         case NON_UNIQUE_1:
         case NON_UNIQUE_2:
@@ -3391,11 +3647,7 @@ Test_New_Pres()
                     case TOO_LONG:
                     case CAN_NOT_DELETE:
                         if(Micro_Print)
-                            {
                             printf("\n\nUnable to delete a primitive.");
-                            if(Micro_Print_F)
-                                fprintf(myout,"\n\nUnable to delete a primitive.");
-                            }
                         TP[ReadPres] --;                        
                         FoundPrimitive = FoundPower = LensSpace = EmtyRel = FALSE;
                         return(RESET);    
@@ -3406,10 +3658,18 @@ Test_New_Pres()
                 }        
             return(RESET);            
         case NOT_CONNECTED:
-            if(UDV[ReadPres] < DONE) UDV[ReadPres] = NOT_CONNECTED;
+            if(UDV[ReadPres] < DONE) 
+            	{
+            	UDV[ReadPres] = NOT_CONNECTED;
+            	NumNotConnected ++;
+            	}
             return(RESET);
         case REDUCE_GENUS:
-            if(UDV[ReadPres] < DONE) UDV[ReadPres] = NOT_CONNECTED;
+            if(UDV[ReadPres] < DONE) 
+            	{
+            	UDV[ReadPres] = NOT_CONNECTED;
+            	NumNotConnected ++;
+            	}
             if(TestRealizability1 || TestRealizability2)
                 Delete_Trivial_Generators(FALSE);
             FoundPrimitive = TRUE;
@@ -3417,7 +3677,7 @@ Test_New_Pres()
         case SEP_PAIRS:
         
             /**********************************************************************************
-                The diagram corresponding to Relators[] has a pair of separating vertices.
+                The diagram corresponding to Relators[] has a separating pair of vertices.
                 Record the two vertices that separate in LSP and LSQ.
                     Then, if this presentation hasn't been checked for primitives etc. call
                 Reduce_Genus(). If Reduce_Genus turns up something return REDUCE_GENUS. 
@@ -3435,12 +3695,16 @@ Test_New_Pres()
             else
                 LSQ[ReadPres] = V2/2 + 65;
 
-            NumCalled = 0;
+            Num_Saved_LPres = 0;
             NotNewPres = 0;
             SNumFilled = NumFilled;
-            k = Level_Transformations(TRUE,!Find_All_Min_Pres,FALSE,0,0);                            
-            for(i = 0; i < NumCalled; i++)
-            for(j = 1; j <= NumRelators; j++) DisposeHandle((char **) SLR[i][j]);
+            k = Level_Transformations(TRUE,!Find_All_Min_Pres,FALSE);                            
+            for(i = 0; i < Num_Saved_LPres; i++)
+       		for(j = 0; j <= NumRelators; j++) if(SLR[i][j] != NULL) 
+       			{
+       			DisposeHandle((char **) SLR[i][j]);
+       			SLR[i][j] = NULL;
+       			}
             if(Level_Interrupt == 1) return(RESET);
             if(k == FATAL_ERROR)
                 {
@@ -3450,12 +3714,7 @@ Test_New_Pres()
             if(Micro_Print && k != 2)
                 {
                 printf("\n\nThe current Presentation is:\n");
-                Print_Relators(Relators,NumRelators,stdout);
-                if(Micro_Print_F)
-                    {
-                    fprintf(myout,"\n\nThe current Presentation is:\n");
-                    Print_Relators(Relators,NumRelators,myout);
-                    }
+                Print_Relators(Relators,NumRelators);
                 }            
             if(k == 5 && !Do_Not_Reduce_Genus) switch(Delete_Trivial_Generators(FALSE))
                 {
@@ -3483,7 +3742,6 @@ Test_New_Pres()
                         case 2:
                             break;
                         case 3:
-                            Free_Memory_For_Find_Level_Transformations(FALSE,1000);
                             ReadPres = NumFilled - 1;
                             switch(Reduce_Genus(NORMAL,FALSE,FALSE))
                                 {
@@ -3495,22 +3753,16 @@ Test_New_Pres()
                                 case TOO_LONG:
                                 case CAN_NOT_DELETE:
                                     if(Micro_Print)
-                                        {
                                         printf("\n\nUnable to delete a primitive.");
-                                        if(Micro_Print_F)
-                                            fprintf(myout,"\n\nUnable to delete a primitive.");
-                                        }                                    
                                     FoundPrimitive = FoundPower = LensSpace = EmtyRel = FALSE;                            
                                     return(RESET);    
                                 }            
                             return(REDUCE_GENUS);
                         case 5:
-                            Free_Memory_For_Find_Level_Transformations(FALSE,1000);
                             return(RESET);
                         default:
                             break;    
                         }
-                    Free_Memory_For_Find_Level_Transformations(FALSE,1000);
                     }
                 }    
                 
@@ -3532,11 +3784,7 @@ Test_New_Pres()
                     case CAN_NOT_DELETE:
                         TP[ReadPres] --;
                         if(Micro_Print)
-                            {
-                            printf("\n\nUnable to delete a primitive.");
-                            if(Micro_Print_F)
-                                fprintf(myout,"\n\nUnable to delete a primitive.");
-                            }                        
+                            printf("\n\nUnable to delete a primitive.");                      
                         FoundPrimitive = FoundPower = LensSpace = EmtyRel = FALSE;                        
                         return(RESET);    
                     }
@@ -3549,7 +3797,6 @@ Test_New_Pres()
             return(TOO_MANY_COMPONENTS);
         case NON_PLANAR:
             fprintf(stdout,"\n\n                    The Whitehead graph is nonplanar.");
-            fprintf(myout,"\n\n                    The Whitehead graph is nonplanar.");    
         case FATAL_ERROR:
             return(STOP);        
         case TOO_LONG:
@@ -3559,15 +3806,15 @@ Test_New_Pres()
     return(NO_ERROR);                        
 }
 
-Check_Level_Transformations()
+int Check_Level_Transformations()
 {
     /******************************************************************************************
         This routine looks for new presentations obtainable by performing level
         T-transformations. In order to reduce the proliferation of presentations, the routine
         is currently configured to look for level transformations only for presentations
         which have a minimal number of generators among the presentations of its summand and,
-        among these presentations, have shortest length.If new presentations, which are not on
-        file, are found these are saved and we return TRUE. Otherwise we return FALSE.
+        among these presentations, have shortest length. If new presentations, which are not
+        on file, are found these are saved and we return TRUE. Otherwise we return FALSE.
     ******************************************************************************************/
         
     unsigned int            i,
@@ -3602,7 +3849,7 @@ Check_Level_Transformations()
                 NumGenerators         = NG[ReadPres];
                 NumRelators         = NR[ReadPres];
                 Vertices             = 2*NumGenerators;
-                CurrentComp            = ComponentNum[ReadPres];    
+                CurrentComp            = ComponentNum[ReadPres];
                 if(Init_Find_Level_Transformations(FALSE) == FALSE)
                     {
                     SNumFilled = NumFilled;
@@ -3615,7 +3862,6 @@ Check_Level_Transformations()
                             break;
                         case 3:
                             ReadPres = NumFilled - 1;
-                            Free_Memory_For_Find_Level_Transformations(FALSE,1000);
                             if(Micro_Print) Micro_Print_Reset();
                             switch(Reduce_Genus(NORMAL,FALSE,FALSE))
                                 {
@@ -3627,22 +3873,18 @@ Check_Level_Transformations()
                                 case TOO_LONG:
                                 case CAN_NOT_DELETE:
                                     if(Micro_Print)
-                                        {
                                         printf("\n\nUnable to delete a primitive.");
-                                        if(Micro_Print_F)
-                                            fprintf(myout,"\n\nUnable to delete a primitive.");
-                                        }                                    
                                     FoundPrimitive = FoundPower = LensSpace = EmtyRel = FALSE;                                
                                     return(FALSE);    
                                 }            
                             return(2);        
                         case 5:
-                            Free_Memory_For_Find_Level_Transformations(FALSE,1000);
                             return(TRUE);
+                        case FULL_HOUSE:
+                        	return(TRUE);    
                         default:
                             break;    
                         }        
-                    Free_Memory_For_Find_Level_Transformations(FALSE,1000);
                     if(NumFilled > SNumFilled) return(TRUE);
                     }
                 break;
@@ -3653,17 +3895,17 @@ Check_Level_Transformations()
 
 unsigned int Get_MinExp(unsigned int Source,int MyNumRelators)
 {
-    register unsigned char     *p,
+    register unsigned char  *p,
                             x,
                             y,
                             z;
                             
-    register unsigned int    j,
+    register unsigned int   j,
                             MinExp;                        
                             
-    unsigned int             h,
+    unsigned int            h,
                             i;
-                            
+                                                        
     /******************************************************************************************
         Let G be the generator which corresponds to the vertex "Source" of the Whitehead graph.
         This routine finds and returns the smallest absolute value of the exponents with which
@@ -3689,7 +3931,7 @@ unsigned int Get_MinExp(unsigned int Source,int MyNumRelators)
             if(MinExp < 2) return(1);    
             continue;
             }        
-        while(z = *p)
+        while( (z = *p) )
             {
             p++;
             if(z != x && z != y)
@@ -3763,49 +4005,49 @@ void Mark_As_Found_Elsewhere(TheComp)
 
 int SetUp_TopOfChain(void)
 {
-    register unsigned char    *p,
+    register unsigned char  *p,
                             *q;
                             
     register int            i;                            
     
     TOCLength     = Length;
-    NG_TOC         = NumGenerators;
-    NR_TOC         = NumRelators;
+    NG_TOC        = NumGenerators;
+    NR_TOC        = NumRelators;
     for(i = 1; i <= NumRelators; i++)
         { 
-        ReallocateHandle((char **) TopOfChain[i],GetHandleSize((char **) Relators[i]));
-        if((q = *TopOfChain[i]) == NULL) return(TRUE);            
+        if(TopOfChain[i] != NULL) DisposeHandle((char **) TopOfChain[i]);
+        TopOfChain[i] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[i]));
+        if(TopOfChain[i] == NULL) Mem_Error();
+        q = *TopOfChain[i];          
         p = *Relators[i];
-        while(*q++ = *p++) ;    
+        while( (*q++ = *p++) ) ;    
         }
     if(Micro_Print)
-        {
         printf("\n\nSaved a copy of the current Relators[] as TopOfChain[].");
-        if(Micro_Print_F)
-            fprintf(myout,"\n\nSaved a copy of the current Relators[] as TopOfChain[].");
-        }    
     return(FALSE);
 }
 
-Get_Relators_From_SUR(MyReadPres)
+int Get_Relators_From_SUR(MyReadPres)
 register int    MyReadPres;
 {
-    register unsigned char    *p,
+    register unsigned char  *p,
                             *q;
                             
     register int            i;
                             
-    NumRelators     = NR[MyReadPres];
+    NumRelators       = NR[MyReadPres];
     NumGenerators     = NG[MyReadPres];
-    Length             = SURL[MyReadPres];
-    Vertices         = 2*NumGenerators;
+    Length            = SURL[MyReadPres];
+    Vertices          = 2*NumGenerators;
     
     for(i = 1; i <= NumRelators; i++)
         {
-        ReallocateHandle((char **) Relators[i],GetHandleSize((char **) SUR[MyReadPres][i]));
-        if((q = *Relators[i]) == NULL) return(TRUE);        
+        if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+        Relators[i] = (unsigned char **) NewHandle(GetHandleSize((char **) SUR[MyReadPres][i]));
+        if(Relators[i] == NULL) Mem_Error(); 
+        q = *Relators[i];       
         p = *SUR[MyReadPres][i];
-        while(*q++ = *p++) ;        
+        while( (*q++ = *p++) ) ;        
         }
     return(FALSE);
 }

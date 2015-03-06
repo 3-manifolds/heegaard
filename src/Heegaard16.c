@@ -2,13 +2,18 @@
 #include "Heegaard_Dec.h"
 #include <ctype.h>
 
+/****************************** function prototypes *****************************************
+L   13 Compute_Homology(void)
+L  363 gcd(unsigned long a,unsigned long b)
+L  376 Prune_Search_Tree(void)
+********************************************************************************************/
+
 #define A_BIG_NUMBER 2147483645
 
 void Compute_Homology(void)
 {
 	/******************************************************************************************
 		This routine computes the integral first homology of the presentation in Relators[].
-		The results are printed to the console screen and to the file 'Heegaard_Results'.
 	******************************************************************************************/
 		
 	register unsigned char 	*p,
@@ -19,25 +24,21 @@ void Compute_Homology(void)
 					Pivot_Column,
 					Pivot_Row;
 					
-	int				k,
-					All_Zeros,
-					Betti_Number,
-					Num_Torsion_Values,
-					S_Num_Torsion_Values,
-					SNumGenerators,
-					SNumRelators;
+	int		All_Zeros,
+			S_Num_Torsion_Values,
+			SNumGenerators,
+			SNumRelators;
 					
-	unsigned int	*ptr;				
+	long	*M[MAXNUMRELATORS],
+			Mij,
+			Min_Abs,
+			Mult,
+			*ptr = NULL,
+			Previous_Min_Abs,
+			Temp,
+			*temp;
 					
-	long			*M[MAXNUMRELATORS],
-					Mij,
-					Min_Abs,
-					Mult,
-					Previous_Min_Abs,
-					Temp,
-					*temp;
-					
-	unsigned long	*Torsion;
+	unsigned long	*Torsion = NULL;
 					
 	unsigned long 	gcd();				
 	
@@ -46,23 +47,29 @@ void Compute_Homology(void)
 	******************************************************************************************/
 		
 	for(i = 0; i < NumRelators; i++)
-	M[i] = (long *)NewPtr(sizeof(long)*NumGenerators);
+		{
+		M[i] = (long *)NewPtr(sizeof(long)*NumGenerators);
+		if(M[i] == NULL) Mem_Error();
+		}	
 	Torsion = (unsigned long *)NewPtr(sizeof(long)*NumGenerators);
+	if(Torsion == NULL) Mem_Error();
 															
 	/******************************************************************************************
 					Abelianize the relators and save the results in M[][].
 	******************************************************************************************/	
 	
-	ptr = (unsigned int *)NewPtr(sizeof(int)*125);
+	ptr = (long *)NewPtr(sizeof(long)*125);
+	if(ptr == NULL) Mem_Error();
 	for(i = 0; i < NumRelators; i++)
 		{
 		for(j = 64 + NumGenerators; j >= 65; j--) ptr[j] = 0L;
 		for(j = 96 + NumGenerators; j >= 97; j--) ptr[j] = 0L;
 		p = *Relators[i+1];
-		while(x = *p++) ptr[x] ++;
+		while( (x = *p++) ) ptr[x] ++;
 		for(j = 0; j < NumGenerators; j++) M[i][j] = ptr[j + 65] - ptr[j + 97];
 		}
-	DisposePtr((char *) ptr);
+		
+	DisposePtr((long *) ptr);
 	
 	/******************************************************************************************
 							Diagonalize the matrix M[][].
@@ -88,7 +95,7 @@ void Compute_Homology(void)
 				for(j = 0; j < SNumGenerators; j++) if(M[i][j])
 					{
 					Mij = M[i][j];
-					if(Mij > 0L)
+					if(Mij > 0)
 						Min_Abs = Mij;
 					else
 						Min_Abs = -Mij;	
@@ -98,8 +105,8 @@ void Compute_Homology(void)
 					}
 				if(Min_Abs == A_BIG_NUMBER) SNumRelators --;
 				}
-			while(SNumRelators && Min_Abs == A_BIG_NUMBER);		
-						
+			while(SNumRelators && Min_Abs == A_BIG_NUMBER);	
+		
 		if(Min_Abs == A_BIG_NUMBER)
 			{
 			/**********************************************************************************
@@ -131,12 +138,12 @@ _BEGIN:
 				Mij = M[i][Pivot_Column];
 				if(Mij && (Mij > -Min_Abs) && (Mij < Min_Abs))
 					{
-					if(Mij > 0L)
+					if(Mij > 0)
 						Min_Abs = Mij;
 					else
 						Min_Abs = -Mij;	
 					Pivot_Row = i;
-					if(Min_Abs == 1L) break;
+					if(Min_Abs == 1) break;
 					}	
 				}
 				
@@ -149,16 +156,16 @@ _BEGIN:
 				Mij = M[Pivot_Row][j];
 				if(Mij && (Mij > -Min_Abs) && (Mij < Min_Abs))
 					{
-					if(Mij > 0L)
+					if(Mij > 0)
 						Min_Abs = Mij;
 					else
 						Min_Abs = -Mij;	
 					Pivot_Column = j;
-					if(Min_Abs == 1L) break;
+					if(Min_Abs == 1) break;
 					}	
 				}	
 			}
-		while(Previous_Min_Abs > Min_Abs && Min_Abs > 1L);
+		while(Previous_Min_Abs > Min_Abs && Min_Abs > 1);
 		
 		/**************************************************************************************
 			Add the appropriate multiple of the Pivot_Column to each column of M[][] with
@@ -168,7 +175,7 @@ _BEGIN:
 		for(j = 0; j < SNumGenerators; j++) if(M[Pivot_Row][j] && j != Pivot_Column)
 			{
 			Mult = M[Pivot_Row][j]/Min_Abs;
-			if(M[Pivot_Row][Pivot_Column] < 0L) Mult = -Mult;
+			if(M[Pivot_Row][Pivot_Column] < 0) Mult = -Mult;
 			for(i = 0; i < SNumRelators; i++) if(M[i][Pivot_Column])
 			M[i][j] -= Mult*M[i][Pivot_Column];
 			}
@@ -181,7 +188,7 @@ _BEGIN:
 		for(i = 0; i < SNumRelators; i++) if(M[i][Pivot_Column] && i != Pivot_Row)
 			{
 			Mult = M[i][Pivot_Column]/Min_Abs;
-			if(M[Pivot_Row][Pivot_Column] < 0L) Mult = -Mult;
+			if(M[Pivot_Row][Pivot_Column] < 0) Mult = -Mult;
 			for(j = 0; j < SNumGenerators; j++) if(M[Pivot_Row][j])
 			M[i][j] -= Mult*M[Pivot_Row][j];
 			}
@@ -192,7 +199,7 @@ _BEGIN:
 		**************************************************************************************/
 		
 		All_Zeros = TRUE;
-		if(Min_Abs > 1L)
+		if(Min_Abs > 1)
 			{
 			for(i = 0; i < SNumRelators; i++) if(M[i][Pivot_Column] && i != Pivot_Row)
 				{
@@ -246,24 +253,22 @@ _BEGIN:
 					if(Temp == Min_Abs) break;
 					if(2*(unsigned int)A_BIG_NUMBER/Torsion[i] < Min_Abs/Temp)
 						{
-						SysBeep(5);
+						if(Batch == FALSE) SysBeep(5);
 						printf("\n\nA Torsion value is greater than 4,294,967,290. ");
 						printf("This is an overflow. Sorry!");
-						fprintf(myout,"\n\nA Torsion value is greater than 4,294,967,290. ");
-						fprintf(myout,"This is an overflow. Sorry!");
 						goto END;
 						}
 					Torsion[i] *= Min_Abs/Temp;
 					Min_Abs = Torsion[i];
 					}
-				if(Torsion[Num_Torsion_Values] == 1L)
+				if(Torsion[Num_Torsion_Values] == 1)
 					S_Num_Torsion_Values ++;
 				else
 					Num_Torsion_Values ++;		
 				}
 			else
 				{
-				if(Min_Abs == 1L)
+				if(Min_Abs == 1)
 					S_Num_Torsion_Values ++;
 				else
 					{	
@@ -277,71 +282,82 @@ _BEGIN:
 		}
 		
 	/******************************************************************************************
-			Print the results to the console screen and to the file 'Heegaard_Results'.
+									Print the results.
 	******************************************************************************************/
 		
-		S_Num_Torsion_Values = Num_Torsion_Values;
-		for(k = 0; k < 2; k++)
+		if(Batch == 6 && H_Results != NULL) fprintf(H_Results,"\n\n%s ",PresName);
+		if(Betti_Number == 0)
 			{
-			if(k == 0)
-				fptr = stdout;
-			else
-				fptr = myout;
-			j = 0;
-			Num_Torsion_Values = S_Num_Torsion_Values;		
-			if(Betti_Number == 0)
+			 if(Num_Torsion_Values == 0)
 				{
-				 if(Num_Torsion_Values == 0)
-					fprintf(fptr,"\n\nThe homology is trivial.");
-				else
+				if(Batch == 6) 
 					{
-					j += fprintf(fptr,"\n\nThe homology is: ");
-					while(Num_Torsion_Values)
-						{
-						j += fprintf(fptr,"Z%lu ",Torsion[--Num_Torsion_Values]);
-						if(Num_Torsion_Values == 0) break;
-						if(j > 80)
-							{
-							j = 0;
-							fprintf(fptr,"\n");
-							}
-						j += fprintf(fptr,"x ");	
-						}
-					}	
+					printf("\nH_1 = 1");
+					if(H_Results != NULL) fprintf(H_Results,"H_1 = 1");
+					}
+				else printf("\n\nThe homology is trivial.");
 				}
 			else
 				{
-				j += fprintf(fptr,"\n\nThe homology is: Z ");
-				for(i = 1; i < Betti_Number; i++)
+				if(Batch == 6)
 					{
-					j += fprintf(fptr,"x Z ");
-					if(j > 80)
-						{
-						j = 0;
-						fprintf(fptr,"\n");
-						}
-					}	
+					printf("\nH_1 = ");
+					if(H_Results != NULL) fprintf(H_Results,"H_1 = ");
+					}
+				else printf("\n\nThe homology is: ");
+				
 				while(Num_Torsion_Values)
-					{
-					j += fprintf(fptr,"x Z%lu ",Torsion[--Num_Torsion_Values]);
-					if(j > 80)
-						{
-						j = 0;
-						fprintf(fptr,"\n");
-						}
-					}		
-				}			
+					{	
+					printf("Z/%lu ",Torsion[--Num_Torsion_Values]);
+					if(Batch == 6 && H_Results != NULL) fprintf(H_Results,"Z/%lu ",Torsion[Num_Torsion_Values]);
+					if(Num_Torsion_Values == 0) break;
+					printf("+ ");
+					if(Batch == 6 && H_Results != NULL) fprintf(H_Results,"+ ");	
+					}
+				}	
 			}
-	
+		else
+			{
+			if(Batch == 6) 
+				{
+				if(Betti_Number == 1) 
+					{
+					printf("\nH_1 = Z ");
+					if(H_Results != NULL) fprintf(H_Results,"H_1 = Z ");
+					}
+				else 
+					{
+					printf("\nH_1 = %dZ ",Betti_Number);
+					if(H_Results != NULL) fprintf(H_Results,"H_1 = %dZ ",Betti_Number);
+					}
+				}
+			else 
+				{
+				if(Betti_Number == 1) 
+					{
+					printf("\n\nThe homology is: Z ");
+					if(H_Results != NULL) fprintf(H_Results,"H_1 = Z ");
+					}			
+				else 
+					{
+					printf("\n\nThe homology is: %dZ ",Betti_Number);
+					if(H_Results != NULL) fprintf(H_Results,"H_1 = %dZ ",Betti_Number);
+					}
+				}
+			while(Num_Torsion_Values) 
+				{
+				printf("+ Z/%lu ",Torsion[--Num_Torsion_Values]);
+				if(H_Results != NULL) fprintf(H_Results,"+ Z/%lu ",Torsion[Num_Torsion_Values]);
+				}
+			}
 	END:
 								
 	/******************************************************************************************
 				Free the memory used by the array M[][] and the array Torsion[].
 	******************************************************************************************/
 		
-	for(i = 0; i < NumRelators; i++) DisposePtr((char *) M[i]);
+	for(i = 0; i < NumRelators; i++) if(M[i]) DisposePtr((char *) M[i]);
 	DisposePtr((char *) Torsion);
-								
 }
 
 unsigned long int gcd(unsigned long a,unsigned long b)
@@ -349,18 +365,18 @@ unsigned long int gcd(unsigned long a,unsigned long b)
 	if(a == 0L) return(b);
 	do
 		{
-		if((b = b%a) == 0L)
+		if((b = b%a) == 0)
 			return(a);
-		if((a = a%b) == 0L)
+		if((a = a%b) == 0)
 			return(b);
 		}
 	while(1);			
 }	
 
-
+#ifdef PRUNE_SEARCH_TREE
 void Prune_Search_Tree(void)
 {
-	unsigned char	*r;
+	unsigned char	*ptr = NULL;
 	
 	register int	Dad,
 					h,
@@ -368,15 +384,16 @@ void Prune_Search_Tree(void)
 					j;
 					
 	int				Ancestor,
-					*DesL,
+					*DesL = NULL,
 					NumDel;
 	
-	r = (unsigned char *) NewPtr(100);
+	ptr = (unsigned char *) NewPtr(100);
+	if(ptr == NULL) Mem_Error();
 	DesL = (int *) NewPtr(sizeof(int)*MAX_SAVED_PRES);
-	
+	if(Desl == NULL) Mem_Error();
 	DO_MORE:
 	printf("\n\nLIST THE NUMBER OF ACTIVE DESCENDANTS OF EACH PRESENTATION ?  HIT 'y' OR 'n'.    ");
-	GET_RESPONSE1:
+	GET_RESPONSE1:	
 	switch(WaitkbHit())
 		{
 		case 'y':
@@ -412,18 +429,18 @@ void Prune_Search_Tree(void)
 		case 'n':
 			break;
 		default:
-			SysBeep(5);
+			if(Batch == FALSE) SysBeep(5);
 			goto GET_RESPONSE1;
 		}
 	printf("\n\nCURRENT PRESENTATIONS RANGE FROM NUMBER 1 TO NUMBER %u. ENTER THE NUMBER OF A PRESENTATION,",NumFilled);	
-	printf("\nWHOSE PROPER DESCENDANTS YOU WANT THE PROGRAM TO STOP SEARCHING, AND HIT 'return'.    ");
+	printf("\nWHOSE PROPER DESCENDANTS YOU WANT Heegaard TO STOP SEARCHING, AND HIT 'return'.    ");
 	GET_RESPONSE2:
 	Ancestor = 0;		
-	ReadString((char *)r, GetPtrSize(r));
-	sscanf((char *) r,"%d",&Ancestor);
+	ReadString((char *)ptr, GetPtrSize(ptr));
+	sscanf((char *) ptr,"%d",&Ancestor);
 	if(Ancestor < 1 || Ancestor > NumFilled)
 		{
-		SysBeep(5);
+		if(Batch == FALSE) SysBeep(5);
 		goto GET_RESPONSE2;
 		}
 		
@@ -446,7 +463,7 @@ void Prune_Search_Tree(void)
 		printf("\n\nNo proper descendants of Presentation %d are currently active.",Ancestor + 1);
 		
 	printf("\n\nDO MORE PRUNNING ? HIT 'y' OR 'n'.    ");
-	GET_RESPONSE3:
+	GET_RESPONSE3:	
 	switch(WaitkbHit())
 		{
 		case 'y':
@@ -454,9 +471,10 @@ void Prune_Search_Tree(void)
 		case 'n':
 			break;
 		default:
-			SysBeep(5);
+			if(Batch == FALSE) SysBeep(5);
 			goto GET_RESPONSE3;
 		}
-	DisposePtr((char *) r);
+	DisposePtr((char *) ptr);
 	DisposePtr((char *) DesL);
 }
+#endif

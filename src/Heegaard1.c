@@ -1,3 +1,4 @@
+
 #include "Heegaard.h"
 #include <ctype.h>
 #include <string.h>
@@ -8,67 +9,139 @@
 struct termios normal_termio;
 #endif
 
+/****************************** function prototypes *****************************************
+L  334 main(int argv, char **argc)
+L  923 Rewrite_Input(void)
+L 1058 Delete_Dups(void)
+L 1141 Compare_Input_Pres(void)
+L 1169 Compare_Pres(int k)
+L 1197 Compare_Dual_Pres(int k)
+L 1224 Get_Initial_Diagram(PrintFlag)
+L 1993 Save_Pres(unsigned int From,unsigned int Daut,unsigned long Len,int F1,int F2,int F3,unsigned char F4,char F5)		
+L 2221 Non_Unique_Initial_Diagram(void)
+L 2347 On_File(void)
+L 2450 Init_G_Variables(void)
+L 2529 Delete_Old_Presentations(void)
+L 2549 ReRun_A_Presentation(void)
+L 2798 Get_Presentation_From_File(void)
+L 2929 Get_Presentation_From_KeyBoard(void)
+L 2996Check_Realizability_Of_The_Initial_Presentation(void)
+L 3022 Display_Diagram_Of_The_Initial_Presentation(void)
+L 3117 Get_Simplification_Parameters_From_User(int Flag1,int Flag2)
+L 3278 Turn_Micro_Print_On(void)
+L 3320 Find_Level_Transformations_Of_The_Initial_Presentation(void)
+L 3496 Reduce_The_Initial_Presentation_To_Minimal_Length(void)
+L 3563 Initial_Realizability_Check(void)
+L 3593 Print_Realizability(int Del_Only_Triv_Rel, unsigned int WhichPres)
+L 3621 Realization_Warning(void)
+L 3628 char mykbhit(void)
+L 3661 char WaitkbHit(void)
+********************************************************************************************/
+
 FILE 
-    *fptr,            
-    *myout,
+    *H_Results,
+    *Gvizdata,
     *input_relators;
 
 char
-    *ER;
+	Check_If_HS_Rep,
+	CheckHSReps,
+    *ER,
+    FoundSF,
+    FoundFiniteSF;
     
 unsigned char
-    *CBC[MAXNUMCOMPONENTS],
-    *BCF,
-    *BCWG,
-    *CO[VERTICES],
-    **Copy_Of_Input[MAXNUMRELATORS + 1],
-    **Copy_Of_Rel_1[MAXNUMRELATORS + 1],
-    **Copy_Of_Rel_2[MAXNUMRELATORS + 1],    
-    *CS,
-    **CD_Surgery_Rel[MAXNUMRELATORS + 1],
-    *DeletedEdgePtr,
-    *DeletedEdges,
-    **DelRelators[MAXNUMRELATORS + 1],
-    **DualRelators[MAXNUMRELATORS + 1],
-    **Exp_Surgery_Rel[MAXNUMRELATORS + 1],    
-    *Face[2*VERTICES],    
-    *FV,
-    *GBC,
-    *Inst,
-    **KorLRelators[MAXNUMRELATORS + 1],
-    *N1H,
-    *NCS,
-    *NS1XD2,
-    *NS1XS2,
-    **OutRelators[MAXNUMRELATORS + 1],
-    *PresName,
-    *QPM,            
-    **Relators[MAXNUMRELATORS + 1],
-    **TopOfChain[MAXNUMRELATORS + 1],
-    **RWR[MAXNUMDUPS],
-    ***SLR[MAX_SAVED_LEVELS],
-    ****SUR,
-    *T[(VERTICES)/2],
-    **Temp1,
-    **Temp2,
-    **Temp3,
-    **Temp4,
-    **Temp5,
-    **Temp6,
-    **Temp7,
-    **Temp8,
-    **Temp9,
-    **Temp10,
-    **Temp11,
-    **Temp12,
-    **Temp13,
-    **Temp14,
-    **Temp15,
-    *TP;
-
+	Batch = 0,
+	BPrintAnnulusData,
+	BPrintNotConnectedData,
+	B5PrintBdryComps,
+	B5PrintDualRelators,
+	B5PrintPaths,
+	B5TestSimpleCircuits,
+	B10B11ConSumPres,
+	B10B11Finite,
+	B10B11HSReps,
+	B10B11Recognized,	
+	B14B15PrintPres,
+	*CBC[MAXNUMCOMPONENTS],
+	*BCF,
+	*BCWG,
+	BreadthFirstSearch,
+	*CO[VERTICES],
+	**Copy_Of_Input[MAXNUMRELATORS + 1],
+	**Copy_Of_Rel_1[MAXNUMRELATORS + 1],
+	**Copy_Of_Rel_2[MAXNUMRELATORS + 1],			
+	*CS,
+	**CD_Surgery_Rel[MAXNUMRELATORS + 1],
+	*DD,
+	*DeletedEdgePtr,
+	*DeletedEdges,
+	**DelRelators[MAXNUMRELATORS + 1],
+	DepthFirstSearch,
+	**DualRelators[MAXNUMRELATORS + 1],
+	**Exp_Surgery_Rel[MAXNUMRELATORS + 1],	
+	*Face[2*VERTICES],
+	*FV,
+	*GBC,
+	GoingDown,
+	GoingUp,
+	GoingUpDown,
+	*Inst,
+	**KorLRelators[MAXNUMRELATORS + 1],
+	*MM[VERTICES],
+	*N1H,
+	*NCS,
+	*NS1XD2,
+	*NS1XS2,	
+	**OutRelators[MAXNUMRELATORS + 1],
+	*PresName,
+	*QPM,			
+	**Relators[MAXNUMRELATORS + 1],
+	**TopOfChain[MAXNUMRELATORS + 1],
+	*RWR[MAXNUMDUPS],
+	***SLR[MAX_SAVED_LEVELS],
+	***SMGP[MAX_MIN_GEN_PRES],
+	****SUR,
+	*T[(VERTICES)/2],
+	**Temp1,
+	**Temp2,
+	**Temp3,
+	**Temp4,
+	**Temp5,
+	**Temp6,
+	**Temp7,
+	**Temp8,
+	**Temp9,
+	**Temp10,
+	**Temp11,
+	**Temp12,
+	**Temp13,
+	**Temp14,
+	**Temp15,
+	**Temp16,
+	*TP,
+	*Low,
+	*MM[VERTICES],
+	*Num, 
+	*OnLStack,
+	*SatEdgeList1,
+	*SatEdgeList2,
+	*SComp,
+	*SepVertexList,
+	*SinkSet,
+	*LStack,
+	*TC[VERTICES],
+	TestRealizability1,
+    TestRealizability2,
+    TestRealizability3,
+    TestRealizability4,
+    **WirtingerL[MAXNUMRELATORS + 1],
+    **WirtingerM[MAXNUMRELATORS + 1];
+    
 int 
     *BDY,
     BdryData,
+    Betti_Number,
     Boundary,
     Compute_Stabilizers,
     Connected,
@@ -76,7 +149,6 @@ int
     CopyNumRelators,
     Count,
     CurrentComp,
-    CycleDiagrams,
     Delete_Only_Short_Primitives,
     Did_Cutting_Disk_Surgery,    
     Did_Exponent_Surgery,
@@ -89,7 +161,7 @@ int
     FoundPower,
     FoundPrimitive,
     *GB[VERTICES],
-    GoingUp,
+    HS_Rep_NumGens,
     *InPS,
     Input,
     Knot_Or_Link,
@@ -115,23 +187,27 @@ int
     NumExp_Sur_Rel,    
     NumFaces,
     NumGenerators,
-    NumKnot_Or_Link_Rel,    
+    NumKnot_Or_Link_Rel,
+    *NumLoops,   
     NumRelators,
     NumSepComps,
     NumTimes,
+    Num_Torsion_Values,
     OnlyReducingBandsums,
     *PRIM,
+    RandomizeSlides,
     ReadPres,
     *SaveBdry,
     Save_Init_Pres,
     SaveMinima,
     Saved_Vertices,
     SepPairs,
+    **SFSols,
+    SFSolV[20],    
     SRError,
     SReadPres,
-    TestRealizability1,
-    TestRealizability2,
-    TestRealizability3,    
+    SSSReadPres,
+    *SURNumX,    
     TotalComp,
     UserSaidQuit,
     Vertices,
@@ -148,9 +224,11 @@ unsigned int
     *AT,
     *B[VERTICES],
     *Bdry,
+    *BeenChecked,
     *BSV1,
     *BSV2,
     *ComponentNum,
+    CouldNotRemove,
     *Daughters,
     *DF,
     *DRA[2*MAXNUMRELATORS],
@@ -166,6 +244,8 @@ unsigned int
     *GV2,
     *GV2L,
     *GV2R,
+    *HegSplNum,
+    *HegSplNxt,
     *InDisk,
     *InQueue,
     *IV,
@@ -173,14 +253,23 @@ unsigned int
     LensSpace,    
     *Lowpt,
     MaxLength,
+    Mergers,
+    MyMaxSavedPres,
     *NEBC,    
     *NEX[(VERTICES)/2],
     *NFBC,    
     NotNewPres,
     *NRBC,    
     *Number,
-    NumCalled,
     NumFilled,
+    NumRealizable,
+    NumRelTooLong,   
+    Num_Saved_LPres,
+    *Num_Sep_Vertex_Pairs,
+    NumNonSepAnnuli,
+    NumNotConnected,
+    NumPresExamined,
+    NumSepAnnuli,
     NumSymmetries,
     NumVert,
     OnStack,
@@ -191,10 +280,12 @@ unsigned int
     Start_Level_Search,
     Starting_Pres,
     Stopper,
+    *SUR_Num,
     *SV,
     This_Pres,
     *TV,
     *UDV,
+    *UnUsed_Sep_Vertex_Pairs,
     *UpDate,
     *V,
     *VA,
@@ -216,35 +307,42 @@ long
     Recip_P,
     Recip_Q;
 
-unsigned long     
+unsigned long 
     Automorphisms,
     BytesAvailable,
     BytesUsed,
+    HS_Rep_Length,
     Length,
     *LR,
     *LSP,
     *LSQ,
+    MinLength,
     *MLC[MAXNUMCOMPONENTS],
     NumDualized,
+    NumErrors,
+    Num_Level_Slides,
     Num_Level_Transformations,
     OrigLength,
     P,
     Q,
     SLength,
+    SNum_Level_Slides,
     *SURL,
     TOCLength,
     TotalAuts;
 
-main(int argv, char **argc)
+int main(int argv, char **argc)
 {
-    char            c;
-        
-    unsigned char    *p,
-                     *q;
+    char            FoundAlexPoly,
+        			FoundMeridianReps;
+                
+    unsigned char 	*p,
+                   	*q;
                             
-    unsigned int     i;
+    unsigned int    i,
+    				j;
     
-    long             Scratch;
+    long            Scratch;
 
 #ifndef MAC
     struct termios newtermio;
@@ -258,11 +356,12 @@ main(int argv, char **argc)
     tcsetattr(0, 0, &newtermio);
 #endif
     
-    if(i = Do_Initialization())
+    if( (i = Do_Initialization()) )
         {
-        printf("\n\nThe program was unable to allocate memory for all of its data structures.");
-        printf("\nTry increasing the amount of memory which the program can use.");
+        printf("\n\nHeegaard was unable to allocate memory for all of its data structures.");
+        printf("\nTry increasing the amount of memory which Heegaard can use.");
         printf("\nFailure at allocation number %u.",i);
+        
 #ifndef MAC
 	tcsetattr(0, 0, &normal_termio);
 #endif
@@ -270,7 +369,25 @@ main(int argv, char **argc)
         }
     
     Input = INITIAL_PRES;
-    
+ 
+    printf("\n\n                                 HEEGAARD");
+    printf("\n                               BY JOHN BERGE");
+    printf("\n                             jberge@charter.net");
+    printf("\n                                   2/5/15\n");
+    printf("\n A PROGRAM FOR STUDYING 3-MANIFOLDS VIA PRESENTATIONS AND HEEGAARD DIAGRAMS.\n");
+    printf("\n        Copyright 1995-2015 by John Berge, released under GNU GPLv2+.");
+ 
+    if((Gvizdata = fopen("Heegaard_Diagrams.dot","w+")) == NULL)
+ 		printf("\n\nUnable to create file Gvizdata used by Graphviz() to display Heegaard diagrams");						
+ 	else
+ 		{
+ 		Heegaard_Splash_Screen();
+		printf("\n\nNote! Open the file 'Heegaard_Diagrams.dot' in Graphviz() to see Heegaard's Heegaard diagrams.");
+		}
+		
+     printf("\n\n	Note!	Hit the 'space-bar' to interrupt long computations.");
+     printf("\n            Hitting 's' during long computations should provide a status report.");  
+     
 _BEGIN:
     if(Input == BEGIN)
         {
@@ -280,42 +397,31 @@ _BEGIN:
         #ifdef DEBUGGING
             printf("\nHIT 'b' TO PRINT DEBUGGING INFO INTO THE FILE SIMPLIFY_H_ERRORS.");
         #endif
-        printf("\nHIT 'd' TO SEE THE HEEGAARD DIAGRAMS.");
-        if(NoReport)
-            printf("\nHIT 'F' TO SAVE THE PRESENTATIONS NOW IN MEMORY TO THE FILE 'Heegaard_Results'.");
-        printf("\nHIT 'i' TO SEE THE FILE 'Input_Presentations'.");
+        printf("\nHIT 'd' TO SEE DATA FOR THE HEEGAARD DIAGRAMS.");
         printf("\nHIT 'n' TO ENTER A NEW PRESENTATION.");
-        printf("\nHIT 'o' TO SEE THE FILE 'Heegaard_Results'.");
-        printf("\nHIT 'p' TO FIND CANCELLATION PATHS.");        
         printf("\nHIT 'q' TO QUIT RUNNING THE PROGRAM.");
-	printf("\n");
         if(Knot_Or_Link || Did_Exponent_Surgery || Did_Cutting_Disk_Surgery)
             printf("\nHIT 'r' TO TRY ANOTHER SURGERY ON A PREVIOUS PRESENTATION, OR TO RERUN A PRESENTATION.");        
         else
             printf("\nHIT 'r' TO RERUN A PRESENTATION.");
         printf("\nHIT 's' TO LOOK FOR SYMMETRIES.");
         printf("\nHIT 'v' TO REVIEW THE PRESENTATIONS NOW IN MEMORY.");
-        if(NumFilled > 1)
-            {
-            printf("\nHIT 'w' TO SORT THE PRESENTATIONS NOW IN MEMORY BY SUMMAND NUMBER,");
-            printf("\n        NUMGENERATORS, NUMRELATORS, LENGTH AND 'LEXICOGRAPHIC' ORDER.");
-            }
-        printf("\nHIT 'x' TO CLOSE 'Heegaard_Results' FOR 'EXTERIOR' EDITING.");    
-        printf("\nHIT '?' FOR HELP.");
-	printf("\n");
-        GET_RESPONSE1:
-        c = WaitkbHit();
-        switch(c)
+        printf("\nHIT 'w' TO SORT THE PRESENTATIONS NOW IN MEMORY BY SUMMAND NUMBER,");
+        printf("\n	NUMGENERATORS, NUMRELATORS, LENGTH AND 'LEXICOGRAPHIC' ORDER.");
+        printf("\n	(NOTE THAT AFTER SORTING ONE CAN FIND CANONICAL ORBIT REPS, ETC.)");
+
+		printf("\n");
+        GET_RESPONSE1:    
+        switch(WaitkbHit())
             {
             case 'b':
                 #ifdef DEBUGGING
                     DrawingDiagrams = FALSE;
-                    fptr = myout;
                     Debug();
                     Input = BEGIN;
                     goto _BEGIN;
                 #else
-                    SysBeep(5);
+                    if(Batch == FALSE) SysBeep(5);
                     DrawingDiagrams = FALSE;
                     Input = BEGIN;
                     goto GET_RESPONSE1;                    
@@ -325,18 +431,7 @@ _BEGIN:
                 Display_Diagrams();
                 Input = BEGIN;
                 goto _BEGIN;
-                        
-            case 'F':
-                if(NoReport)
-                    Report(Band_Sums,NumDiagrams,OnStack,Starting_Pres,1,1,1,0,1,0);
-                Input = BEGIN;
-                goto _BEGIN;
-                        
-            case 'i':
-                Display_File_Input_Presentations();
-                Input = BEGIN;
-                goto _BEGIN;
-                    
+                   
             case 'n': 
                 Input = INITIAL_PRES;
                 DrawingDiagrams = FALSE;
@@ -344,15 +439,6 @@ _BEGIN:
                 Did_Cutting_Disk_Surgery = FALSE;
                 Delete_Old_Presentations();
                 break;
-                
-            case 'o':
-                Display_File_Simplify_Heegaard();
-                Input = BEGIN;
-                goto _BEGIN;
-
-            case 'p':
-                Find_Cancellation_Paths();
-                goto _BEGIN;
                             
             case 'q':
                 goto _QUIT;
@@ -371,62 +457,53 @@ _BEGIN:
                 goto _BEGIN;
                 
             case 'v':
-                Report(Band_Sums,NumDiagrams,OnStack,0,0,0,0,0,1,0);
+                Report(Band_Sums,NumDiagrams,OnStack,0,0,0,0,0,1,NULL);
                 Input = BEGIN;
                 goto _BEGIN;
                 
             case 'w':
                 printf("\n\n     Sorting presentations. . . .");
-                Sort_Presentations_In_Memory();
-                Input = BEGIN;
-                goto _BEGIN;
-                
-            case 'x':
-                Edit_MyOut();
-                Input = BEGIN;
-                goto _BEGIN;
-                        
-            case '?':
-                Display_Help_File();
+                Sort_Presentations_In_Memory(1);
                 Input = BEGIN;
                 goto _BEGIN;
                                             
             default:
-                SysBeep(5);
+                if(Batch == FALSE) SysBeep(5);
                 DrawingDiagrams = FALSE;
                 Input = BEGIN;
                 goto GET_RESPONSE1;                                
             }            
-        }    
+        } 
+           
     if(Input == INITIAL_PRES)
         {
-        PRINT_INPUT_OPTIONS:            
-        printf("\n\nHIT 'f' IF THE PRESENTATION WILL COME FROM THE FILE 'Input_Presentations'.");
-        printf("\nHIT 'r' TO REVIEW THE FILE 'Input_Presentations'.");
+        PRINT_INPUT_OPTIONS: 
+        printf("\n\nHIT 'B' TO DO SOME BATCH PROCESSING.");           
+        printf("\nHIT 'f' IF THE PRESENTATION WILL COME FROM THE FILE 'Input_Presentations'.");
         printf("\nHIT 'k' IF THE PRESENTATION WILL BE ENTERED FROM THE KEYBOARD.");
         printf("\nHIT 'q' TO QUIT RUNNING THE PROGRAM.");
-        printf("\nHIT '?' FOR HELP.");
-	printf("\n");
-        GET_RESPONSE2:
-        c = WaitkbHit();
-        switch(c)
+		printf("\n");
+        GET_RESPONSE2:        
+        switch(WaitkbHit())
             {
+            case 'B': BatchProcessing();
+            	DrawingDiagrams = FALSE;
+                Did_Exponent_Surgery = FALSE;
+                Did_Cutting_Disk_Surgery = FALSE;
+            	Batch = 0;
+            	Input = INITIAL_PRES;
+            	goto PRINT_INPUT_OPTIONS;
             case 'f':
                 if(Get_Presentation_From_File()) goto PRINT_INPUT_OPTIONS;
-                break;
-            case 'r':
-                Display_File_Input_Presentations();
-                goto PRINT_INPUT_OPTIONS;        
+                break;     
             case 'k':
                 if(Get_Presentation_From_KeyBoard()) goto PRINT_INPUT_OPTIONS;
                 break;
             case 'q':
+            	printf("\n\n");
                 goto _QUIT;
-            case '?':
-                Display_Help_File();
-                goto PRINT_INPUT_OPTIONS;    
             default:
-                SysBeep(5);
+                if(Batch == FALSE) SysBeep(5);
                 goto GET_RESPONSE2;
             }
             
@@ -435,38 +512,47 @@ _BEGIN:
             to be the Wirtinger presentation of a knot or link and, if so, give the user the
             option of performing Dehn-fillings.
         **************************************************************************************/
-                
-        if(Wirtinger()) Knot_Or_Link = FALSE;
-        if(Knot_Or_Link)
+        
+        Knot_Or_Link = FALSE;        
+        if( (j = Wirtinger()) )
+        	{
+        	if(j == 6) 
+        		{
+        		printf("\n\n	This presentation resembles a Wirtinger presentation of a knot or link.");
+        		printf("\n\n	However, it does not seem to have the right number of relators!!");
+        		printf("\n\n(Heegaard expects a Wirtinger presentation obtained from an n crossing knot ");
+        		printf("or link projection to have n relators---with one relator corresponding to ");
+        		printf("each crossing of the projection.)");
+        		}
+        	}
+        if(Knot_Or_Link && (j != 17))
             {
             printf("\n\nThe surgered presentation is:\n");
-            Print_Relators(Relators,NumRelators,stdout);            
+            Print_Relators(Relators,NumRelators);            
             }                    
         }
     if(Input == RERUN) Input = INITIAL_PRES;        
     if(Input == INITIAL_PRES)
+		_STABILIZE_RETURN:
+		_EXPONENT_SURGERY_RETURN:
+		_CUTTING_DISK_SURGERY_RETURN:    
         {
         /**************************************************************************************
             Echo the initial relators to the output so we will have a copy of them. Then call
             Freely_Reduce(), Rewrite_Input(), and Canonical_Rewrite() to get a presentation
-            which serves as the initial presentation for the program. 
+            which serves as the initial presentation for Heegaard. 
         **************************************************************************************/    
         
         Micro_Print = FALSE;
         Micro_Print_F = FALSE;
-        ObscureCursor();
-        fprintf(myout,"\n\nThe initial presentation was:");
-        fprintf(myout," %s\n",PresName);
-        Print_Relators(Relators,NumRelators,myout);    
         for(i = 1,Scratch = 0L; i <= NumRelators; i++)
             Scratch += GetHandleSize((char **) Relators[i]);
         Scratch -= NumRelators;
-        printf("\n\nThis presentation has length %ld ",Scratch);
-        fprintf(myout,"\n\nThis presentation has length %ld ",Scratch);
+        printf("\n\nThis presentation has length %ld ",Scratch);        									
         if(Freely_Reduce() == TOO_LONG)
             {
             printf("\n\nThis presentation is too long!!");
-            SysBeep(5);
+            if(Batch == FALSE) SysBeep(5);
             Input = BEGIN;
             goto _BEGIN;
             }
@@ -474,23 +560,17 @@ _BEGIN:
             {
             printf("\nand freely reduces to the following presentation of length %lu.\n",
                 OrigLength);
-            fprintf(myout,"\nand freely reduces to the following presentation of length %lu.\n",
-                OrigLength);
-            Print_Relators(Relators,NumRelators,stdout);
-            Print_Relators(Relators,NumRelators,myout);    
+            Print_Relators(Relators,NumRelators);
             Scratch = OrigLength;
             }
         else
-            {
             printf("and is freely reduced.");
-            fprintf(myout,"and is freely reduced.");
-            }
         Micro_Print = TRUE;
         Micro_Print_F = TRUE;    
         if(Rewrite_Input())
             {
             printf("\n\nThere must be at least one non-empty relator!!");
-            SysBeep(5);
+            if(Batch == FALSE) SysBeep(5);
             Micro_Print = FALSE;
             Micro_Print_F = FALSE;
             Input = BEGIN;
@@ -504,13 +584,17 @@ _BEGIN:
         **************************************************************************************/
         
         CopyNumRelators     = NumRelators;
-        CopyNumGenerators     = NumGenerators;
+        CopyNumGenerators   = NumGenerators;
+        HS_Rep_Length 		= OrigLength;
+        HS_Rep_NumGens		= NumGenerators;
         for(i = 1; i <= NumRelators; i++)
             {
-            ReallocateHandle((char **) Copy_Of_Input[i],GetHandleSize((char **) Relators[i]));                
+            if(Copy_Of_Input[i] != NULL) DisposeHandle((char **) Copy_Of_Input[i]);
+            Copy_Of_Input[i] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[i]));
+            if(Copy_Of_Input[i] == NULL) Mem_Error();
             p = *Copy_Of_Input[i];
             q = *Relators[i];
-            while(*p++ = *q++) ;
+            while( (*p++ = *q++) ) ;
             }
                                         
         /**************************************************************************************
@@ -520,69 +604,122 @@ _BEGIN:
         
         Init_G_Variables();
         Length = Scratch;
-        printf("\n\nNumRelators = %d, NumGenerators = %d\n",NumRelators, NumGenerators);
+        printf("\n\nGen %d, Rel %d\n",NumGenerators,NumRelators);   
         Micro_Print = TRUE;
-        Micro_Print_F = TRUE;    
+        Micro_Print_F = TRUE;
+          					
         if(Canonical_Rewrite(Relators,FALSE,FALSE) == TOO_LONG)
             {
             printf("\n\nThis presentation has too many symmetries!!");
-            SysBeep(5);
+            if(Batch == FALSE) SysBeep(5);
             Micro_Print = FALSE;
             Micro_Print_F = FALSE;
-        /*    Input = BEGIN;
-            goto _BEGIN;    */    /* Overrode the error message from Canonical_Rewrite(). */
             }
         Micro_Print = FALSE;
-        Micro_Print_F = FALSE;                            
+        Micro_Print_F = FALSE; 
+        					                         
         if(Compare_Input_Pres() == FALSE)
             {
-            printf("\n\nThe rewritten initial presentation is:\n");
-            Print_Relators(Relators,NumRelators,stdout);
-            fprintf(myout,"\n\nThe rewritten initial presentation is:\n");
-            Print_Relators(Relators,NumRelators,myout);
+            if(Batch == 0) printf("\n\n");
+            printf(" The rewritten initial presentation is:");
+            if(Batch == 0) printf("\n");
+            Print_Relators(Relators,NumRelators);
+            printf("\n");
             }
-        
+        					
         /**************************************************************************************
                         Update the copy of the initial set of relators.
         **************************************************************************************/
         
-        CopyNumRelators     = NumRelators;
+        CopyNumRelators       = NumRelators;
         CopyNumGenerators     = NumGenerators;
         for(i = 1; i <= NumRelators; i++)
             {
-            ReallocateHandle((char **) Copy_Of_Input[i],GetHandleSize((char **) Relators[i]));                
+            if(Copy_Of_Input[i] != NULL) DisposeHandle((char **) Copy_Of_Input[i]);
+            Copy_Of_Input[i] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[i]));
+	        if(Copy_Of_Input[i] == NULL) Mem_Error();    
             p = *Copy_Of_Input[i];
             q = *Relators[i];
-            while(*p++ = *q++) ;
+            while( (*p++ = *q++) ) ;
             }
     
         /**************************************************************************************
                                 Present the user with some options.
         **************************************************************************************/
-                                        
+        
+        FoundAlexPoly = FALSE;
+        FoundMeridianReps = FALSE;                               
     _OPTIONS:
         printf("\n");
+        if(NumGenerators == 2 && NumRelators == 1)
+        	{
+        	if(FoundAlexPoly == FALSE)
+        		printf("\nHit 'a' TO COMPUTE THE ALEXANDER POLYNOMIAL OF R1.");
+        	if(FoundMeridianReps == FALSE)
+        		{	
+        		printf("\nHIT 'b' TO FIND 'meridian' REPS M1 & M2 OF H[R]. THIS ALLOWS ONE TO CHECK IF R IS A KNOT RELATOR.");
+        		printf("\nN.B.'Meridian' reps depend only on the relator R and don't depend on embedding in S^3.");
+        		}
+        	}
         printf("\nHIT 'c' TO CHECK REALIZABILITY OF THE INITIAL PRESENTATION.");
-        printf("\nHIT 'd' TO SEE THE HEEGAARD DIAGRAM OF THE INITIAL PRESENTATION.");
+        printf("\nHIT 'C' TO CHECK IF THE INITIAL PRESENTATION IS A \042HS REP\042. (Heegaard will stop and alert the user if");  
+        printf("\n    a sequence of handle-slides of the initial presentation P yields a presentation P' with |P'| < |P|.)");
+        printf("\nHIT 'd' TO SEE DATA FOR THE HEEGAARD DIAGRAM OF THE INITIAL PRESENTATION.");
         printf("\nHIT 'e' TO TRY EXPONENT SURGERY ON THE INITIAL PRESENTATION.");
-        printf("\nHIT 'g' TO GENERATE GENUS TWO DIAGRAMS.");            
         printf("\nHIT 'h' TO FIND THE INTEGRAL FIRST HOMOLOGY OF THE INITIAL PRESENTATION.");
-        printf("\nHIT 'i' TO SEE THE FILE 'Input_Presentations'.");
         printf("\nHIT 'k' TO TRY CUTTING DISK SURGERY ON THE INITIAL PRESENTATION.");
         printf("\nHIT 'l' TO FIND LEVEL TRANSFORMATIONS OF THE INITIAL PRESENTATION.");
-        printf("\nHIT 'm' TO LOOK FOR ALL MINIMAL PRESENTATIONS.");
+        printf("\nHIT 'm' TO LOOK FOR ALL MINIMAL PRESENTATIONS USING DEPTH-FIRST SEARCH.");
+        printf("\nHIT 'M' TO LOOK FOR ALL MINIMAL PRESENTATIONS USING BREADTH-FIRST SEARCH.");       
         printf("\nHIT 'n' TO ENTER A NEW PRESENTATION.");
         printf("\nHIT 'q' TO QUIT RUNNING THE PROGRAM.");
-        printf("\nHIT 'r' TO REDUCE AND SIMPLIFY THE INITIAL PRESENTATION.");
+        printf("\nHIT 'r' TO REDUCE AND SIMPLIFY THE INITIAL PRESENTATION USING DEPTH-FIRST SEARCH.");
+        printf("\nHIT 'R' TO REDUCE AND SIMPLIFY THE INITIAL PRESENTATION USING BREADTH-FIRST SEARCH.");        
         printf("\nHIT 's' TO FIND SYMMETRIES OF THE INITIAL PRESENTATION.");
+        printf("\nHIT 'u' TO STABILIZE THE PRESENTATION WHILE PRESERVING REALIZABILITY.");
         printf("\nHIT 'v' TO REVIEW THE INITIAL PRESENTATION.");
-        printf("\nHIT 'x' TO CLOSE 'Heegaard_Results' FOR 'EXTERIOR' EDITING.");
-        printf("\nHIT 'z' TO REDUCE THE INITIAL PRESENTATION TO MINIMAL LENGTH.");
-        printf("\nHIT '?' FOR HELP.\n");
-        GET_RESPONSE3:
-        c = WaitkbHit();
-        switch(c)
+        printf("\nHIT 'x' TO SIMPLIFY A PRESENTATION BY SUCCESSIVELY DELETING PRIMITIVES WITHOUT CHECKING REALIZABILITY.");
+        printf("\nHIT 'X' TO FIND THE PRESENTATIONS OBTAINED BY DELETING PRIMITIVES FROM JUST THE INITIAL PRESENTATION.");        
+        printf("\nHIT 'z' TO REDUCE THE INITIAL PRESENTATION TO MINIMAL LENGTH.\n");
+        GET_RESPONSE3:        
+        switch(WaitkbHit())
             {
+            case 'a':
+            	if(FoundAlexPoly == TRUE) 
+            		{
+            		printf("\n\nBeen Done! Choose a different option from the previous list.");
+            		goto GET_RESPONSE3;
+            		}
+            	if(NumGenerators != 2 || NumRelators != 1) goto GET_RESPONSE3;
+            	FoundAlexPoly = TRUE;
+            	AlexanderPolynomial(*Relators[1]);
+				Length = GetHandleSize((char **) Relators[1]) - 1;
+				Fill_A(1);
+				Get_Matrix();            	
+            	printf("\n\nCHOOSE ANOTHER OPTION FROM THE PREVIOUS LIST.");
+            	goto GET_RESPONSE3;
+            
+            case 'b':
+            	if(FoundMeridianReps == TRUE)
+            		{
+            		printf("\n\nBeen Done! Choose a different option from the previous list.");
+            		goto GET_RESPONSE3;
+            		}
+            	if(NumGenerators != 2 || NumRelators != 1) goto GET_RESPONSE3;
+            	FoundMeridianReps = TRUE;
+            	if(Is_Knot_Relator())
+            		{
+            		printf("\n\nCHOOSE ANOTHER OPTION FROM THE PREVIOUS LIST.");
+            		Length = GetHandleSize((char **) Relators[1]) - 1;
+            		Fill_A(1);
+            		Get_Matrix();
+            		goto GET_RESPONSE3;
+            		}
+            	printf("\n\n	Note: If simplifying < A,B | M1,M2 > yields S^3, R 1 is a knot relator.");
+            	printf("\n  If Heegaard produces a pseudo-minimal PM diagram != S^3, R 1 is not a knot relator."); 
+       			Input = RERUN;
+       			goto _BEGIN;
+            	
             case 'c':
                 if(Check_Realizability_Of_The_Initial_Presentation())
                     {
@@ -590,35 +727,44 @@ _BEGIN:
                     goto _BEGIN;
                     }
                 break;
-                
+ 
+			case 'C':
+				Check_If_HS_Rep 	= TRUE;
+				Get_Simplification_Parameters_From_User(FALSE,TRUE);
+                DepthFirstSearch	= FALSE;
+                BreadthFirstSearch	= TRUE;
+                Find_All_Min_Pres 	= FALSE; 
+                CheckHSReps 		= TRUE;               
+                goto _GET_INITIAL_DIAGRAM;
+                               
             case 'd':
                 Display_Diagram_Of_The_Initial_Presentation();
                 break;
                 
             case 'e':
-                if(Try_Exponent_Surgery()) break;
+                if(Try_Exponent_Surgery()) 
+                	{
+                	printf("\n\n	Did not do Exponent Surgery. Choose another option from the list above.");
+                	goto GET_RESPONSE3;
+                	}
                 Did_Exponent_Surgery = TRUE;
-                goto _OPTIONS;
-            
-            case 'g':
-                Generate_Orbits_Under_Auts();
-                    {
-                    Input = BEGIN;
-                    goto _BEGIN;
-                    }
+                Input = INITIAL_PRES;
+                goto _EXPONENT_SURGERY_RETURN;
                     
             case 'h':
                 printf("\n\nComputing the integral first homology of the initial presentation . . .");
                 Compute_Homology();
-                break;
-            
-            case 'i':
-                Display_File_Input_Presentations();
-                goto _OPTIONS;
+                printf("\n\nChoose another option from the list above.");
+                goto GET_RESPONSE3;
             
             case 'k':
-                if(Try_Cutting_Disk_Surgery()) break;
-                goto _OPTIONS;
+                if(Try_Cutting_Disk_Surgery())
+                	{
+                	printf("\n\n	Did not do Cutting_Disk_Surgery. Choose another option from the list above.");
+                	goto GET_RESPONSE3;
+                	}
+                Input = INITIAL_PRES;
+                goto _CUTTING_DISK_SURGERY_RETURN;
                 
             case 'I':
             case 'l':
@@ -631,9 +777,18 @@ _BEGIN:
                             
             case 'm':
                 Get_Simplification_Parameters_From_User(FALSE,TRUE);
-                Find_All_Min_Pres = TRUE;
-                goto _GET_INITIAL_DIAGRAM;    
-            
+                DepthFirstSearch	= TRUE;
+                BreadthFirstSearch	= FALSE;
+                Find_All_Min_Pres 	= TRUE;
+                goto _GET_INITIAL_DIAGRAM; 
+                  
+            case 'M':
+                Get_Simplification_Parameters_From_User(FALSE,TRUE);
+                DepthFirstSearch	= FALSE;
+                BreadthFirstSearch	= TRUE;
+                Find_All_Min_Pres 	= TRUE;
+                goto _GET_INITIAL_DIAGRAM; 
+                             
             case 'n':
                 Input = INITIAL_PRES;
                 goto _BEGIN;
@@ -643,59 +798,79 @@ _BEGIN:
             
             case 'r':
                 Get_Simplification_Parameters_From_User(FALSE,TRUE);
-                Find_All_Min_Pres = FALSE;                
+                DepthFirstSearch	= TRUE;
+                BreadthFirstSearch	= FALSE;
+                Find_All_Min_Pres 	= FALSE;                
                 goto _GET_INITIAL_DIAGRAM;
+                
+             case 'R':
+                Get_Simplification_Parameters_From_User(FALSE,TRUE);
+                DepthFirstSearch	= FALSE;
+                BreadthFirstSearch	= TRUE;
+                Find_All_Min_Pres 	= FALSE;
+                goto _GET_INITIAL_DIAGRAM;          
             
             case 's':
                 printf("\n\n    This is the initial presentation:\n");
-                Print_Relators(Relators,NumRelators,stdout);
-                fprintf(myout,"\n\n   This was the initial presentation:\n");
-                Print_Relators(Relators,NumRelators,myout);
+                Print_Relators(Relators,NumRelators);
                 i = NoReport;
                 NoReport = FALSE;
                 Find_Symmetries(TRUE);
                 NoReport = i;
                 break;
+                
+            case 'u':
+            	if(Stabilize())
+            		{
+            		printf("\n\n	Did not stabilize. Choose another option from the list above.");
+            		goto GET_RESPONSE3;
+            		}
+            	Input = INITIAL_PRES;
+            	goto _STABILIZE_RETURN;    
             
             case 'v':
                 printf("\n\n    This is the initial presentation:\n");
-                Print_Relators(Relators,NumRelators,stdout);    
+                Print_Relators(Relators,NumRelators);    
                 goto _OPTIONS;
-            
+                
             case 'x':
-                Edit_MyOut();
-                goto _OPTIONS;
-                    
+            	Just_Delete_Primitives(FALSE); 
+                Input = BEGIN;
+                goto _BEGIN;
+                
+            case 'X':
+            	Just_Delete_Primitives(TRUE); 
+                Input = BEGIN;
+                goto _BEGIN; 
+                                   
             case 'z':
                 if(Reduce_The_Initial_Presentation_To_Minimal_Length())
                     {
                     Input = BEGIN;
                     goto _BEGIN;
                     }
-                break;    
-            
-            case '?':
-                Display_Help_File();
-                goto _OPTIONS;
+                break;
                 
             default:
-                SysBeep(5);
+                if(Batch == FALSE) SysBeep(5);
                 goto GET_RESPONSE3;
             }
         
-        NumRelators     = CopyNumRelators;
-        NumGenerators     = CopyNumGenerators;
-        Vertices         = 2*NumGenerators;
+        NumRelators		= CopyNumRelators;
+        NumGenerators 	= CopyNumGenerators;
+        Vertices 		= 2*NumGenerators;
         for(i = 1,Scratch = 0L; i <= NumRelators; i++)
             {
-            ReallocateHandle((char **) Relators[i],GetHandleSize((char **) Copy_Of_Input[i]));
+            if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+            Relators[i] = (unsigned char **) NewHandle(GetHandleSize((char **) Copy_Of_Input[i]));
+            if(Relators[i] == NULL) Mem_Error();     
             Scratch += GetHandleSize((char **) Copy_Of_Input[i]);                
             p = *Copy_Of_Input[i];
             q = *Relators[i];
-            while(*q++ = *p++) ;
+            while( (*q++ = *p++) ) ;
             }
         Scratch -= NumRelators;                    
-        Delete_Old_Presentations();    
+        Delete_Old_Presentations();
         Init_G_Variables();
         Length = Scratch;    
         goto _OPTIONS;
@@ -705,7 +880,7 @@ _BEGIN:
             Call Get_Initial_Diagram(TRUE) to see whether this presentation is realizable.
         **************************************************************************************/
 
-        _GET_INITIAL_DIAGRAM:                        
+ _GET_INITIAL_DIAGRAM:                        
         switch(Get_Initial_Diagram(TRUE))
             {
             case 0:
@@ -715,7 +890,7 @@ _BEGIN:
             case 1:
                 TestRealizability1 = FALSE;
                 TestRealizability2 = FALSE;
-                Report(Band_Sums,NumDiagrams,OnStack,Starting_Pres,0,0,1,0,1,0);
+                Report(Band_Sums,NumDiagrams,OnStack,Starting_Pres,0,0,1,0,1,NULL);
                 Input = BEGIN;
                 goto _BEGIN;
             case 2:
@@ -738,14 +913,14 @@ _BEGIN:
     goto _BEGIN;
     
 _QUIT:    
-    fclose(myout);
 #ifndef MAC
     tcsetattr(0, 0, &normal_termio);
 #endif
     return(0);            
 }        
 
-Rewrite_Input()
+
+int Rewrite_Input()
 {
     /******************************************************************************************
         This routine is called after input of the initial set of relators. It reads through
@@ -755,18 +930,18 @@ Rewrite_Input()
     ******************************************************************************************/
     
     register unsigned char     *p,
-                            s,
-                            t,
-                            x,
-                            y,
-                            z;
+                            	s,
+                            	t,
+                            	x,
+                            	y,
+                            	z;
                             
-    register unsigned int     i,
-                            j,
-                            k;
+    register unsigned int     	i,
+                            	j,
+                            	k;
                             
-    int                        h,
-                            m;                        
+    int                        	h,
+                            	m;                        
                                                     
     unsigned char             **Temp;
     
@@ -791,7 +966,7 @@ Rewrite_Input()
     TT[++i] = 0;
     
     /******************************************************************************************
-        If k = 0, the presentation the program was given has reduced to the empty presentation.
+        If k = 0, the presentation Heegaard was given has reduced to the empty presentation.
         Return(1);
     ******************************************************************************************/
         
@@ -832,7 +1007,7 @@ Rewrite_Input()
     for(i = 1; i <= NumRelators; i++)
         {
         p = *Relators[i];
-        while(z = *p++) TT[z]++;
+        while( (z = *p++) ) TT[z]++;
         }
     NumGenerators = 0;
     for(i = 65, j = 97; i < 91; i++,j++) if(TT[i] || TT[j])
@@ -861,26 +1036,13 @@ Rewrite_Input()
         if(Micro_Print)
             {
             if(h == 1)
-                {
                 printf("\n\nMade the following replacements of generators in the presentation:\n");
-                if(Micro_Print_F)
-                    fprintf(myout,"\n\nMade the following replacements of generators in the presentation:\n");
-                }
-            if(m > 80)
-                {
-                printf("\n");
-                if(Micro_Print_F)                
-                    fprintf(myout,"\n");
-                m = 0;
-                }    
-            m += printf("%d) %c -> %c ",h,s,x);
-            if(Micro_Print_F)            
-            fprintf(myout,"%d) %c -> %c ",h,s,x);    
+            printf("%d) %c -> %c ",h,s,x);  
             }
         for(k = 1; k <= NumRelators; k++)
             {
             p = *Relators[k];
-            while(z = *p)
+            while( (z = *p) )
                 {
                 if(z == s) *p = x;
                 if(z == t) *p = y;
@@ -901,18 +1063,17 @@ int Delete_Dups(void)
             of another relator. It returns the number of distinct nonempty relators.
     ******************************************************************************************/
     
-    register unsigned char     **Temp;
+    register unsigned char  **Temp;
         
-    register int             i,
+    register int            i,
                             j;
     
     int                     SNumRelators;
     
-    unsigned long            HS;
+    unsigned long           HS;
     
     SNumRelators = NumRelators;
     NumEmptyRels = 0;
-    for(i = 1; i <= NumRelators; i++) HLock((char **) Relators[i]);
     
     /*****************************************************************************************
                         First, find and remove any empty relators.
@@ -921,7 +1082,7 @@ int Delete_Dups(void)
     for(i = 1; i < SNumRelators; i++)
         {
         HS = GetHandleSize((char **) Relators[i]);
-        if(HS == 1L)                        
+        if(HS == 1)                        
             {
             SNumRelators--;
             NumEmptyRels ++;
@@ -932,7 +1093,7 @@ int Delete_Dups(void)
                 
             for(j = SNumRelators + 1; j > i; j--)
                 {
-                if(GetHandleSize((char **) Relators[j]) > 1L)
+                if(GetHandleSize((char **) Relators[j]) > 1)
                     {
                     Temp = Relators[i];
                     Relators[i] = Relators[j];
@@ -974,11 +1135,10 @@ int Delete_Dups(void)
                     }        
         Inverse(*Relators[i]);                    
         }    
-    for(i = 1; i <= NumRelators; i++) HUnlock((char **) Relators[i]);             
     return(SNumRelators);                
 }
 
-Compare_Input_Pres()
+int Compare_Input_Pres()
 {
     /******************************************************************************************
                 This routine compares the presentation in Copy_Of_Input[] and the
@@ -986,7 +1146,7 @@ Compare_Input_Pres()
             FALSE otherwise.
     ******************************************************************************************/
     
-    register unsigned char     *p,
+    register unsigned char 	*p,
                             *q;
                             
     register int             i;
@@ -1006,7 +1166,7 @@ Compare_Input_Pres()
     return(TRUE);            
 }
 
-Compare_Pres(k)
+int Compare_Pres(k)
 register int k;
 {
     /******************************************************************************************
@@ -1015,7 +1175,7 @@ register int k;
             FALSE otherwise.
     ******************************************************************************************/
     
-    register unsigned char     *p,
+    register unsigned char 	*p,
                             *q;
                             
     register int             i;
@@ -1034,7 +1194,7 @@ register int k;
     return(TRUE);            
 }
 
-Compare_Dual_Pres(k)
+int Compare_Dual_Pres(k)
 register int k;
 {
     /******************************************************************************************
@@ -1042,7 +1202,7 @@ register int k;
             DualRelators[]. It returns TRUE if they are identical and FALSE otherwise.
     ******************************************************************************************/
     
-    register unsigned char     *p,
+    register unsigned char  *p,
                             *q;
                             
     register int             i;
@@ -1061,7 +1221,7 @@ register int k;
     return(TRUE);                
 }
 
-Get_Initial_Diagram(PrintFlag)
+int Get_Initial_Diagram(PrintFlag)
 int        PrintFlag;
 {
     /******************************************************************************************
@@ -1069,10 +1229,10 @@ int        PrintFlag;
             if the initial presentation is realizable by a Heegaard diagaram.
     ******************************************************************************************/
         
-    register unsigned char     *p,
+    register unsigned char  *p,
                             *q;
     
-    register int             i,
+    register int            i,
                             j;
                             
     unsigned int            Flag1,
@@ -1081,7 +1241,7 @@ int        PrintFlag;
                             Flag4,
                             SNumFilled;                                                
     
-    int                        Del_Only_Triv_Rel,
+    int                     Del_Only_Triv_Rel,
                             DistinctNonEmpty,
                             FirstPass,
                             NumReTries1,
@@ -1090,19 +1250,19 @@ int        PrintFlag;
                             SMicro_Print_F,
                             SNumRelators;
                             
-    unsigned long            HS;                        
+    unsigned long           HS;                        
     
-    unsigned int Whitehead_Graph();
-    unsigned int Reduce_Genus();        
+    unsigned int 			Whitehead_Graph();
+    unsigned int 			Reduce_Genus();        
     
-    Input = NORMAL;
-    TestRealizability1 = TRUE;
-    TestRealizability2 = FALSE;
-    Del_Only_Triv_Rel = TRUE;
-    NumReTries1 = 0;
-    NumReTries2 = 0;
-    FirstPass = TRUE;
-    BdryData = TRUE;
+    Input 				= NORMAL;
+    TestRealizability1 	= TRUE;
+    TestRealizability2 	= FALSE;
+    Del_Only_Triv_Rel  	= TRUE;
+    NumReTries1 		= 0;
+    NumReTries2 		= 0;
+    FirstPass   		= TRUE;
+    BdryData 			= TRUE;
 
     if(NumGenerators > 2 && Initial_Realizability_Check()) return(2);
         
@@ -1119,7 +1279,7 @@ _RESTART:
         printf("\nHIT 'v' TO REVIEW THE PRESENTATIONS.");
         printf("\nHIT 'x' TO TOGGLE MICRO_PRINTING ON AND OFF.");
         printf("\nHIT 'r' TO RESUME RUNNING THIS EXAMPLE.");
-        GET_RESPONSE2:
+        GET_RESPONSE2:        
         switch(WaitkbHit())
             {
             case 'r':
@@ -1127,40 +1287,50 @@ _RESTART:
             case 't':
                 return(1);
             case 'v':
-                Report(Band_Sums,NumDiagrams,OnStack,0,0,0,0,0,1,0);
+                Report(Band_Sums,NumDiagrams,OnStack,0,0,0,0,0,1,NULL);
                 goto LIST_OPTIONS2;
             case 'x':
-                printf("\n\n    HIT 'b' TO MICRO_PRINT TO BOTH THE SCREEN AND 'Heegaard_Results'.");
-                printf("\n    HIT 's' TO MICRO_PRINT ONLY TO THE SCREEN.");
-                if(SMicro_Print)
-                    printf("\n    HIT 'o' TO TURN MICRO_PRINTING COMPLETELY OFF.");        
-                GET_RESPONSE1:
-                switch(WaitkbHit())
-                    {
-                    case 'b':
-                        SMicro_Print = TRUE;
-                        SMicro_Print_F = TRUE;
-                        break;
-                    case 's':
-                        SMicro_Print = TRUE;
-                        SMicro_Print_F = FALSE;
-                        break;                            
-                    case 'o':
-                        if(!SMicro_Print)
-                            {
-                            SysBeep(5);
-                            goto GET_RESPONSE1;
-                            }
-                        SMicro_Print = FALSE;
-                        SMicro_Print_F = FALSE;
-                        break;                        
-                    default:
-                        SysBeep(5);
-                        goto GET_RESPONSE1;
-                    }    
+            	if(SMicro_Print)
+					{
+					printf("\nMicro_Printing IS ON. TURN Micro_Printing OFF ? HIT 'y' OR 'n'.\n");
+					GET_RESPONSE1:
+					switch(WaitkbHit())
+						{
+						case 'y':	
+							SMicro_Print 	= FALSE;
+							SMicro_Print_F 	= FALSE;
+							break;
+						case 'n':
+							SMicro_Print 	= TRUE;
+							SMicro_Print_F 	= TRUE;
+							break;
+						default:
+							if(Batch == FALSE) SysBeep(5);
+							goto GET_RESPONSE1;
+						}
+					}
+				else
+					{
+					printf("\nTURN Micro_Printing ON ? HIT 'y' OR 'n'.\n");
+					GET_RESPONSE3:					
+					switch(WaitkbHit())
+						{
+						case 'y':
+							SMicro_Print 	= TRUE;
+							SMicro_Print_F 	= TRUE;			
+							break;
+						case 'n':
+							SMicro_Print 	= FALSE;
+							SMicro_Print_F 	= FALSE;
+							break;
+						default:
+							if(Batch == FALSE) SysBeep(5);
+							goto GET_RESPONSE3;
+						}
+					}	
                 break;
             default:
-                SysBeep(5);
+                if(Batch == FALSE) SysBeep(5);
                 goto GET_RESPONSE2;
             }
         NoReport = TRUE;    
@@ -1179,24 +1349,14 @@ _RESTART:
             if(!Micro_Print)
                 {
                 if(SNumRelators == NumRelators + 1)
-                    {
                     printf("\n\n                    Deleted a trivial generator.\n");
-                    if(Micro_Print_F)                    
-                        fprintf(myout,"\n\n                    Deleted a trivial generator.\n");
-                    }
-                else
-                    {    
+                else    
                     printf("\n\n                    Deleted %d trivial generators.\n",
                         SNumRelators - NumRelators);
-                    if(Micro_Print_F)
-                        fprintf(myout,"\n\n                    Deleted %d trivial generators.\n",
-                            SNumRelators - NumRelators);
-                    }
                 }
             break;
         case TOO_LONG:
-            printf("\n\n                    This presentation may be too long!");
-            fprintf(myout,"\n\n                    This presentation may be too long!");
+			printf("\n\n                    This presentation may be too long!");
             return(1);
         }
     
@@ -1242,10 +1402,9 @@ _RESTART:
         return(1);    
         }
         
-    if(Length == 0L)
+    if(Length == 0)
         {
         printf("\n\nThe presentation has reduced to a presentation of length zero.");
-        fprintf(myout,"\n\nThe presentation has reduced to a presentation of length zero.");
         Print_Realizability(Del_Only_Triv_Rel,NumFilled);
         if(On_File() == NumFilled)
         Save_Pres(ReadPres,0,Length,1,2,0,0,0);
@@ -1261,27 +1420,15 @@ _RESTART:
             printf("\n\n%lu automorphism(s) reduced the length to %lu.",
                 Automorphisms,Length);
             printf("\n\nThe presentation is currently:\n");
-            Print_Relators(Relators,NumRelators,stdout);
-            if(Micro_Print_F)
-                {    
-                fprintf(myout,"\n\n%lu automorphism(s) reduced the length to %lu.",
-                    Automorphisms,Length);
-                fprintf(myout,"\n\nThe presentation is currently:\n");
-                Print_Relators(Relators,NumRelators,myout);
-                }
+            Print_Relators(Relators,NumRelators);
             }
         else
-            {
-            printf("\n\nThe current set of relators has minimal length of %lu.",Length);
-            if(Micro_Print_F)
-                fprintf(myout,"\n\nThe current set of relators has minimal length of %lu.",Length);
-            }        
+            printf("\n\nThe current set of relators has minimal length of %lu.",Length);       
         }
             
     if(Flag4 == TOO_LONG)
         {
-        printf("\n\n                    This presentation may be too long!");
-        fprintf(myout,"\n\n                    This presentation may be too long!");
+		printf("\n\n                    This presentation may be too long!");        
         return(1);
         }                
     if(Flag4 == 1)
@@ -1291,15 +1438,11 @@ _RESTART:
             {
             printf("\n\n                    This relator is not of full rank.");
             printf("\n\n                    Reducing the number of generators. . .\n");
-            fprintf(myout,"\n\n                    This relator is not of full rank.");
-            fprintf(myout,"\n\n                    Reducing the number of generators. . .\n");
             }
         else
             {    
             printf("\n\n                    The initial relators are not of full rank.");
             printf("\n\n                    Reducing the number of generators. . .\n");
-            fprintf(myout,"\n\n                    The initial relators are not of full rank.");
-            fprintf(myout,"\n\n                    Reducing the number of generators. . .\n");
             }
                 
         if(NumFilled == 0)
@@ -1348,31 +1491,31 @@ _RESTART:
             if(NumReTries1 > 3)
                 {
                 printf("\n\n                    Unable to determine whether the presentation is realizable.");
-                fprintf(myout,"\n\n                    Unable to determine whether the presentation is realizable.");                        
-                if(Do_Not_Reduce_Genus || Delete_Only_Short_Primitives)
-                    {
-                    printf("\n\n          Suggest rerunning the example and allowing the program to delete all primitives.");    
-                    fprintf(myout,"\n\n          Suggest rerunning the example and allowing the program to delete all primitives.");    
-                    }    
+                printf("\n\nTry computing the orbit of this presentation under level-transformations. Then check members of");
+        		printf("\nthe orbit for the absence of separating pairs of vertices. If such presentations exist, Heegaard");
+        		printf("\ncan determine whether this presentation is realizable.");
                 return(1);                
                 }
             printf("\n\n                    Retrying the initial presentation.");
-            NumRelators         = CopyNumRelators;
-            NumGenerators         = CopyNumGenerators;
-            Vertices             = 2*NumGenerators;
-            Del_Only_Triv_Rel     = TRUE;
-            FirstPass            = TRUE;
+            NumRelators  		= CopyNumRelators;
+            NumGenerators     	= CopyNumGenerators;
+            Vertices         	= 2*NumGenerators;
+            Del_Only_Triv_Rel  	= TRUE;
+            FirstPass         	= TRUE;
             for(i = 1,Length = 0L; i <= NumRelators; i++)
                 {
-                ReallocateHandle((char **) Relators[i],GetHandleSize((char **) Copy_Of_Input[i]));
+                if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+                Relators[i] = (unsigned char **) NewHandle(GetHandleSize((char **) Copy_Of_Input[i]));
+				if(Relators[i] == NULL) Mem_Error();
                 Length += GetHandleSize((char **) Copy_Of_Input[i]);                
                 p = *Copy_Of_Input[i];
-                if((q = *Relators[i]) == NULL)
+                if(Relators[i] == NULL)
                     {
                     printf("\n\n    Memory Error. Sorry!");
                     return(1);
                     }
-                while(*q++ = *p++) ;
+                q = *Relators[i]; 
+                while( (*q++ = *p++) ) ;
                 }
             Length -= NumRelators;
             ReadPres = 0;
@@ -1429,12 +1572,7 @@ _RESTART:
     if(Micro_Print)
         {
         printf("\n\nAt Get_Initial_Diagram(), the presentation is currently:\n");
-        Print_Relators(Relators,NumRelators,stdout);        
-        if(Micro_Print_F)
-            {        
-            fprintf(myout,"\n\nAt Get_Initial_Diagram(), the presentation is currently:\n");        
-            Print_Relators(Relators,NumRelators,myout);
-            }
+        Print_Relators(Relators,NumRelators);
         }                                            
     if(This_Pres == NumFilled)
         {
@@ -1461,17 +1599,15 @@ _RESTART:
     Saved_Vertices = 0;
     NumDiagrams ++;
     
-    if(Flag1 = Whitehead_Graph()) switch(Flag1)
+    if( (Flag1 = Whitehead_Graph()) ) switch(Flag1)
         {
         case NON_PLANAR:
             printf("\n\n                    The Whitehead graph is nonplanar.");
-            fprintf(myout,"\n\n                    The Whitehead graph is nonplanar.");
         case FATAL_ERROR:
             Fatal_Error();        
             return(1);
         case TOO_LONG:
-            printf("\n\n                    This presentation may be too long!");
-            fprintf(myout,"\n\n                    This presentation may be too long!");
+			printf("\n\n                    This presentation may be too long!");
             return(1);
         case TOO_MANY_COMPONENTS:
             return(1);        
@@ -1482,7 +1618,10 @@ _RESTART:
             UDV[This_Pres] = Flag1;
         case V2_ANNULUS_EXISTS:    
             if(Non_Unique_Initial_Diagram())
+            	{
+            	if(Batch == 4 || Batch == 10 || Batch == 11 || Batch == 53)
                 return(1);
+                }
             return(REDUCE_GENUS);
         case REDUCE_GENUS:
             goto _RESTART;    
@@ -1493,27 +1632,22 @@ _RESTART:
             **********************************************************************************/
             
             if(!Del_Only_Triv_Rel)
-                {
-                Realization_Warning(stdout);
-                Realization_Warning(myout);
-                }
+                Realization_Warning();
             printf("\n\n                    The Whitehead graph is not connected.");
             printf("\n\n                    Please check each summand separately.");
-            fprintf(myout,"\n\n                    The Whitehead graph is not connected.");
             BdryData = FALSE;
             return(1);
                         
         /**************************************************************************************
-                If the program gets to this point, then the program cannot find the diagram
-            corresponding to the initial presentation. Before we give up, we let the program
+                If Heegaard gets to this point, then Heegaard cannot find the diagram
+            corresponding to the initial presentation. Before we give up, we let Heegaard
             try to find some level transformations which might change the presentation into
-            one for which the program can find the corresponding diagram. If the program can't
+            one for which Heegaard can find the corresponding diagram. If Heegaard can't
             find any level transformations that work,then we look for ways to reduce the genus.
         **************************************************************************************/    
                 
         case SEP_PAIRS:
-            printf("\n\n                    The Whitehead graph has a pair of separating vertices.\n");
-            fprintf(myout,"\n\n                    The Whitehead graph has a pair of separating vertices.");
+            printf("\n\n                    The Whitehead graph has a separating pair of vertices.\n");
             UDV[This_Pres] = SEP_PAIRS;
             if(V1 & 1)
                 LSP[This_Pres] = V1/2 + 97;
@@ -1523,10 +1657,11 @@ _RESTART:
                 LSQ[This_Pres] = V2/2 + 97;
             else
                 LSQ[This_Pres] = V2/2 + 65;                
-            NumCalled = 0;
+            Num_Saved_LPres = 0;
             NotNewPres = 0;
-            ReadPres = This_Pres;    
-            switch(Flag3 = Level_Transformations(TRUE,TRUE,FALSE,0,FALSE))
+            SNum_Level_Slides = Num_Level_Slides;
+            ReadPres = This_Pres; 
+            switch(Flag3 = Level_Transformations(TRUE,TRUE,FALSE))
                 {
                 case 0:
                     break;
@@ -1542,55 +1677,39 @@ _RESTART:
                         {
                         case NON_PLANAR:
                             printf("\n\n                    The Whitehead graph is nonplanar.");
-                            fprintf(myout,"\n\n                    The Whitehead graph is nonplanar.");
                         case FATAL_ERROR:
                             Fatal_Error();        
                             return(1);
                         case TOO_LONG:
-                            printf("\n\n                    This presentation may be too long!");
-                            fprintf(myout,"\n\n                    This presentation may be too long!");
+							printf("\n\n                    This presentation may be too long!");
                             return(1);
                         case NON_UNIQUE_1:
                         case NON_UNIQUE_2:
                         case NON_UNIQUE_3:
                         case NON_UNIQUE_4:
                             UDV[This_Pres] = Flag2;
-                        case V2_ANNULUS_EXISTS:         
-                            for(i = 0; i < NumCalled; i++)
-                            for(j = 1; j <= NumRelators; j++) DisposeHandle((char **) SLR[i][j]);
+                        case V2_ANNULUS_EXISTS: 
+                        	if(Batch != 4 && Batch != 10 && Batch != 11) return(1); 
                             if(Non_Unique_Initial_Diagram())
                                 return(1);
                             return(REDUCE_GENUS);    
                         case NO_ERROR:
-                            printf("\n\n                    After some level transformations:");
-                            fprintf(myout,"\n\n                    After some level transformations:");
+                            printf("\n\n	After examining %u diagram(s) and performing %lu Sep-Vert-Slide(s):"
+                            	,Num_Saved_LPres, Num_Level_Slides - SNum_Level_Slides);
                             Print_Realizability(Del_Only_Triv_Rel,ReadPres + 1);
                             if(UDV[This_Pres] == V2_ANNULUS_EXISTS)
-                                {
                                 printf("\n\n                    However, the realization is not unique because an annulus exists.");    
-                                fprintf(myout,"\n\n                    However, the realization is not unique because an annulus exists.");
-                                }
-                            for(i = 0; i < NumCalled; i++)
-                            for(j = 1; j <= NumRelators; j++) DisposeHandle((char **) SLR[i][j]);
                             if(Micro_Print)
                                 {
                                 printf("\n\nStarted with Presentation %d:\n",ReadPres + 1);
-                                Print_Relators(Relators,NumRelators,stdout);        
-                                if(Micro_Print_F)
-                                    {        
-                                    fprintf(myout,"\n\nStarted with Presentation %d:\n",ReadPres + 1);        
-                                    Print_Relators(Relators,NumRelators,myout);
-                                    }
+                                Print_Relators(Relators,NumRelators); 
                                 }                                
                             goto DELETE_REDUNDANT;
                         break;    
                         }        
                     break;
                 case 3:
-                    for(i = 0; i < NumCalled; i++)
-                    for(j = 1; j <= NumRelators; j++) DisposeHandle((char **) SLR[i][j]);
                     printf("\n\n                    The Whitehead graph is nonplanar.");
-                    fprintf(myout,"\n\n                    The Whitehead graph is nonplanar.");
                     Fatal_Error();        
                     return(1);
                 case 4:
@@ -1598,12 +1717,8 @@ _RESTART:
                 case 5:
                     printf("\n\n          After some level transformations, ");
                     printf("the presentation contains a trivial generator.");
-                    fprintf(myout,"\n\n          After some level transformations, ");
-                    fprintf(myout,"the presentation contains a trivial generator.");        
                     if(!Do_Not_Reduce_Genus)
                         {
-                        for(i = 0; i < NumCalled; i++)
-                        for(j = 1; j <= NumRelators; j++) DisposeHandle((char **) SLR[i][j]);
                         goto _RESTART;
                         }
                     break;    
@@ -1616,270 +1731,241 @@ _RESTART:
                     break;
                 case FATAL_ERROR:
                     Fatal_Error();
-                    return(1);                            
+                    return(1);  
+                 default:
+                 	break;
                 }
-            if(NumCalled) for(i = 1; i <= NumRelators; i++)
+            if(Num_Saved_LPres) for(i = 1; i <= NumRelators; i++)
                 {
-                ReallocateHandle((char **) Relators[i],GetHandleSize((char **) SLR[0][i]));
-                if((p = *Relators[i]) == NULL)
-                    {
-                    printf("\n\nAn out of memory condition has arisen. Sorry!");
-                    for(i = 0; i < NumCalled; i++)
-                    for(j = 1; j <= NumRelators; j++) DisposeHandle((char **) SLR[i][j]);
-                    return(1);
-                    }
+                if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+                Relators[i] = (unsigned char **) NewHandle(GetHandleSize((char **) SLR[0][i]));
+                if(Relators[i] == NULL) Mem_Error();
+                p = *Relators[i];    
                 q = *SLR[0][i];
-                while(*p++ = *q++) ;
-                }        
-            for(i = 0; i < NumCalled; i++)
-            for(j = 1; j <= NumRelators; j++) DisposeHandle((char **) SLR[i][j]);
+                while( (*p++ = *q++) ) ;
+                } 
             if(Micro_Print)
                 {
                 printf("\n\nAt Get_Initial_Diagram(), the presentation is currently:\n");
-                Print_Relators(Relators,NumRelators,stdout);                
-                if(Micro_Print_F)
-                    {
-                    fprintf(myout,"\n\nAt Get_Initial_Diagram(), the presentation is currently:\n");                
-                    Print_Relators(Relators,NumRelators,myout);
-                    }
+                Print_Relators(Relators,NumRelators);
                 }    
             if(Flag3 != 5)
                 {                
-                printf("\n\n                    Unable to remove the separating pair of vertices.");
-                fprintf(myout,"\n\n                    Unable to remove the separating pair of vertices.");        
+                printf("\n\n                    Unable to remove the separating pair of vertices by Sep_Vert_Slides.");
+                if((Batch != 4 && Batch != 10 && Batch != 11) && Do_Not_Reduce_Genus) return(1);
                 if(NumReTries1 <= 3 && !Do_Not_Reduce_Genus)
-                    {
-                    printf("\n\n                    Trying to reduce the genus of the presentation.");
-                    fprintf(myout,"\n\n                    Trying to reduce the genus of the presentation.");
+                	{
+                	if(Batch == FALSE)
+                		{
+						printf("\n\nHeegaard would like to try to reduce the genus of the presentation. However, while deleting primitives\n");
+						printf("preserves fundamental groups, there is a small probability genus reduction will convert an unrealizable\n");
+						printf("into a realizable presentation.\n");
+						printf("The alternative is to abort, rerun the initial presentation, reduce the initial presentation to minimal-\n");
+						printf("length, have Heegaard compute the full orbit of the initial presentation under level-transformations, and\n");
+						printf("then to test the members of the orbit for the absence of separating pairs of vertices.");
+						printf("\n\n                    Hit 'p' to allow Heegaard to proceed. Hit 'q' to abort.");
+                    	}
+                    GET_RESPONSE5:
+                    if(Batch == FALSE)        
+                    switch(WaitkbHit())
+						{
+						case 'p':		
+							break;
+						case 'q':
+							return(1);
+						default:
+							if(Batch == FALSE) SysBeep(5);
+							goto GET_RESPONSE5;
+                    	}
                     }
                 }
             
         default:
-        if(NumRelators > 1 && NumReTries1 <= 3 && !Do_Not_Reduce_Genus)
-            {
-            /**********************************************************************************
-                Call Reduce_Genus() to see if there are primitives which can be removed.
-            **********************************************************************************/
-                
-            SNumRelators = NumRelators;
-            SReadPres = This_Pres;                
-            switch(Reduce_Genus(NORMAL,TRUE,TRUE))
-                {
-                case NO_ERROR:
-                    break;
-                case FATAL_ERROR:
-                    Fatal_Error();
-                    return(1);
-                case TOO_LONG:
-                case CAN_NOT_DELETE:
-                    printf("\n\n                    Unable to delete a primitive.");
-                    if(Micro_Print_F)
-                        fprintf(myout,"\n\n                    Unable to delete a primitive.");                    
-                    FoundPrimitive = FoundPower = LensSpace = EmtyRel = FALSE;
-                    NumReTries1 ++;
-                    printf("\n\n                    Retrying the initial presentation.");
-                    NumRelators         = CopyNumRelators;
-                    NumGenerators         = CopyNumGenerators;
-                    Vertices             = 2*NumGenerators;
-                    Del_Only_Triv_Rel     = TRUE;
-                    FirstPass            = TRUE;
-                    for(i = 1,Length = 0L; i <= NumRelators; i++)
-                        {
-                        ReallocateHandle((char **) Relators[i],GetHandleSize((char **) Copy_Of_Input[i]));
-                        Length += GetHandleSize((char **) Copy_Of_Input[i]);                
-                        p = *Copy_Of_Input[i];
-                        if((q = *Relators[i]) == NULL)
-                            {
-                            printf("\n\n    Memory Error. Sorry!");
-                            return(1);
-                            }
-                        while(*q++ = *p++) ;
-                        }
-                    Length -= NumRelators;
-                    ReadPres = 0;
-                    CurrentComp = 1;
-                    goto _RESTART;
-                }
-                    
-            if(FoundPrimitive || FoundPower || LensSpace || EmtyRel)
-                {
-                Del_Only_Triv_Rel = FALSE;
-                if(LensSpace)
-                    {
-                    if(SNumRelators > NumRelators)
-                        {
-                        Realization_Warning(stdout);
-                        Realization_Warning(myout);
-                        }
-                    printf("\n\n                    This manifold is a lens space.");
-                    fprintf(myout,"\n\n                    This manifold is a lens space.");
-                    return(REDUCE_GENUS);
-                    }
-                if(FoundPrimitive)
-                    {
-                    FoundPrimitive = FALSE;
-                    printf("\n\n                    The program found relator(s) which are primitive");
-                    printf("\n                    and deleted their consequences from the presentation.");
-                    fprintf(myout,"\n\n                    The program found relator(s) which are primitive");
-                    fprintf(myout,"\n                    and deleted their consequences from the presentation.");
-                    }
-                if(FoundPower)
-                    {
-                    FoundPower = FALSE;
-                    printf("\n\n                    The program found relator(s) which are proper powers");
-                    printf("\n                    and deleted their consequences from the presentation.");
-                    fprintf(myout,"\n\n                    The program found relator(s) which are proper powers");
-                    fprintf(myout,"\n                    and deleted their consequences from the presentation.");
-                    }
-                if(EmtyRel)
-                    {
-                    if(SNumRelators > NumRelators)
-                        {
-                        Realization_Warning(stdout);
-                        Realization_Warning(myout);
-                        }
-                    EmtyRel = FALSE;
-                    printf("\n\n                    This manifold is a connected sum.");
-                    printf("\n                    Please check each summand separately.\n");
-                    fprintf(myout,"\n\n                    This manifold is a connected sum.");
-                    fprintf(myout,"\n                    Please check each summand separately.\n");
-                    return(1);
-                    }
-                printf("\n");
-                fprintf(myout,"\n");        
-                goto _RESTART;
-                }
-            }
+        	
+        	if(NumRelators > 1 && NumReTries1 <= 3 && !Do_Not_Reduce_Genus)
+				{
+				if(Batch) printf("\n\nTrying to delete primitives from the presentation.");
+				
+				/**********************************************************************************
+					Call Reduce_Genus() to see if there are primitives which can be removed.
+				**********************************************************************************/
+				
+				SNumRelators = NumRelators;
+				SReadPres = This_Pres;                
+				switch(Reduce_Genus(NORMAL,TRUE,TRUE))
+					{
+					case NO_ERROR:
+						break;
+					case FATAL_ERROR:
+						Fatal_Error();
+						return(1);
+					case TOO_LONG:
+					case CAN_NOT_DELETE:
+						if(EmtyRel) break;
+						printf("\n\n                    Unable to delete a primitive.");                 
+						FoundPrimitive = FoundPower = LensSpace = EmtyRel = FALSE;
+						NumReTries1 ++;
+						printf("\n\n                    Retrying the initial presentation.");
+						NumRelators         = CopyNumRelators;
+						NumGenerators       = CopyNumGenerators;
+						Vertices            = 2*NumGenerators;
+						Del_Only_Triv_Rel   = TRUE;
+						FirstPass           = TRUE;
+						for(i = 1,Length = 0L; i <= NumRelators; i++)
+							{
+							if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+							Relators[i] = (unsigned char **) NewHandle(GetHandleSize((char **) Copy_Of_Input[i]));
+							if(Relators[i] == NULL) Mem_Error();
+							Length += GetHandleSize((char **) Copy_Of_Input[i]);                
+							p = *Copy_Of_Input[i];
+							if(Relators[i] == NULL)
+								{
+								printf("\n\n    Memory Error. Sorry!");
+								return(1);
+								}
+							q = *Relators[i];    
+							while( (*q++ = *p++) ) ;
+							}
+						Length -= NumRelators;
+						ReadPres = 0;
+						CurrentComp = 1;
+						goto _RESTART;
+					}
+					
+				if(FoundPrimitive || FoundPower || LensSpace || EmtyRel)
+					{
+					Del_Only_Triv_Rel = FALSE;
+					if(LensSpace)
+						{
+						if(SNumRelators > NumRelators)
+							Realization_Warning();
+						printf("\n\n                    This manifold is a lens space.");
+						return(REDUCE_GENUS);
+						}
+					if(FoundPrimitive)
+						{
+						FoundPrimitive = FALSE;
+						printf("\n\n                    Heegaard found relator(s) which are primitive");
+						printf("\n                    and deleted their consequences from the presentation.");
+						}
+					if(FoundPower)
+						{
+						FoundPower = FALSE;
+						printf("\n\n                    Heegaard found relator(s) which are proper powers");
+						printf("\n                    and deleted their consequences from the presentation.");
+						}
+					if(EmtyRel)
+						{
+						if(SNumRelators > NumRelators)
+							Realization_Warning();
+						EmtyRel = FALSE;
+						printf("\n\n                    This manifold is a connected sum.");
+						printf("\n                    Please check each summand separately.\n");
+						return(1);
+						}
+					printf("\n");
+					goto _RESTART;
+					}
+				}
             
-        if(Delete_Only_Short_Primitives)
-            {
-            ReadPres = This_Pres = Save_Init_Pres;
-            if(Get_Relators_From_SUR(ReadPres))
-                {
-                printf("\n\n    Memory Error. Sorry!");
-                return(1);
-                }
-            NumCalled = 0;
-            NotNewPres = 0;
-            if(Micro_Print)
-                {
-                printf("\n\nAt Get_Initial_Diagram(), the presentation is currently:\n");
-                Print_Relators(Relators,NumRelators,stdout);
-                if(Micro_Print_F)
-                    {                                
-                    fprintf(myout,"\n\nAt Get_Initial_Diagram(), the presentation is currently:\n");
-                    Print_Relators(Relators,NumRelators,myout);
-                    }
-                }
-            Fill_A(NumRelators);
-            Get_Matrix();
-            switch(Flag3 = Level_Transformations(TRUE,FALSE,FALSE,0,Del_Only_Triv_Rel))
-                {
-                case 3:
-                    for(i = 0; i < NumCalled; i++)
-                    for(j = 1; j <= NumRelators; j++) DisposeHandle((char **) SLR[i][j]);
-                    printf("\n\n                    The Whitehead graph is nonplanar.");
-                    fprintf(myout,"\n\n                    The Whitehead graph is nonplanar.");
-                    Fatal_Error();        
-                    return(1);                                        
-                case 5:
-                    for(i = 0; i < NumCalled; i++)
-                    for(j = 1; j <= NumRelators; j++) DisposeHandle((char **) SLR[i][j]);
-                    if(Micro_Print)
-                        {
-                        printf("\n\nThe presentation is currently:\n");
-                        Print_Relators(Relators,NumRelators,stdout);                        
-                        if(Micro_Print_F)
-                            {                        
-                            fprintf(myout,"\n\nThe presentation is currently:\n");
-                            Print_Relators(Relators,NumRelators,myout);
-                            }
-                        }
-                    printf("\n\n          After some level transformations, ");
-                    printf("the presentation contains a trivial generator.");
-                    fprintf(myout,"\n\n          After some level transformations, ");
-                    fprintf(myout,"the presentation contains a trivial generator.");                    
-                    goto _RESTART;
-                case 7:
-                    printf("\n\n            Out of memory for level transformations.");
-                    break;                        
-                case FATAL_ERROR:
-                    Fatal_Error();
-                    return(1);                
-                default:
-                    break;                    
-                }
-            for(i = 0; i < NumCalled; i++)
-            for(j = 1; j <= NumRelators; j++) DisposeHandle((char **) SLR[i][j]);        
-            }
+        	if(Delete_Only_Short_Primitives)
+				{
+				ReadPres = This_Pres = Save_Init_Pres;
+				if(Get_Relators_From_SUR(ReadPres))
+					{
+					printf("\n\n    Memory Error. Sorry!");
+					return(1);
+					}
+				Num_Saved_LPres = 0;
+				NotNewPres = 0;
+				SNum_Level_Slides = Num_Level_Slides;
+				if(Micro_Print)
+					{
+					printf("\n\nAt Get_Initial_Diagram(), the presentation is currently:\n");
+					Print_Relators(Relators,NumRelators);
+					}
+				Fill_A(NumRelators);
+				Get_Matrix();
+				switch(Flag3 = Level_Transformations(TRUE,FALSE,FALSE))
+					{
+					case 3:
+						printf("\n\n                    The Whitehead graph is nonplanar.");
+						Fatal_Error();        
+						return(1);                                        
+					case 5:
+						if(Micro_Print)
+							{
+							printf("\n\nThe presentation is currently:\n");
+							Print_Relators(Relators,NumRelators);   
+							}
+						printf("\n\n	After examining %u diagram(s) and performing %lu Sep-Vert-Slide(s):"
+							,Num_Saved_LPres, Num_Level_Slides - SNum_Level_Slides);
+						printf("the presentation contains a trivial generator.");                  
+						goto _RESTART;
+					case 7:
+						printf("\n\n            Out of memory for level transformations.");
+						break;                        
+					case FATAL_ERROR:
+						Fatal_Error();
+						return(1);                
+					default:
+						break;                    
+					}
+				}
         
-        if(!Delete_Only_Short_Primitives && NumReTries2 < 3
-            && Flag1 == SEP_PAIRS && Flag3 == 4)
-            {
-            NumReTries2 ++;    
-            DistinctNonEmpty = Delete_Dups();
-            j = NumRelators - DistinctNonEmpty;
-            if(j)
-                {
-                Del_Only_Triv_Rel = FALSE;
-                FirstPass = TRUE;
-                NumReTries1 = 0;
-                printf("\n\n                    Unable to remove the annulus which is present.");
-                fprintf(myout,"\n\n                    Unable to remove the annulus which is present.");
-                if(j == 1)
-                    {
-                    SysBeep(5);
-                    printf("\n\n    Modifying the initial presentation by deleting a duplicated or empty relator.\n",j);
-                    fprintf(myout,"\n\n    Modifying the initial presentation by deleting a duplicated or empty relator.\n",j);
-                    printf("\n    NOTE: This modification may change the homeomorphism type of M.\n");
-                    fprintf(myout,"\n    NOTE: This modification may change the homeomorphism type of M.\n");
-                    }                
-                else
-                    {
-                    SysBeep(5);
-                    printf("\n\n    Modifying the initial presentation by deleting %d duplicated or empty relators.\n",j);
-                    fprintf(myout,"\n\n    Modifying the initial presentation by deleting %d duplicated or empty relators.\n",j);
-                    printf("\n    NOTE: This modification may change the homeomorphism type of M.\n");
-                    fprintf(myout,"\n    NOTE: This modification may change the homeomorphism type of M.\n");
-                    }
-                NumRelators = DistinctNonEmpty;
-                for(i = 1,Length = 0L; i <= NumRelators; i++)
-                    Length += GetHandleSize((char **) Relators[i]);
-                Length -= NumRelators;        
-                printf("\n\nThe modified presentation is:\n");
-                fprintf(myout,"\n\nThe modified presentation is:\n");
-                Print_Relators(Relators,NumRelators,stdout);
-                Print_Relators(Relators,NumRelators,myout);    
-                goto _RESTART;
-                }
-            }
+        	if(!Delete_Only_Short_Primitives && NumReTries2 < 3 && Flag1 == SEP_PAIRS && Flag3 == 4)
+				{
+				NumReTries2 ++;    
+				DistinctNonEmpty = Delete_Dups();
+				j = NumRelators - DistinctNonEmpty;
+				if(j)
+					{
+					Del_Only_Triv_Rel = FALSE;
+					FirstPass = TRUE;
+					NumReTries1 = 0;
+					printf("\n\n                    Unable to remove the annulus which is present.");
+					if(j == 1)
+						{
+						if(Batch == FALSE) SysBeep(5);
+						printf("\n\n    Modifying the initial presentation by deleting a duplicated or empty relator.\n");
+						printf("\n    NOTE: This modification may change the homeomorphism type of M.\n");
+						}                
+					else
+						{
+						if(Batch == FALSE) SysBeep(5);
+						printf("\n\n    Modifying the initial presentation by deleting %d duplicated or empty relators.\n", j);
+						printf("\n    NOTE: This modification may change the homeomorphism type of M.\n");
+						}
+					NumRelators = DistinctNonEmpty;
+					for(i = 1,Length = 0L; i <= NumRelators; i++)
+						Length += GetHandleSize((char **) Relators[i]);
+					Length -= NumRelators;        
+					printf("\n\nThe modified presentation is:\n");
+					Print_Relators(Relators,NumRelators);
+					goto _RESTART;
+					}
+				}
                     
         printf("\n\n                    Unable to determine whether the presentation is realizable.");
-        fprintf(myout,"\n\n                    Unable to determine whether the presentation is realizable.");                        
-        if(Do_Not_Reduce_Genus || Delete_Only_Short_Primitives)
-            {
-            printf("\n\n          Suggest rerunning the example and allowing the program to delete all primitives.");    
-            fprintf(myout,"\n\n          Suggest rerunning the example and allowing the program to delete all primitives.");    
-            }    
+        printf("\n\nTry computing the orbit of this presentation under level-transformations. Then check members of");
+        printf("\nthe orbit for the absence of separating pairs of vertices. If such presentations exist, Heegaard");
+        printf("\ncan determine whether this presentation is realizable.");
         return(1);    
         }
         
     /******************************************************************************************
-            Otherwise, if the program gets to here, then the program found the diagram
+            Otherwise, if Heegaard gets to this point, then Heegaard found the diagram
         corresponding to the initial presentation. So we are in business.
     ******************************************************************************************/    
     
     Print_Realizability(Del_Only_Triv_Rel,Save_Init_Pres + 1);
     if(UDV[This_Pres] == V2_ANNULUS_EXISTS)
-        {
         printf("\n\n                    However, the realization is not unique because an annulus exists.");    
-        fprintf(myout,"\n\n                    However, the realization is not unique because an annulus exists.");
-        }
         
     DELETE_REDUNDANT:
-    
+    	
     if(PrintFlag)            
-    printf("\n\n                    Looking for other diagrams. . . .\n");
+    printf("\n\n                    Looking for other diagrams. . . .\n");	
         
     if(NumGenerators > 1)
         {
@@ -1907,21 +1993,24 @@ _RESTART:
 int Save_Pres(unsigned int From,unsigned int Daut,unsigned long Len,int F1,int F2,int F3,unsigned char F4,char F5)
 {
     /******************************************************************************************
-        Save_Pres() is called when the program has determined that a presentation should be
+        Save_Pres() is called when Heegaard has determined that a presentation should be
         put on file for further processing. It saves a copy of the presentation in the array
         SUR[][] and saves some other data about the presentation in the arrays listed below.
     ******************************************************************************************/
     
-    register unsigned char     *p,
-                            *q;
+    register unsigned char  *p,
+                            *q,
+                            *r;
                             
-    unsigned char             ***MyRelators;
+    unsigned char           ***MyRelators;
                     
-    register int             i,
+    register int            i,
                             j;
                     
-    int                        Error = FALSE;
-    
+    int                     Error = FALSE;
+        
+    unsigned long			HS;
+                
     switch(F1)
         {
         case 0:
@@ -1934,27 +2023,53 @@ int Save_Pres(unsigned int From,unsigned int Daut,unsigned long Len,int F1,int F
             MyRelators = Copy_Of_Input;
             break;
         }
-    
+
+	if(F4 == 1)
+		{
+		if(SUR[NumFilled][0] != NULL) DisposeHandle((char **) SUR[NumFilled][0]);
+		SUR[NumFilled][0] = (unsigned char **) NewHandle(sizeof(char)*(NumRelators + 1));
+		if(SUR[NumFilled][0] == NULL) Mem_Error();
+        p = *SUR[NumFilled][0];    
+        *p++ = NumRelators;
+        for(i = 1; i <= NumRelators; i++)  *p++ = 1;
+		}
+		
     for(i = 1; i <= NumRelators; i++)
         {
-        SUR[NumFilled][i] = (unsigned char **) NewHandle(GetHandleSize((char **) MyRelators[i]));            
-        if((q = *SUR[NumFilled][i]) == NULL)
-            {
-            Error = TRUE;
-            goto END;
-            }
+        HS = GetHandleSize((char **) MyRelators[i]);
+        if(SUR[NumFilled][i] != NULL) DisposeHandle((char **) SUR[NumFilled][i]);
+        SUR[NumFilled][i] = (unsigned char **) NewHandle(HS);            
+        if(SUR[NumFilled][i] == NULL) Mem_Error();
         p = *MyRelators[i];
-        while(*q++ = *p++) ;                                    
+        q = *SUR[NumFilled][i];    
+		r = q;
+		while( (*q++ = *p++) ) ;  
+		if((q-r) != HS) printf("\n\n1) Error in Presentation %u! |Relator[%d]| = %lu, HS = %lu.",NumFilled + 1,i,q-r-1,HS);
         }    
 
-    ComponentNum[NumFilled] = CurrentComp;
-    Daughters[NumFilled]    = Daut;
-    ER[NumFilled]            = F5;
-    FR[NumFilled]            = From;
-    NG[NumFilled]             = NumGenerators;
-    NR[NumFilled]             = NumRelators;
-    PRIM[NumFilled]         = F2;
-    SURL[NumFilled]         = Len;
+    ComponentNum[NumFilled] 	= CurrentComp;
+    Daughters[NumFilled]    	= Daut;
+    ER[NumFilled]            	= F5;
+    FR[NumFilled]            	= From;
+    NG[NumFilled]             	= NumGenerators;
+    NR[NumFilled]             	= NumRelators;
+    PRIM[NumFilled]         	= F2;
+    SURL[NumFilled]         	= Len;
+    SURNumX[NumFilled]			= 1;
+    if(NumFilled && NG[ReadPres] == NumGenerators && ComponentNum[ReadPres] == CurrentComp)
+    	{
+    	HegSplNum[NumFilled] = HegSplNum[ReadPres];
+    	j = HegSplNxt[ReadPres];
+    	HegSplNxt[NumFilled] = j;
+    	HegSplNxt[ReadPres] = NumFilled;
+    	Mergers ++;
+    	}
+    else
+    	{
+    	HegSplNum[NumFilled] = NumFilled;
+    	HegSplNxt[NumFilled] = NumFilled;
+    	}
+    NumLoops[NumFilled] 	 = 0;		
     BytesUsed                += Len;
     
     if(ER[From] < 0 && ComponentNum[From] == CurrentComp)
@@ -1970,87 +2085,133 @@ int Save_Pres(unsigned int From,unsigned int Daut,unsigned long Len,int F1,int F
 
     NumFilled ++;
     SaveMinima = TRUE;
-    if(Num_Level_Transformations && ! Find_All_Min_Pres)
-        OnStack = NumFilled - ReadPres;
-    else    
-        OnStack += 2*NumGenerators;
+    
+    switch(F4)
+    	{
+    	case 0:
+    		OnStack += 2*NumGenerators;
+    		break;
+    	case 1:
+    	case 2:
+    		OnStack += NumRelators;
+    		break;
+    	case 3:
+    		OnStack = NumFilled - ReadPres;
+    	}
         
     if(Micro_Print)
-        {
         printf("\n\nSaved the current presentation as: Presentation %u.\n",NumFilled);
-        if(Micro_Print_F)        
-            fprintf(myout,"\n\nSaved the current presentation as: Presentation %u.\n",NumFilled);
-        }
-    printf("\nPres%6u  ToDo%6u  Summand%3d  ",NumFilled,OnStack,CurrentComp);
-    printf("Gen%3d  Rel%3d  Length%6lu  From%6u  ",NumGenerators,NumRelators,Len,From + 1);
     
+    if(Batch == FALSE)
+    	{    
+    	printf("\nPres%6u  ToDo%6u  Summand%3d  ",NumFilled,OnStack,CurrentComp);
+    	printf("Gen%3d  Rel%3d  Length%6lu  From%6u  ",NumGenerators,NumRelators,Len,From + 1);
+    	}
+    
+    if(Batch == FALSE)
     switch(F2)
-        {
-        case 1:
-            printf("DR");
-            break;
-        case 2:
-            printf("IP");
-            break;
-        case 3:
-            printf("LS");
-            break;
-        case 4:
-            printf("1G");
-            break;
-        case 5:
-            printf("S3");
-            break;
-        case 6:
-            printf("FP");
-            break;
-        case 7:
-            printf("BC");
-            break;
-        case 8:
-        case 108:
-            printf("PM");
-            break;
-        case 9:
-            printf("PM");
-            break;
-        case 10:
-            printf("BC");
-            break;
-        case 11:
-            printf("CF");
-            break;
-        case 12:
-            printf("ER");
-            break;
-        case 13:
-            printf("Er");
-            break;            
-        case 20:
-            printf("NC");
-            break;
-        case 30:
-            printf("MG");
-            break;
-        case 60:
-            printf("PP");
-            break;    
-        case 70:
-            printf("Lt");
-            break;
-        case 75:
-            printf("LT");
-            break;    
-        case 80:
-            printf("A2");
-            break;    
-        default:
-            break;
-        }
-    END:
+		{
+		case 1:
+			printf("DR");
+			break;
+		case 2:
+			printf("IP");
+			break;
+		case 3:
+			printf("LS");
+			break;
+		case 4:
+			printf("1G");
+			break;
+		case 5:
+			printf("S3");
+			break;
+		case 6:
+			printf("FP");
+			break;
+		case 7:
+			printf("BC");
+			break;
+		case 8:
+		case 108:
+			printf("PM");
+			break;
+		case 9:
+			printf("PM");
+			break;
+		case 10:
+			printf("BC");
+			break;
+		case 11:
+			printf("CF");
+			break;
+		case 12:
+			printf("ER");
+			break;
+		case 13:
+			printf("Er");
+			break;            
+		case 20:
+			printf("NC");
+			break;
+		case 30:
+			printf("MG");
+			break;
+		case 60:
+			printf("PP");
+			break;    
+		case 70:
+			printf("Lt");
+			break;
+		case 75:
+			printf("LT");
+			break;    
+		case 80:
+			printf("A2");
+			break;    
+		default:
+			break;
+		}
+		
+	if(Check_If_HS_Rep)
+		{
+		if(Len < HS_Rep_Length && NumGenerators <= HS_Rep_NumGens)
+			{
+			if(NumGenerators == HS_Rep_NumGens)
+				{
+				printf("\n\n		The Initial Presentation %s is not a Heegaard Splitting Rep!",PresName); 
+				printf("\n	Pres %u lies on the same Heegaard surface and has length %lu < %lu !",
+					NumFilled,Len,HS_Rep_Length);
+				if(Batch == 4 && H_Results != NULL) fprintf(H_Results,"\n\n%s <-- Not a HS Rep!",PresName);	
+				}
+			if(NumGenerators < HS_Rep_NumGens)
+				{
+				printf("\n\n		The Initial Presentation %s is Stabilized and hence not a Heegaard Splitting Rep!",PresName); 
+				printf("\n	Pres %u lies on a Heegaard surface of genus %d < the initial genus %d !",
+					NumFilled,NumGenerators,HS_Rep_NumGens);
+				if(Batch == 4 && H_Results != NULL) fprintf(H_Results,"\n\n%s <-- Not a HS Rep!",PresName);	
+				}			
+			if(Batch == FALSE)
+				{
+				printf("\n\nShould Heegaard Continue? Hit 'y' or 'n'.");
+				Check_If_HS_Rep = CheckHSReps = FALSE;
+				GET_RESPONSE1:			
+				switch(WaitkbHit())
+					{
+					case 'y':
+						break;
+					case 'n':				
+						Check_If_HS_Rep = 7;
+						break;
+					default: goto GET_RESPONSE1;
+					}
+				}
+			else
+				Check_If_HS_Rep = 7;		
+			}
+		}
     if(Error)
         {
-        for(j = 1; j < i; j++) DisposeHandle((char **) SUR[NumFilled][j]);
         printf("\n    Memory Error. Sorry!");
         return(TOO_LONG);
         }
@@ -2060,33 +2221,33 @@ int Save_Pres(unsigned int From,unsigned int Daut,unsigned long Len,int F1,int F
 int Non_Unique_Initial_Diagram(void)
 {
     /******************************************************************************************
-        This routine is called when the program has determined that if the initial presentation
+        This routine is called when Heegaard has determined that if the initial presentation
         is realizable by a Heegaard diagram, then the realization is not unique. The routine
         determines whether we have a presentation that is realizable, but not uniquely so, or
         we have a presentation that is not realizable at all. It returns 0 if the presentation
         is realizable and returns 1 if it is not realizable.
     ******************************************************************************************/
     
-    int                i;
+    int            	i;
                     
     unsigned int    AnnulusExists,
                     Flag1;                
     
-    unsigned int Whitehead_Graph();
-    unsigned int Reduce_Genus();
+    unsigned int 	Whitehead_Graph();
+    unsigned int 	Reduce_Genus();
     
     /******************************************************************************************
                             Check whether a valence-two annulus exists.
     ******************************************************************************************/
     
-    AnnulusExists         = FALSE;    
-    TestRealizability2     = TRUE;
-    TestRealizability3     = TRUE;
-    DrawingDiagrams     = FALSE;
+    AnnulusExists         	= FALSE;    
+    TestRealizability2     	= TRUE;
+    TestRealizability3     	= TRUE;
+    DrawingDiagrams     	= FALSE;
     
     Flag1 = Whitehead_Graph();
     
-    TestRealizability3     = FALSE;
+    TestRealizability3     	= FALSE;
     
     if(Flag1 == V2_ANNULUS_EXISTS)
         {
@@ -2098,16 +2259,20 @@ int Non_Unique_Initial_Diagram(void)
         {
         case NO_ERROR:
             printf("\n\n                    Presentation %d is realizable.",This_Pres + 1);
-            fprintf(myout,"\n\n                    Presentation %d is realizable.",This_Pres + 1);
             printf("\n\n                    But the realization is not unique.");
-            fprintf(myout,"\n\n                    But the realization is not unique.");
-            
+            if(Batch) return(NO_ERROR);
+            printf("\n\n                    Hit 'p' to have Heegaard investigate one possible realization.");
+            printf("\n\n                    Hit any other key to abort further investigation.");          
+            switch(WaitkbHit())
+				{
+				case 'p': break;
+				default: return(NO_ERROR);
+				}
+					
             if(AnnulusExists)
                 {
-                printf("\n\n    NOTE: The program is investigating one diagram that realizes the initial presentation.");
+                printf("\n\n    NOTE: Heegaard is investigating one diagram that realizes the initial presentation.");
                 printf("\n          Subsequent results may not apply to all realizations.");
-                fprintf(myout,"\n\n    NOTE: The program is investigating one diagram that realizes the initial presentation.");
-                fprintf(myout,"\n          Subsequent results may not apply to all realizations.");
                 }
                 
             if(NumGenerators > 1)
@@ -2141,9 +2306,8 @@ int Non_Unique_Initial_Diagram(void)
                     return(1);
                 case TOO_LONG:
                 case CAN_NOT_DELETE:
-                    printf("\n\n                    Unable to delete a primitive.");
-                    if(Micro_Print_F)
-                        fprintf(myout,"\n\n                    Unable to delete a primitive.");                    
+                	if(EmtyRel) break;
+                    printf("\n\n                    Unable to delete a primitive.");                 
                     FoundPrimitive = FoundPower = LensSpace = EmtyRel = FALSE;
                     return(1);        
                 }
@@ -2151,45 +2315,30 @@ int Non_Unique_Initial_Diagram(void)
                 {
                 if(!AnnulusExists)
                     {
-                    printf("\n\nNOTE: The program is investigating one diagram that realizes the initial presentation.");
+                    printf("\n\nNOTE: Heegaard is investigating one diagram that realizes the initial presentation.");
                     printf("\n      Subsequent results may not apply to all realizations.");
-                    fprintf(myout,"\n\nNOTE: The program is investigating one diagram that realizes the initial presentation.");
-                    fprintf(myout,"\n      Subsequent results may not apply to all realizations.");
                     }
                 if(FoundPrimitive)
                     {
-                    printf("\n\n                    The program found a relator which is a primitive");
+                    printf("\n\n                    Heegaard found a relator which is a primitive");
                     printf("\n                    and deleted its consequences from the presentation.");
-                    fprintf(myout,"\n\n                    The program found a relator which is a primitive");
-                    fprintf(myout,"\n                    and deleted its consequences from the presentation.");    
                     }
                 if(FoundPower)
                     {
-                    printf("\n\n                    The program found a relator which is a proper power");
+                    printf("\n\n                    Heegaard found a relator which is a proper power");
                     printf("\n                    and deleted its consequences from the presentation.");
-                    fprintf(myout,"\n\n                    The program found a relator which is a proper power");
-                    fprintf(myout,"\n                    and deleted its consequences from the presentation.");                    
                     }
                 if(LensSpace)
-                    {
                     printf("\n\n                    This manifold is a lens space.");
-                    fprintf(myout,"\n\n                    This manifold is a lens space.");
-                    }
                 if(EmtyRel)
-                    {
                     printf("\n\n                    This manifold is a connected sum.");
-                    fprintf(myout,"\n\n                    This manifold is a connected sum.");
-                    }
                 printf("\n");
-                fprintf(myout,"\n");    
                 return(0);
                 }    
             return(1);
         case FATAL_ERROR:
             printf("\n\n                    The initial presentation is not realizable.\n");
-            Print_Relators(Relators,NumRelators,stdout);
-            fprintf(myout,"\n\n                    The initial presentation is not realizable.\n");
-            Print_Relators(Relators,NumRelators,myout);
+            Print_Relators(Relators,NumRelators);
             return(1);
         }
     return(NO_ERROR);            
@@ -2207,11 +2356,14 @@ unsigned int On_File(void)
         the value NumFilled.
     ******************************************************************************************/    
         
-    register int     i,
-                    j;
+    register int  	i,
+    				ii,
+                   	j,
+                   	jj,
+                   	k;
     
     if(Length > 0L)    Canonical_Rewrite(Relators,FALSE,FALSE);        
-     for(i = 0,Dup_On_File = INFINITE; i < NumFilled; i++)
+/*     for(i = 0,Dup_On_File = INFINITE; i < NumFilled; i++)
      if(SURL[i] == Length  
         && NG[i] == NumGenerators
         && NR[i] == NumRelators)
@@ -2227,115 +2379,179 @@ unsigned int On_File(void)
              else
                  break;
              }    
-         }
+         }							*/
+ 
+ /*	Modified 2/18/15 to just check for duplications within a given component number. */  
+       
+    for(i = 0,Dup_On_File = INFINITE; i < NumFilled; i++)
+     if(ComponentNum[i] == CurrentComp && SURL[i] == Length && NG[i] == NumGenerators && NR[i] == NumRelators)
+        {
+         for(j = 1; j <= NumRelators; j++)
+             if(GetHandleSize((char **) Relators[j]) != GetHandleSize((char **) SUR[i][j])) break;
+         if(j > NumRelators && Compare_Pres(i)) break;    
+         }    
      
      if(Micro_Print)
          {
          if(i < NumFilled)
-             {
              printf("\n\nA copy of the current presentation is already on file as presentation %d.",
                  i+1);
-             if(Micro_Print_F)    
-                 fprintf(myout,"\n\nA copy of the current presentation is already on file as presentation %d.",
-                     i+1);
-             }
          else if(Dup_On_File < INFINITE)
-             {
              printf("\n\nThe current presentation is a duplicate of presentation %d of summand %d.",
                  i+1,ComponentNum[Dup_On_File]);
-             if(Micro_Print_F)    
-                 fprintf(myout,"\n\nThe current presentation is a duplicate of presentation %d of summand %d.",
-                     i+1,ComponentNum[Dup_On_File]);
-             }                         
-         }    
+         }  
+         
+     if(i < NumFilled) 
+     	{
+     	if(SSSReadPres == i) NumLoops[i] ++;
+     	else SURNumX[i] ++; 
+		if(NG[ReadPres] == NG[i] && ComponentNum[i] == CurrentComp)
+			{
+			if(HegSplNum[i] < HegSplNum[ReadPres])
+				{
+				ii = HegSplNum[i];
+				jj = HegSplNum[ReadPres];
+				k = ReadPres;
+				while(1)
+					{
+					if(HegSplNum[k] == ii) break;
+					HegSplNum[k] = ii;
+					k = HegSplNxt[k];
+					}
+				ii = HegSplNxt[i];
+				jj = HegSplNxt[ReadPres];
+				HegSplNxt[ReadPres] = ii;
+				HegSplNxt[i] = jj;	
+				Mergers ++;
+				}
+			if(HegSplNum[i] > HegSplNum[ReadPres])
+				{
+				ii = HegSplNum[i];
+				jj = HegSplNum[ReadPres];
+				k = i;
+				while(1)
+					{
+					if(HegSplNum[k] == jj) break;
+					HegSplNum[k] = jj;
+					k = HegSplNxt[k];
+					}
+				ii = HegSplNxt[i];
+				jj = HegSplNxt[ReadPres];
+				HegSplNxt[ReadPres] = ii;
+				HegSplNxt[i] = jj;
+				Mergers ++;
+				}			
+			}        
+        }
+          
      return(i);                    
 }
 
 void Init_G_Variables()
 {
     /******************************************************************************************
-        This routine initializes some of the global variables used by the program.
+        This routine initializes some of the global variables used by Heegaard.
     ******************************************************************************************/
         
-    register int     i,
+    register int    i,
                     j;
                     
-    Band_Sums                         = 0L;
-    BDY[0]                            = 2;
+    Band_Sums                       = 0L;
+    BDY[0]                          = 2;
     BdryData                        = FALSE;
-    BytesAvailable                    = 2097152L;
-    BytesUsed                        = 0L;
-    Compute_Stabilizers                = FALSE;
-    Count                             = 0;
+    BytesAvailable                  = BYTES_AVAILABLE;
+    BytesUsed                       = 0L;
+    Check_If_HS_Rep					= FALSE;
+    CheckHSReps						= FALSE;
+    Compute_Stabilizers             = FALSE;
+    Count                           = 0;
+    CouldNotRemove					= 0;
     CurrentComp                     = 1;
-    Delete_Only_Short_Primitives     = FALSE;
-    Do_Not_Reduce_Genus                = TRUE;
+    Delete_Only_Short_Primitives    = FALSE;
+    Do_Not_Reduce_Genus             = TRUE;
     DrawingDiagrams                 = FALSE;
-    EmtyRel                            = FALSE;
-    Find_All_Min_Pres                = FALSE;
+    EmtyRel                         = FALSE;
+    Find_All_Min_Pres               = FALSE;
     FormBandsums                    = FALSE;
-    FoundPower                         = FALSE;
-    FoundPrimitive                     = FALSE;
+    FoundPower                      = FALSE;
+    FoundPrimitive                  = FALSE;
     From_BANDSUM                    = 0;
-    From_DUALIZE                     = 0;
-    Length                             = 0L;
-    LensSpace                         = FALSE;
-    Level_Interrupt                    = FALSE;
-    Micro_Print                        = FALSE;
-    Micro_Print_F                    = FALSE;
+    From_DUALIZE                    = 0;
+    Length                          = 0L;
+    LensSpace                       = FALSE;
+    Level_Interrupt                 = FALSE;
+    Mergers							= 0;
+    Micro_Print                     = FALSE;
+    Micro_Print_F                   = FALSE;
     Minimum                         = 0L;
-    Modified_Init_Pres                 = FALSE;
-    NoReport                         = TRUE;
+    Modified_Init_Pres              = FALSE;
+    NoReport                        = TRUE;
     NumDiagrams                     = 0L;
-    NumDualized                        = 0L;
-    NumFilled                         = 0;
-    Num_Level_Transformations         = 0L;
+    NumDualized                     = 0L;
+    NumErrors						= 0L;
+    NumFilled                       = 0;
+    Num_Level_Transformations       = 0L;
+    Num_Level_Slides				= 0l;
+    NumRelTooLong					= 0;
+    NumNonSepAnnuli					= 0;
+    NumNotConnected					= 0;
+    Num_Saved_LPres					= 0;
+    NumSepAnnuli					= 0;
     NumTimes                        = 0;
-    OnStack                            = 0;
-    ReadPres                         = 0;
-    SaveMinima                         = FALSE;
-    Saved_Vertices                    = 0;
-    Start_Level_Search                = 0;
-    Starting_Pres                    = 0;
-    TotalAuts                        = 0L;
-    TotalComp                         = 1;
+    OnStack                         = 0;
+    RandomizeSlides					= TRUE;
+    ReadPres                        = 0;
+    SaveMinima                      = FALSE;
+    Saved_Vertices                  = 0;
+    Start_Level_Search              = 0;
+    Starting_Pres                   = 0;
+    TestRealizability1				= FALSE;
+    TestRealizability2				= FALSE;
+    TestRealizability3				= FALSE;
+    TestRealizability4				= FALSE;
+    TotalAuts                       = 0L;
+    TotalComp                       = 1;
     UserSaidQuit                    = FALSE;
-    Vertices                         = 2*NumGenerators;
+    Vertices                        = 2*NumGenerators;
+    
     for(i = 0; i < MAX_SAVED_PRES; i++)
         {
         SURL[i] = 0L;
-        QPM[i] = EOS;
+        QPM[i] = 0;
         }
-    for(i = 0; i < MAXNUMCOMPONENTS; i++)
+    for(i = 0; i <  MAXNUMCOMPONENTS; i++)
     for(j = 1; j <= MAXNUMGENERATORS; j++) MLC[i][j] = BIG_NUMBER;
-    for(i = 0; i < MAXNUMCOMPONENTS; i++) CBC[i][0] = BDRY_UNKNOWN;
+    for(i = 0; i <  MAXNUMCOMPONENTS; i++) CBC[i][0] = BDRY_UNKNOWN;
     for(i = 0; i <= MAXNUMCOMPONENTS; i++) CS[i] = EOS;
+    
 }
 
 void Delete_Old_Presentations(void)
-{
-    unsigned int    i,
+{   
+	unsigned int    i,
                     j;
-                            
+                              
     for(i = 0; i < NumFilled; i++)
         {
-        if(UDV[i] == ANNULUS_EXISTS || UDV[i] == V2_ANNULUS_EXISTS)
-            DisposeHandle((char **) SUR[i][0]);
-        UDV[i] = PRIM[i] = 0;
-        for(j = 1; j <= NR[i]; j++) DisposeHandle((char **) SUR[i][j]);
+        if(UDV[i] == ANNULUS_EXISTS || UDV[i] == V2_ANNULUS_EXISTS) UDV[i] = PRIM[i] = 0;
+        for(j = 0; j <= NR[i]; j++) if(SUR[i][j] != NULL)
+        	{
+        	DisposeHandle((char **) SUR[i][j]);
+        	SUR[i][j] = NULL;
+        	}
         }
     NumFilled         = 0;
-    BytesAvailable    = 2097152L;
+    BytesAvailable    = BYTES_AVAILABLE;
     BytesUsed         = 0L;
-    UserSaidQuit     = FALSE;                    
+    UserSaidQuit      = FALSE;             
 }
 
-ReRun_A_Presentation()
+int ReRun_A_Presentation()
 {
     unsigned char   *p,
                     *q,
-                    *r,
-                    revnum[8];
+                    *ptr = NULL,
+                    revnum[10];
     
     unsigned int    PresNum;
     
@@ -2348,21 +2564,15 @@ ReRun_A_Presentation()
 
     if(NoReport)
         {
-        SysBeep(5);
-        printf("\n\n                                    Caution!!!");
-        printf("\n\n     All the presentations in memory, except the one you rerun, ");
-        printf("\n     will be vaporized unless you save them now!");
         printf("\n\n     HIT 'v' TO REVIEW THESE PRESENTATIONS.");
-        if(NoReport)
-            printf("\n     HIT 's' TO SAVE THESE PRESENTATIONS TO THE FILE 'Heegaard_Results'.");
-        printf("\n     OR HIT ANY OTHER KEY TO CONTINUE.");
+        printf("\n     OR HIT ANY OTHER KEY TO CONTINUE.");        
         switch(WaitkbHit())
             {
             case 'v':
                 REVIEW:
-                Report(Band_Sums,NumDiagrams,OnStack,Starting_Pres,0,0,1,0,1,0);
+                Report(Band_Sums,NumDiagrams,OnStack,Starting_Pres,0,0,1,0,1,NULL);
                 printf("\n\n    CONTINUE TO REVIEW PRESENTATIONS ?  HIT 'y' OR 'n'.");
-                GET_RESPONSE2:
+                GET_RESPONSE2:                
                 switch(WaitkbHit())
                     {
                     case 'y':
@@ -2370,14 +2580,10 @@ ReRun_A_Presentation()
                     case 'n':
                         break;
                     default:
-                        SysBeep(5);
+                        if(Batch == FALSE) SysBeep(5);
                         goto GET_RESPONSE2;
                     }
                 break;
-            case 's':
-                if(NoReport)
-                    Report(Band_Sums,NumDiagrams,OnStack,Starting_Pres,1,1,1,0,1,0);
-                break;    
             default:
                 break;        
             }
@@ -2386,28 +2592,25 @@ ReRun_A_Presentation()
     if(Did_Cutting_Disk_Surgery)
         {
         printf("\n\nRETRIEVE THE LAST PRESENTATION USED FOR CUTTING DISK SURGERY ?  HIT 'y' OR 'n'.    ");
-        GET_RESPONSE5:
+        GET_RESPONSE5:        
         switch(WaitkbHit())
             {
             case 'y':
                 NumRelators = NumCuttingDiskSurgeryRel;
                 for(i = 1; i <= NumRelators; i++)
                     {
-                    ReallocateHandle((char **) Relators[i],GetHandleSize((char **) CD_Surgery_Rel[i]));                
+                    if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+                    Relators[i] = (unsigned char **) NewHandle(GetHandleSize((char **) CD_Surgery_Rel[i]));
+                    if(Relators[i] == NULL) Mem_Error();
                     p = *CD_Surgery_Rel[i];
-                    if((q = *Relators[i]) == NULL)
-                        {
-                        printf("\n\n    Memory Error. Sorry!");
-                        return(1);
-                        }
-                    while(*q++ = *p++) ;
+                    q = *Relators[i];    
+                    while( (*q++ = *p++) ) ;
                     }
                 printf("\n\nThe initial presentation is: %s\n",PresName);                    
-                Print_Relators(Relators,NumRelators,stdout);
+                Print_Relators(Relators,NumRelators);
                 Delete_Old_Presentations();
                 NoReport = TRUE;
                 WhichInput = 0;
-                fptr = myout;
                 Input = RERUN;
                 Did_Cutting_Disk_Surgery = FALSE;
                 return(0);
@@ -2415,7 +2618,7 @@ ReRun_A_Presentation()
                 Did_Cutting_Disk_Surgery = FALSE;
                 break;
             default:
-                SysBeep(5);
+                if(Batch == FALSE) SysBeep(5);
                 goto GET_RESPONSE5;
             }    
         }    
@@ -2423,29 +2626,25 @@ ReRun_A_Presentation()
     if(Did_Exponent_Surgery)
         {
         printf("\n\nRETRIEVE THE LAST PRESENTATION USED FOR EXPONENT SURGERY ?  HIT 'y' OR 'n'.    ");
-        GET_RESPONSE4:
+        GET_RESPONSE4:      
         switch(WaitkbHit())
             {
             case 'y':
                 NumRelators = NumExp_Sur_Rel;
                 for(i = 1; i <= NumRelators; i++)
                     {
-                    ReallocateHandle((char **) Relators[i],GetHandleSize((char **) Exp_Surgery_Rel[i]));                
+                    if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+                    Relators[i] = (unsigned char **) NewHandle(GetHandleSize((char **) Exp_Surgery_Rel[i]));
+                    if(Relators[i] == NULL) Mem_Error();
                     p = *Exp_Surgery_Rel[i];
-                    if((q = *Relators[i]) == NULL)
-                        {
-                        printf("\n\n    Memory Error. Sorry!");
-                        Did_Exponent_Surgery = FALSE;
-                        return(1);
-                        }
-                    while(*q++ = *p++) ;
+                    q = *Relators[i];    
+                    while( (*q++ = *p++) ) ;
                     }
                 printf("\n\nThe initial presentation is: %s\n",PresName);                    
-                Print_Relators(Relators,NumRelators,stdout);
+                Print_Relators(Relators,NumRelators);
                 Delete_Old_Presentations();
                 NoReport = TRUE;
                 WhichInput = 0;
-                fptr = myout;
                 Input = RERUN;
                 Did_Exponent_Surgery = FALSE;
                 return(0);
@@ -2453,7 +2652,7 @@ ReRun_A_Presentation()
                 Did_Exponent_Surgery = FALSE;
                 break;
             default:
-                SysBeep(5);
+                if(Batch == FALSE) SysBeep(5);
                 goto GET_RESPONSE4;
             }    
         }
@@ -2461,25 +2660,24 @@ ReRun_A_Presentation()
     if(Knot_Or_Link)
         {
         printf("\n\nRETRIEVE THE LAST WIRTINGER PRESENTATION OF A KNOT OR LINK ?  HIT 'y' OR 'n'.    ");
-        GET_RESPONSE3:
+        GET_RESPONSE3:       
         switch(WaitkbHit())
             {
             case 'y':
-                NumRelators = NumKnot_Or_Link_Rel;
-                for(i = 1; i <= NumRelators; i++)
+                for(i = 1; i <= NumKnot_Or_Link_Rel; i++)
                     {
-                    ReallocateHandle((char **) Relators[i],GetHandleSize((char **) KorLRelators[i]));                
+                    if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+                    Relators[i] = (unsigned char **) NewHandle(GetHandleSize((char **) KorLRelators[i]));
                     p = *KorLRelators[i];
-                    if((q = *Relators[i]) == NULL)
-                        {
-                        printf("\n\n    Memory Error. Sorry!");
-                        return(1);
-                        }
-                    while(*q++ = *p++) ;
+                    if(Relators[i] == NULL) Mem_Error();
+                    q = *Relators[i];    
+                    while( (*q++ = *p++) ) ;
                     }
+                NumRelators = NumKnot_Or_Link_Rel;   
                 printf("\n\nThe initial presentation is: %s\n",PresName);                    
-                Print_Relators(Relators,NumRelators,stdout);                                    
-                if(Wirtinger())
+                Print_Relators(Relators,NumRelators); 
+                j = Wirtinger();                                 
+                if(j && (j != 17))
                     {
                     printf("\nSurgery is not possible. Sorry!");
                     Knot_Or_Link = FALSE;
@@ -2489,22 +2687,22 @@ ReRun_A_Presentation()
                 NoReport = TRUE;
                 WhichInput = 0;
                 printf("\nThe surgered presentation is:\n");
-                Print_Relators(Relators,NumRelators,stdout);
-                fptr = myout;
+                Print_Relators(Relators,NumRelators);
                 Input = RERUN;
                 return(0);        
             case 'n':
                 Knot_Or_Link = FALSE;
                 break;
             default:
-                SysBeep(5);
+                if(Batch == FALSE) SysBeep(5);
                 goto GET_RESPONSE3;
             }
         }
 
-    r = (unsigned char *) NewPtr(100L);        
+    ptr = (unsigned char *) NewPtr(100); 
+    if(ptr == NULL) Mem_Error(); 
     printf("\n\nENTER A PRESENTATION FROM 0 TO %u THAT YOU WANT RERUN AND HIT 'return'.     ",NumFilled);
-    for(i = j = 0; j < NumFilled; j++) if(SURL[j] == 0L) i ++;
+    for(i = j = 0; j < NumFilled; j++) if(SURL[j] == 0) i ++;
     if(i)
         {
         if(i == 1)
@@ -2517,13 +2715,13 @@ ReRun_A_Presentation()
             {
             j = 0;
             j += printf("\n\nExcept for presentations: ");
-            for(h = 0,k = 1; h < NumFilled; h++) if(SURL[h] == 0L)
+            for(h = 0,k = 1; h < NumFilled; h++) if(SURL[h] == 0)
                 {
                 h++;
                 j += printf("{%d,",h);    
                 break;
                 }
-            for( ; h < NumFilled; h++) if(SURL[h] == 0L)
+            for( ; h < NumFilled; h++) if(SURL[h] == 0)
                 {
                 if(++k < i)
                     j += printf("%d,",h+1);
@@ -2540,30 +2738,27 @@ ReRun_A_Presentation()
         }
     GET_RESPONSE1:
     WhichInput = -1;        
-    ReadString((char *)r, GetPtrSize(r));
-    sscanf((char *) r,"%d",&WhichInput);    
+    ReadString((char *)ptr, GetPtrSize(ptr));
+    sscanf((char *) ptr,"%d",&WhichInput);    
     if(WhichInput == 0)
         {
         printf("\n\nRerunning the original presentation.\n");
         NumRelators = CopyNumRelators;
         for(i = 1; i <= NumRelators; i++)
             {
-            ReallocateHandle((char **) Relators[i],GetHandleSize((char **) Copy_Of_Input[i]));                
+            if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+            Relators[i] = (unsigned char **) NewHandle(GetHandleSize((char **) Copy_Of_Input[i])); 
+            if(Relators[i] == NULL) Mem_Error();
             p = *Copy_Of_Input[i];
-            if((q = *Relators[i]) == NULL)
-                {
-                DisposePtr((char *) r);
-                printf("\n\n    Memory Error. Sorry!");
-                return(1);
-                }
-            while(*q++ = *p++) ;
+            q = *Relators[i];    
+            while( (*q++ = *p++) ) ;
             }
         }
     else
         {
-        if(WhichInput < 1 || WhichInput > NumFilled || SURL[WhichInput-1] == 0L)
+        if(WhichInput < 1 || WhichInput > NumFilled || SURL[WhichInput-1] == 0)
             {
-            SysBeep(5);
+            if(Batch == FALSE) SysBeep(5);
             goto GET_RESPONSE1;
             }    
         printf("\n\nRerunning presentation %d.\n",WhichInput);
@@ -2583,216 +2778,44 @@ ReRun_A_Presentation()
         NumRelators = NR[WhichInput];
         for(i = 1; i <= NumRelators; i++)
             {
-            ReallocateHandle((char **) Relators[i],GetHandleSize((char **) SUR[WhichInput][i]));                
+            if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+            Relators[i] = (unsigned char **) NewHandle(GetHandleSize((char **) SUR[WhichInput][i]));
+            if(Relators[i] == NULL) Mem_Error();
             p = *SUR[WhichInput][i];
-            if((q = *Relators[i]) == NULL)
-                {
-                DisposePtr((char *) r);
-                printf("\n\n    Memory Error. Sorry!");
-                return(1);
-                }            
-            while(*q++ = *p++) ;
+            q = *Relators[i];              
+            while( (*q++ = *p++) ) ;
             }
         }
-    DisposePtr((char *) r);        
+    DisposePtr((char *) ptr); 
     Delete_Old_Presentations();
     NoReport = TRUE;
     
-    Print_Relators(Relators,NumRelators,stdout);
-    fptr = myout;
+    Print_Relators(Relators,NumRelators);
     Input = RERUN;
     return(0);
 }
 
-int Display_File_Input_Presentations(void)
+int Get_Presentation_From_File()
 {
-    char            c;
-    
-    register int     x;                                        
-    
-    if((input_relators = fopen("Input_Presentations","r+")) == NULL)
-        {
-        SysBeep(5);
-        printf("\nUnable to open the file 'Input_Presentations'.\n");
-        return(1);
-        }
-    
-    ObscureCursor();
-    
-    printf("\n\n                    This is the file 'Input_Presentations'.");
-    printf("\n\nNote: Hit 'return' to stop reviewing this file.");
-    printf("\n      Hit the 'space-bar' to alternately stop and start scrolling.\n\n");
-        
-    while((x = getc(input_relators)) != EOF)
-        {
-        if(x == '\n' && (c = mykbhit())) switch(c)
-            {
-            case ' ':
-                WAIT:
-                switch(WaitkbHit())
-                    {
-                    case ' ':
-                        break;
-                    case '\n':
-                        fclose(input_relators);
-                        return(NO_ERROR);
-                    case '\r':
-                        fclose(input_relators);
-                        return(NO_ERROR);    
-                    default:
-                        SysBeep(5);
-                        printf("\n\nNote: Hit 'return' to stop reviewing this file.");
-                        printf("\n      Hit the 'space-bar' to alternately stop and start scrolling.");
-                        goto WAIT;        
-                    }
-                break;    
-            case '\n':
-                fclose(input_relators);
-                return(NO_ERROR);
-            case '\r':
-                fclose(input_relators);
-                return(NO_ERROR);    
-            default:
-                break;        
-            }
-        putc((char)x,stdout);
-        }
-    fclose(input_relators);
-    return(NO_ERROR);
-}
-
-int Display_File_Simplify_Heegaard(void)
-{
-    char            c;
-
-    register int     x;                                        
-    
-    if(myout == NULL)
-        {
-        SysBeep(5);
-        printf("\nUnable to display the file 'Heegaard_Results'.\n");
-        return(1);
-        }
-    
-    ObscureCursor();
-    
-    printf("\n\n                    This is the file 'Heegaard_Results'.\n\n");
-    printf("\n\nNote: Hit 'return' to stop reviewing this file.");
-    printf("\n      Hit the 'space-bar' to alternately stop and start scrolling.\n\n");
-    rewind(myout);    
-    while((x = getc(myout)) != EOF)
-        {
-        if(x == '\n' && (c = mykbhit())) switch(c)
-            {
-            case ' ':
-                WAIT:
-                switch(WaitkbHit())
-                    {
-                    case ' ':
-                        break;
-                    case '\n':
-                        return(NO_ERROR);
-                    case '\r':
-                        return(NO_ERROR);    
-                    default:
-                        SysBeep(5);
-                        printf("\n\nNote: Hit 'return' to stop reviewing this file.");
-                        printf("\n      Hit the 'space-bar' to alternately stop and start scrolling.");
-                        goto WAIT;        
-                    }
-                break;    
-            case '\n':
-                return(NO_ERROR);
-            case '\r':
-                return(NO_ERROR);    
-            default:
-                break;        
-            }
-        putc((char)x,stdout);
-        }
-    return(NO_ERROR);    
-}
-
-int Display_Help_File(void)
-{
-    char            c;
-    
-    register int     x;
-    
-    FILE            *fptr;
-
-    if((fptr = fopen("Heegaard_Help","r")) == NULL)
-        {
-        SysBeep(5);
-        printf("\nUnable to open the Help file 'Heegaard_Help'.");
-        printf("\nPlease locate the file 'Heegaard_Help' and put it in the same folder with");
-        printf("\nthe program.");
-        return(1);
-        }
-    
-    ObscureCursor();
-    while((x = getc(fptr)) != EOF)
-        {
-        if(x == '\n' && (c = mykbhit())) switch(c)
-            {
-            case ' ':
-                WAIT:
-                switch(WaitkbHit())
-                    {
-                    case ' ':
-                        break;
-                    case '\n':
-                        fclose(fptr);
-                        return(NO_ERROR);
-                    case '\r':
-                        fclose(fptr);
-                        return(NO_ERROR);    
-                    default:
-                        SysBeep(5);
-                        printf("\n\nNote: Hit 'return' to stop reviewing this file.");
-                        printf("\n      Hit the 'space-bar' to alternately stop and start scrolling.");
-                        goto WAIT;        
-                    }
-                break;    
-            case '\n':
-                fclose(fptr);
-                return(NO_ERROR);
-            case '\r':
-                fclose(fptr);
-                return(NO_ERROR);    
-            default:
-                SysBeep(5);
-                printf("\n\nNote: Hit 'return' to stop reviewing this file.");
-                printf("\n      Hit the 'space-bar' to alternately stop and start scrolling.");
-                break;        
-            }        
-        putc((char)x,stdout);
-        }
-    fclose(fptr);
-    return(NO_ERROR);    
-}
-
-Get_Presentation_From_File()
-{
-    register unsigned char    *p,
+    register unsigned char  *p,
                             *q,
-                            *r,
                             t;
     
     unsigned int            h,
-                            i;
+                            i,
+                            j;
                             
     long                    StrLength;                                                
     
     if((input_relators = fopen("Input_Presentations","r+")) == NULL)
         {
-        SysBeep(5);
+        if(Batch == FALSE) SysBeep(5);
         printf("\nUnable to open the file 'Input_Presentations'.");
         printf("\nPlease locate the file 'Input_Presentations', make sure it is closed,");
-        printf("\nand place it in the same folder that the program is in.");
+        printf("\nand place it in the parent folder of the folder containing Heegaard.");
         return(1);
         }
-    r = (unsigned char *) NewPtr((Size)(MAXLENGTH + 1));
+     
     printf("\n\nPLEASE INDICATE WHICH PRESENTATION YOU WANT USED BY ENTERING ITS IDENTIFIER:\n\n    ");        
     ReadString((char *)PresName, GetPtrSize(PresName));
 
@@ -2800,31 +2823,19 @@ Get_Presentation_From_File()
                     Look for a presentation with the given identifier.
     ******************************************************************************************/    
     
-    rewind(input_relators);
+    fseek(input_relators,0L,0);
     do
         {
-        if(fgets((char *) r,MAXLENGTH,input_relators) == NULL)
+        if(fgets((char *) Inst,MAXLENGTH,input_relators) == NULL)
             {
-            printf("\n\nUnable to find this presentation in the file 'Input_Presentations'.");
-            SysBeep(5);
-            fclose(input_relators);
-            DisposePtr((char *) r);
-            printf("\n\nREVIEW THE FILE 'Input_Presentations' ?  HIT 'y' OR 'n'.");
-            GET_RESPONSE1:
-            switch(WaitkbHit())
-                {
-                case 'y':
-                    Display_File_Input_Presentations();
-                    break;
-                case 'n':
-                    break;
-                default:
-                    SysBeep(5);
-                    goto GET_RESPONSE1;
-                }
+            printf("\n\n	Unable to find this presentation in the file 'Input_Presentations'.");
+            printf("\nCheck that the identifier you entered appears in 'Input_Presentations':");
+            printf("\n1) Preceded by the same number of spaces and tabs as appear in your identifier."); 
+            printf("\n2) Followed in 'Input_Presentations' by a blank space.");
+            if(Batch == FALSE) SysBeep(5);
             return(1);
             }
-        p = r;
+   		p = Inst;
         q = PresName;
         while(*p && *q && *p == *q)
             {
@@ -2840,26 +2851,22 @@ Get_Presentation_From_File()
     ******************************************************************************************/
     
     do
-        if(fgets((char *) r,MAXLENGTH,input_relators) == NULL)
+        if(fgets((char *) Inst,MAXLENGTH,input_relators) == NULL)
             {
             printf("\n\nUnable to find any non-trivial relators in this presentation!");
-            SysBeep(5);
-            fclose(input_relators);
-            DisposePtr((char *) r);
+            if(Batch == FALSE) SysBeep(5);
             return(1);
             }
-    while(*r == '\n' || *r == '\r');
+    while(*Inst == '\n' || *Inst == '\r');
 
     /******************************************************************************************
         Read in the relators, at one relator to each non-empty line, stripping off leading
         spaces and tabs.
     ******************************************************************************************/
-    
-    ObscureCursor();
                         
     for(i = 1,NumRelators = 0; i <= MAXNUMRELATORS; i++)
         {
-        p = r;
+ 		p = Inst;
         t = *p;
         h = 0;
         while(t == ' ' || t == '\t')
@@ -2873,8 +2880,9 @@ Get_Presentation_From_File()
             *p = EOS;
             break;
             }
-        printf("\n R%3u)   ",i);        
-        while(t = *p)
+        printf("\n R%3u)   ",i); 
+        j = 0;       
+        while( (t = *p) )
             {
             if(t == '\n' || t == ' ' || t == '\t')
                 {
@@ -2882,52 +2890,43 @@ Get_Presentation_From_File()
                 break;
                 }     
             putc(t,stdout);
+            j++;
             if(!isalpha(t))
                 {
-                SysBeep(5);
-                printf("\nPlease check relator %2u.\n",i);
+                if(Batch == FALSE) SysBeep(5);
+                printf("\nPlease check relator %2u. Char number %u is %c = %d.\n",i,j,t,t);
                 printf("\nA relator can only contain upper and lower case letters!\n");
                 printf("\nPlease make sure each relator is on its own line!");
                 printf("\nAnd the presentation is terminated by an empty line!");
-                fclose(input_relators);
-                DisposePtr((char *) r);
                 return(1);
                 }
             p++;        
             }                                
-        if(*r == '\n') break;
-        StrLength = strlen((char *) r);
+  		if(*Inst== '\n') break;
+        StrLength = strlen((char *) Inst);
         if(StrLength >= MAXLENGTH)
             {
-            SysBeep(5);
+            if(Batch == FALSE) SysBeep(5);
             printf("\nRelator %d is too long!!",NumRelators + 1);
-            fclose(input_relators);
-            DisposePtr((char *) r);
             return(1);
             }
         if(StrLength == h) break;
         NumRelators ++;
-        ReallocateHandle((char **) Relators[i],StrLength + 1 - h);            
-        if((p = *Relators[i]) == NULL)
-            {
-            SysBeep(5);
-            fclose(input_relators);
-            DisposePtr((char *) r);
-            printf("\n\n    Memory Error. Sorry!");
-            return(1);
-            }
-        q = r + h;
-        while(*p++ = *q++) ;
-        if(fgets((char *) r,MAXLENGTH,input_relators) == NULL) break;        
+        if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+        Relators[i] = (unsigned char **) NewHandle(StrLength + 1 - h);
+        if(Relators[i] == NULL) Mem_Error();
+        LR[i] = StrLength - h;
+        p = *Relators[i];    
+  		q = Inst + h;
+        while( (*p++ = *q++) ) ;
+        if(fgets((char *) Inst,MAXLENGTH,input_relators) == NULL) break;         
         }
     if(NumRelators == MAXNUMRELATORS)
-        printf("\n\nThe program will not accept any more than %d relators.",NumRelators);            
-    fclose(input_relators);
-    DisposePtr((char *) r);
+        printf("\n\nHeegaard will not accept any more than %d relators.",NumRelators);
     return(0);
 }
 
-Get_Presentation_From_KeyBoard()
+int Get_Presentation_From_KeyBoard()
 {
     unsigned char   *p,
                     *q,
@@ -2940,15 +2939,9 @@ Get_Presentation_From_KeyBoard()
                             
     unsigned long   StrLength;                                                
     
-/*    r = (unsigned char *) NewPtr((Size)(MAXLENGTH + 1));
-    if(r == NULL)
-        {
-        SysBeep(5);
-        printf("\n\n    Memory Error. Sorry!");
-        return(1);
-        }                */
-    printf("\n\nPLEASE ENTER THE RELATORS.");
-    printf("        (Note: Hit 'return' twice to terminate entry of the presentation.)\n\n");
+    printf("\n\nPLEASE ENTER THE RELATORS.\n");
+    printf("    Note 1: Use 'Input_Presentations' to enter presentations having individual relators longer than 1024.\n");
+    printf("    Note 2: Hit 'return' twice to terminate entry of the presentation. \n\n");
     for(i = 1,NumRelators = 0; i <= MAXNUMRELATORS; i++)
         {
         do
@@ -2956,23 +2949,21 @@ Get_Presentation_From_KeyBoard()
             r = Inst;
             p = r;
             printf("R%3u)   ",i);
-            ReadString((char *)Inst, GetPtrSize(Inst)); 
+            ReadString((char *)Inst, GetPtrSize(Inst));
             t = *Inst;
             if(t == '\r' || t == '\n')
                 {
                 *p = *r = EOS;
                 break;
                 }
-        /*    printf("R%3u)   ",i);
-            ungetc((char)t,stdin);
-            gets((char *) r);    */
+
             Flag1 = FALSE;
-            while(t = *p++)
+            while( (t = *p++) )
                 {
                 if(!isalpha(t))
                     {
                     Flag1 = TRUE;
-                    SysBeep(5);
+                    if(Batch == FALSE) SysBeep(5);
                     printf("\nA relator can contain only upper and lower case letters!\n");
                     if(t == ' ')
                         printf("\nNo blanks or trailing spaces!\n");
@@ -2983,35 +2974,39 @@ Get_Presentation_From_KeyBoard()
             }
         while(Flag1);
         StrLength = strlen((char *) r);
-        if(StrLength == 0L) break;
+        if(StrLength == 0) break;
         NumRelators ++;
-        ReallocateHandle((char **) Relators[i],StrLength + 1);            
-        if((p = *Relators[i]) == NULL)
-            {
-            printf("\n\n    Memory Error. Sorry!");
-            return(1);
-            }
+        if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+        Relators[i] = (unsigned char **) NewHandle(StrLength + 1);
+        if(Relators[i] == NULL) Mem_Error();
+        LR[i] = StrLength;
+        p = *Relators[i];    
         q = r;
-        while(*p++ = *q++) ;            
+        while( (*p++ = *q++) ) ;            
         }
     if(NumRelators == MAXNUMRELATORS)
-        printf("\n\nThe program will not accept more than %d relators.",NumRelators);        
-    printf("\n\nPlease enter a name by which the program can refer to this presentation,");
+        printf("\n\nHeegaard will not accept more than %d relators.",NumRelators);        
+    printf("\n\nPlease enter a name by which Heegaard can refer to this presentation,");
     printf("\nand then hit 'return'.");
     printf("\n\nSAVE THIS PRESENTATION AS: ");
     ReadString((char *)PresName, GetPtrSize(PresName));
     return(0);
 }
 
-Check_Realizability_Of_The_Initial_Presentation()
+int Check_Realizability_Of_The_Initial_Presentation()
 {
     Get_Simplification_Parameters_From_User(FALSE,FALSE);
     if(Get_Initial_Diagram(FALSE) == 2)
         NoReport = FALSE;
     else    
-        Report(0,NumDiagrams,0,0,0,0,1,0,1,0);
+        {
+        Report(0,NumDiagrams,0,0,0,0,1,0,1,NULL);
+        }
+
+	if(Batch != 3)   
     printf("\n\nDISCARD ALL BUT THE INITIAL PRESENTATION ?  HIT 'y' OR 'n'.");
-    GET_RESPONSE1:
+    if(Batch == 3) return(0);
+    GET_RESPONSE1:    
     switch(WaitkbHit())
         {
         case 'y':
@@ -3019,7 +3014,7 @@ Check_Realizability_Of_The_Initial_Presentation()
         case 'n':
             return(1);
         default:
-            SysBeep(5);
+            if(Batch == FALSE) SysBeep(5);
             goto GET_RESPONSE1;
         }        
 }
@@ -3030,7 +3025,7 @@ void Display_Diagram_Of_The_Initial_Presentation(void)
                     i,
                     SNumGenerators;
     
-    unsigned long    Scratch;
+    unsigned long  	Scratch;
     
     DrawingDiagrams = TRUE;
     if(NumFilled)
@@ -3053,7 +3048,7 @@ void Display_Diagram_Of_The_Initial_Presentation(void)
             DrawingDiagrams = FALSE;
             return;    
         }
-    if(Length == 0L)
+    if(Length == 0)
         {
         printf("\n\nThe presentation has reduced to the empty presentation.");
         printf("\nThere is no diagram to display.");
@@ -3062,7 +3057,7 @@ void Display_Diagram_Of_The_Initial_Presentation(void)
         }    
     if(Automorphisms)
         {
-        SysBeep(5);
+        if(Batch == FALSE) SysBeep(5);
         printf("\n\n                    NOTE!");
         printf("\n\nThe initial presentation does not have minimal length. The diagram you see will");
         printf("\ncorrespond to the following rewritten minimal length version of the initial presentation.");
@@ -3074,26 +3069,27 @@ void Display_Diagram_Of_The_Initial_Presentation(void)
                 printf("\n    Note: %d generators disappeared from the original presentation.",
                 SNumGenerators - NumGenerators);
             printf("\n          The missing generator(s) will not appear in the Heegaard diagram.");    
-            }    
-        printf("\nA copy of this presentation will be saved in the file 'Heegaard_Results'.");
+            }  
+        Vertices = 2*NumGenerators;      
         Canonical_Rewrite(Relators,FALSE,FALSE);
         Fill_A(NumRelators);
         Saved_Vertices = 0;
-        fprintf(stdout,"\n\nThe minimal length presentation is:\n");
-        Print_Relators(Relators,NumRelators,stdout);
-        fprintf(myout,"\n\nThe minimal length presentation is:\n");
-        Print_Relators(Relators,NumRelators,myout);    
+        printf("\n\nThe minimal length presentation is:\n");
+        Print_Relators(Relators,NumRelators);   
         for(i = 1,Scratch = 0L; i <= NumRelators; i++)
             Scratch += GetHandleSize((char **) Relators[i]);
         Scratch -= NumRelators;
         printf("\nThis presentation has length %ld ",Scratch);
-        fprintf(myout,"\nThis presentation has length %ld ",Scratch);
-        printf("\n\n    HIT ANY KEY TO SEE THE HEEGAARD DIAGRAM.");
-        WaitkbHit();
+        if(Batch == 0)
+        	{
+        	printf("\n\n    HIT ANY KEY TO SEE DATA FOR THE HEEGAARD DIAGRAM.");
+        	WaitkbHit();
+        	} 
         }
-    Get_Matrix();
+    Get_Matrix();    
+    ComputeValences_A();  
     Check_Connected();
-    SepPairs = Sep_Pairs(0,0);
+    SepPairs = Sep_Pairs(0,0,1);
     if(SepPairs == TOO_LONG)
         {
         printf("\n\n     This presentation may be too long! Unable to display its diagram. Sorry!");
@@ -3113,52 +3109,64 @@ void Display_Diagram_Of_The_Initial_Presentation(void)
         if(UDV[WhichInput] <= DONE)    
             UDV[WhichInput] = SEP_PAIRS;            
         }
-    NonPlanar = Planar(FALSE,FALSE);
-    Print_Graph(FALSE);
+    NonPlanar = Planar(FALSE,TRUE);
+    Print_Graph(FALSE,0,0,0);
     DrawingDiagrams = FALSE;
 }
 
 void Get_Simplification_Parameters_From_User(int Flag1,int Flag2)
 {
+	if(Check_If_HS_Rep)
+    	{
+		FormBandsums 					= TRUE;
+		OnlyReducingBandsums 			= FALSE; 
+		Delete_Only_Short_Primitives 	= FALSE;
+        Do_Not_Reduce_Genus 			= TRUE;
+        return; 	
+    	}
     if(Flag2 == FALSE) OnlyReducingBandsums = FormBandsums = FALSE;
     if(Flag1)
         {
+        if(BreadthFirstSearch)
+        	printf("\nHeegaard is using Breadth-First search.\n");
+        if(DepthFirstSearch)
+          	printf("\nHeegaard is using Depth-First search.\n");      
         if(FormBandsums)
             {
             if(OnlyReducingBandsums)
-                printf("\nThe program is currently forming only length reducing bandsums.\n");            
+                printf("\nHeegaard is currently forming only length reducing bandsums.\n");            
             else
-                printf("\nThe program is currently forming all possible bandsums.\n");
+                printf("\nHeegaard is currently forming all possible bandsums.\n");
             }
         else
-            printf("\nThe program is not currently forming any bandsums.\n");
+            printf("\nHeegaard is not currently forming any bandsums.\n");
         }
     if(Flag2)
         {
         printf("\nCREATE NEW DIAGRAMS BY FORMING BANDSUMS ? HIT 'y' OR 'n'.\n");
-        GET_RESPONSE1:
+        GET_RESPONSE1:        
         switch(WaitkbHit())
             {
             case 'y':
                 printf("\n    HIT 'a' TO FORM ALL POSSIBLE BANDSUMS.");
                 printf("\n    HIT 'r' TO FORM ONLY LENGTH REDUCING BANDSUMS.");
                 printf("\n    HIT 'n' TO FORM NO BANDSUMS.    ");
-                GET_RESPONSE2:
+                GET_RESPONSE2:                
                 switch(WaitkbHit())
                     {
                     case 'a':
-                        FormBandsums = TRUE;
-                        OnlyReducingBandsums = FALSE;
+                        FormBandsums 			= TRUE;
+                        OnlyReducingBandsums 	= FALSE;
                         break;
                     case 'r':
-                        FormBandsums = TRUE;
-                        OnlyReducingBandsums = TRUE;
+                        FormBandsums 			= TRUE;
+                        OnlyReducingBandsums 	= TRUE;
                         break;
                     case 'n':
                         OnlyReducingBandsums = FormBandsums = FALSE;
                         break;    
                     default:
-                        SysBeep(5);
+                        if(Batch == FALSE) SysBeep(5);
                         goto GET_RESPONSE2;
                     }
                 printf("\n");    
@@ -3167,7 +3175,7 @@ void Get_Simplification_Parameters_From_User(int Flag1,int Flag2)
                 OnlyReducingBandsums = FormBandsums = FALSE;                
                 break;
             default:
-                SysBeep(5);
+                if(Batch == FALSE) SysBeep(5);
                 goto GET_RESPONSE1;    
             }    
         }
@@ -3175,47 +3183,65 @@ void Get_Simplification_Parameters_From_User(int Flag1,int Flag2)
         {
         if(!Do_Not_Reduce_Genus && !Delete_Only_Short_Primitives)
             {
-            printf("\nThe program is currently trying to delete all primitive relators.\n");
+            printf("\nHeegaard is currently trying to delete all primitive relators.\n");
             printf("\nCONTINUE TO DELETE ALL PRIMITIVE RELATORS ? HIT 'y' OR 'n'.\n");
             }
         else
             {
             if(Delete_Only_Short_Primitives && !Do_Not_Reduce_Genus)
-            printf("\nThe program is currently deleting only primitive relators of length 1 and 2.\n");
+            printf("\nHeegaard is currently deleting only primitive relators of length 1 and 2.\n");
             else
-            printf("\nThe program is not currently attempting to delete any primitive relators.\n");
+            printf("\nHeegaard is not currently attempting to delete any primitive relators.\n");
             printf("\nCHANGE TO DELETE ALL PRIMITIVE RELATORS ? HIT 'y' OR 'n'.\n");
             }
         }
-    else        
-    printf("\nDELETE ALL PRIMITIVE RELATORS ? HIT 'y' OR 'n'.\n");
-    GET_RESPONSE3:
+    else
+    	if(Batch != 3)
+    		{
+			printf("\nDELETE ALL PRIMITIVE RELATORS ? HIT 'y' OR 'n'.\n");
+  
+			printf("\n***************************************************************************");
+			printf("\n        Be somewhat careful when choosing to delete primitives!");
+			printf("\n    Although deleting primitives always preserves fundamental groups,");
+			printf("\nsimplifying a presentation P, whose realizability has not been verified, by");
+			printf("\ndeleting primitives, may falsely suggest P is realizable. For example,");
+			printf("\ndeleting C from P = < A,B,C | AAACBBC, C > yields P' = < A,B | AAABB >,");
+			printf("\nand P' is realizable, but P is not.");
+			printf("\n***************************************************************************\n");
+			}
+    if(Batch == 3)
+    	{
+ 		Delete_Only_Short_Primitives 	= FALSE;
+        Do_Not_Reduce_Genus 			= TRUE;
+        return;   	
+    	}
+    GET_RESPONSE3:    
     switch(WaitkbHit())
         {
         case 'y':
-            Do_Not_Reduce_Genus = FALSE;
-            Delete_Only_Short_Primitives = FALSE;
+            Do_Not_Reduce_Genus 			= FALSE;
+            Delete_Only_Short_Primitives 	= FALSE;
             break;
         case 'n':    
             printf("\nDELETE PRIMITIVE RELATORS OF LENGTH 1 AND LENGTH 2 ? HIT 'y' OR 'n'.\n");
-            GET_RESPONSE4:
+            GET_RESPONSE4:            
             switch(WaitkbHit())
                 {
                 case 'y':
-                    Delete_Only_Short_Primitives = TRUE;
-                    Do_Not_Reduce_Genus = FALSE;
+                    Delete_Only_Short_Primitives 	= TRUE;
+                    Do_Not_Reduce_Genus 			= FALSE;
                     break;
                 case 'n':
-                    Delete_Only_Short_Primitives = FALSE;
-                    Do_Not_Reduce_Genus = TRUE;
+                    Delete_Only_Short_Primitives 	= FALSE;
+                    Do_Not_Reduce_Genus 			= TRUE;
                     break;
                 default:
-                    SysBeep(5);
+                    if(Batch == FALSE) SysBeep(5);
                     goto GET_RESPONSE4;
                 }
             break;
         default:
-            SysBeep(5);
+            if(Batch == FALSE) SysBeep(5);
             goto GET_RESPONSE3;
         }
         
@@ -3225,15 +3251,15 @@ void Get_Simplification_Parameters_From_User(int Flag1,int Flag2)
         {
         if(Find_All_Min_Pres)
             {
-            printf("\nThe program is currently trying to make broad use of level-transformations.\n");
+            printf("\nHeegaard is currently trying to make broad use of level-transformations.\n");
             printf("\nCONTINUE TO MAKE BROAD USE OF LEVEL-TRANSFORMATIONS ? HIT 'y' OR 'n'.\n");
             }
         else
             {
-            printf("\nThe program is currently trying to make only limited use of level-transformations.\n");
+            printf("\nHeegaard is currently trying to make only limited use of level-transformations.\n");
             printf("\nCHANGE STRATEGY TO MAKE BROAD USE OF LEVEL-TRANSFORMATIONS ? HIT 'y' OR 'n'.\n");
             }
-        GET_RESPONSE5:
+        GET_RESPONSE5:       
         switch(WaitkbHit())
             {
             case 'y':
@@ -3243,96 +3269,99 @@ void Get_Simplification_Parameters_From_User(int Flag1,int Flag2)
                 Find_All_Min_Pres = FALSE;
                 break;
             default:
-                SysBeep(5);
+                if(Batch == FALSE) SysBeep(5);
                 goto GET_RESPONSE5;
             }
-        }                        
+    	}		   
 }
 
 void Turn_Micro_Print_On(void)
 {
-    printf("\nTURN Micro_Printing ON ? HIT 'y' OR 'n'.\n");
-    GET_RESPONSE1:
-    switch(WaitkbHit())
-        {
-        case 'y':
-            printf("\n    HIT 'b' TO MICRO_PRINT TO BOTH THE SCREEN AND 'Heegaard_Results'.");
-            printf("\n    HIT 's' TO MICRO_PRINT ONLY TO THE SCREEN.    ");
-            if(Micro_Print)
-                printf("\n    HIT 'o' TO TURN MICRO_PRINTING COMPLETELY OFF.    ");
-            printf("\n");    
-            GET_RESPONSE2:
-            switch(WaitkbHit())
-                {
-                case 'b':
-                    Micro_Print = TRUE;
-                    Micro_Print_F = TRUE;
-                    break;
-                case 's':
-                    Micro_Print = TRUE;
-                    Micro_Print_F = FALSE;
-                    break;                            
-                case 'o':
-                    if(!Micro_Print)
-                        {
-                        SysBeep(5);
-                        goto GET_RESPONSE2;                            
-                        }
-                    Micro_Print = FALSE;
-                    Micro_Print_F = FALSE;
-                    break;                        
-                default:
-                    SysBeep(5);
-                    goto GET_RESPONSE2;
-                }    
-            break;
-        case 'n':
-	  //	    printf("\n");
-            Micro_Print = FALSE;
-            Micro_Print_F = FALSE;
-            break;
-        default:
-            SysBeep(5);
-            goto GET_RESPONSE1;
-        }
+	if(Micro_Print)
+		{
+		printf("\nMicro_Printing IS ON. TURN Micro_Printing OFF ? HIT 'y' OR 'n'.\n");
+		GET_RESPONSE1:		
+		switch(WaitkbHit())
+			{
+			case 'y':	
+				Micro_Print 	= FALSE;
+				Micro_Print_F 	= FALSE;
+				break;
+			case 'n':
+				Micro_Print 	= TRUE;
+				Micro_Print_F 	= TRUE;
+				break;
+			default:
+				if(Batch == FALSE) SysBeep(5);
+				goto GET_RESPONSE1;
+			}
+		}
+	else
+		{
+		printf("\nTURN Micro_Printing ON ? HIT 'y' OR 'n'.\n");
+		GET_RESPONSE2:		
+		switch(WaitkbHit())
+			{
+			case 'y':
+				Micro_Print 	= TRUE;
+				Micro_Print_F 	= TRUE;			
+				break;
+			case 'n':
+				Micro_Print 	= FALSE;
+				Micro_Print_F 	= FALSE;
+				break;
+			default:
+				if(Batch == FALSE) SysBeep(5);
+				goto GET_RESPONSE2;
+			}
+		}	
 }
 
-Find_Level_Transformations_Of_The_Initial_Presentation()
+int Find_Level_Transformations_Of_The_Initial_Presentation()
 {
-    if(Length == 0L)
+	int		FLTRV;
+	
+    if(Length == 0)
         {
-        printf("\n\nThis is an empty presentation!!");
-        return(0);
+        if(Batch != 7) printf("\n");
+        printf("\nThis is an empty presentation!!");
+        return(1);
         }
     ReadPres = NumFilled;    
     if(Find_Flow_A(NORMAL,FALSE) == TOO_LONG)
         {
-        printf("\n\nPresentation %d is too long!",ReadPres + 1);
-        return(0);
+        if(Batch != 7) printf("\n");
+        printf("\nPresentation %d is too long!",ReadPres + 1);
+        return(2);
         }
     if(Automorphisms)
         {
-        printf("\n\nPresentation %d does not have minimal length.",ReadPres + 1);
-        printf("\n\nThe program will only find level transformations for presentations ");
+        if(Batch != 7) printf("\n");
+        printf("\nPresentation %d does not have minimal length.",ReadPres + 1);
+        printf("\nHeegaard will only find level transformations for presentations ");
         printf("that have minimal length.");
-        return(0);
-        }    
-    printf("\nPRINT STABILIZER INFO INTO 'Heegaard_Results' ? HIT 'y' OR 'n'.");
-    GET_RESPONSE1:
-    switch(WaitkbHit())
-        {
-        case 'y':
-            Compute_Stabilizers = TRUE;
-            break;
-        case 'n':
-            Compute_Stabilizers = FALSE;
-            break;
-        default:
-            SysBeep(5);
-            goto GET_RESPONSE1;        
+        return(3);
         }
-    printf("\n\nListing members of the orbit of presentation 1 under level transformations. . .\n");
-    Num_Level_Transformations = 1L;
+    if(Batch != 7) 
+    	{     
+		printf("\nPRINT STABILIZER INFO ? HIT 'y' OR 'n'.");
+		GET_RESPONSE1:   
+		switch(WaitkbHit())
+			{
+			case 'y':
+				Compute_Stabilizers = TRUE;
+				break;
+			case 'n':
+				Compute_Stabilizers = FALSE;
+				break;
+			default:
+				if(Batch == FALSE) SysBeep(5);
+				goto GET_RESPONSE1;        
+			}
+		printf("\n\nListing members of the orbit of presentation 1 under level transformations. . .\n");
+    	}
+    if(Batch == 7) Compute_Stabilizers = FALSE;	
+    Num_Level_Transformations = 0L;
     Left[0] = Right[0] = INFINITE;    
     if(Save_Pres(ReadPres,0,Length,1,2,1,0,0))
         {
@@ -3347,81 +3376,78 @@ Find_Level_Transformations_Of_The_Initial_Presentation()
     do
         {
         OnStack --;
-        if(Find_Level_Transformations(FALSE,TRUE) == 5)
+        FLTRV = Find_Level_Transformations(FALSE,TRUE);
+        if(FLTRV == 5 || FLTRV == FULL_HOUSE)
             {
-            printf("\n\nWe have run out of memory set aside for presentations!!!!");
+            if(Batch != 7) printf("\n\nWe have run out of memory set aside for presentations!!!!");
             Compute_Stabilizers = FALSE;
             break;
             }
-        if(mykbhit() == ' ')
-            {
-            printf("\n\n   There are currently %u unexamined presentations.",OnStack);            
-            printf("\n      HIT 't' TO TERMINATE THIS RUN.");
-            printf("\n         HIT 'r' TO RESUME LOOKING FOR LEVEL TRANSFORMATIONS.");
-            GET_RESPONSE2:
-            switch(WaitkbHit())
-                {
-                case 't':
-                    goto _STOP_LT;
-                case 'r':
-                    if(Compute_Stabilizers)
-                        {
-                        printf("\nCONTINUE TO PRINT STABILIZER INFO ?  HIT 'y' OR 'n'.\n");
-                        GET_RESPONSE3:
-                        switch(WaitkbHit())
-                            {
-                            case 'y':
-                                break;
-                            case 'n':
-                                Compute_Stabilizers = FALSE;
-                                break;
-                            default:
-                                SysBeep(5);
-                                goto GET_RESPONSE3;    
-                            }
-                        }
-                    break;                        
-                default:
-                    SysBeep(5);
-                    goto GET_RESPONSE2;
-                }
-            }        
         ReadPres ++;
         }
     while(ReadPres < NumFilled);
-    SysBeep(5);        
-_STOP_LT:        
-    Free_Memory_For_Find_Level_Transformations(TRUE,1000);
-    Compute_Stabilizers = FALSE;
-    if(ReadPres < NumFilled)
-        {
-        printf("\n\nThe search for level transformations was interrupted.");
-        fprintf(myout,"\n\nThe search for level transformations was interrupted.");
-        }
-    switch(NumFilled - 1)
-        {
-        case 0:
-            printf("\n\nThe orbit of presentation 1 under level transformations has 1 member.\n");
-            fprintf(myout,"\n\nThe orbit of presentation 1 under level transformations has 1 member.\n");
-            break;
-        default:
-            printf("\n\nThe orbit of presentation 1 under level transformations has %u members.\n",
-                NumFilled);
-            fprintf(myout,"\n\nThe orbit of presentation 1 under level transformations has %u members.\n",
-                NumFilled);
-            break;
-        }
     
-    printf("\n\nHIT 'v' TO REVIEW THE PRESENTATIONS IN THE ORBIT.");    
-    printf("\nHIT 'f' TO FILE THESE PRESENTATIONS IN THE FILE 'Heegaard_Results'.");
-    printf("\nHIT ANY OTHER KEY TO CONTINUE.");
+    if(Batch != 7) SysBeep(5); 
+      
+    Compute_Stabilizers = FALSE;
+    if(ReadPres < NumFilled && Batch != 7) printf("\n\nThe search for level transformations was interrupted.");
+    if(Batch != 7)
+    	{
+		printf("\nHeegaard performed %lu level-transformation",Num_Level_Transformations);
+		if(Num_Level_Transformations == 1)
+			printf(".");
+		else
+			printf("s.");
+		printf("\n\nThe orbit of presentation 1 under level transformations has ");
+		switch(NumFilled - 1)
+			{
+			case 0:
+				printf("1 member.\n");
+				break;
+			default:
+				if(NumFilled >= MAX_SAVED_PRES -3)
+					printf("at least %u members.\n",NumFilled);
+				else
+					printf("%u members.\n",NumFilled);
+				break;
+			}
+        }   
+    
+    if(Batch == 7) 
+    	{
+    	printf("\n|LTs| %lu, ",Num_Level_Transformations);
+    	if(H_Results != NULL) 
+    		fprintf(H_Results,"\n\n%s\n|LTs| %lu, ",PresName,Num_Level_Transformations);
+    	if(NumFilled >= MAX_SAVED_PRES -3)
+    		{
+    		printf("|Orbit| >= %u, ",NumFilled);
+    		if(H_Results != NULL) fprintf(H_Results,"|Orbit| >= %u, ",NumFilled);
+    		}
+    	else
+    		{
+    		printf("|Orbit| %u, ",NumFilled);
+    		if(H_Results != NULL) fprintf(H_Results,"|Orbit| %u, ",NumFilled);
+    		}
+    	return(0);
+    	}
+        
+    if(Batch != 7)
+    	{
+    	printf("\n\nHIT 'v' TO REVIEW THE PRESENTATIONS IN THE ORBIT.");
+    	if(NumFilled > 1)
+			{
+			printf("\nHIT 'w' TO SORT THE PRESENTATIONS NOW IN MEMORY BY SUMMAND NUMBER,");
+			printf("\n        NUMGENERATORS, NUMRELATORS, LENGTH AND 'LEXICOGRAPHIC' ORDER.");
+			}
+    	printf("\nHIT ANY OTHER KEY TO CONTINUE.");
+    	}   
     switch(WaitkbHit())
         {
         case 'v':
             REVIEW:
-            Report(0,0,0,0,0,0,0,0,1,0);
+            Report(0,0,0,0,0,0,0,0,1,NULL);
             printf("\n\n    CONTINUE TO REVIEW PRESENTATIONS ?  HIT 'y' OR 'n'.");
-            GET_RESPONSE4:
+            GET_RESPONSE4:            
             switch(WaitkbHit())
                 {
                 case 'y':
@@ -3429,18 +3455,20 @@ _STOP_LT:
                 case 'n':
                     break;
                 default:
-                    SysBeep(5);
+                    if(Batch == FALSE) SysBeep(5);
                     goto GET_RESPONSE4;
                 }
             break;
-        case 'f':
-            Report(0,0,0,0,1,1,0,0,1,0);
-            break;
+        case 'w':
+            printf("\n\n     Sorting presentations. . . .");
+            Sort_Presentations_In_Memory(FALSE);
+        	break;
         default:
             break;    
-        }    
+        }
+        
     printf("\n\nDISCARD THE PRESENTATIONS IN THE ORBIT ?  HIT 'y' OR 'n'.");        
-    GET_RESPONSE5:
+    GET_RESPONSE5:   
     switch(WaitkbHit())
         {
         case 'y':
@@ -3448,7 +3476,7 @@ _STOP_LT:
         case 'n':
             printf("\n\nTEST THESE PRESENTATIONS FOR PSEUDO-MINIMALITY, SEPARATING VERTICES AND REALIZABILITY ?");
             printf("\nHIT 'y' OR 'n'.");
-            GET_RESPONSE6:
+            GET_RESPONSE6:            
             switch(WaitkbHit())
                 {
                 case 'y':
@@ -3456,48 +3484,68 @@ _STOP_LT:
                 case 'n':
                     return(1);
                 default:
-                    SysBeep(5);
+                    if(Batch == FALSE) SysBeep(5);
                     goto GET_RESPONSE6;
                 }
         default:
-            SysBeep(5);
+            if(Batch == FALSE) SysBeep(5);
             goto GET_RESPONSE5;
         }    
 }                        
 
-Reduce_The_Initial_Presentation_To_Minimal_Length()
+int Reduce_The_Initial_Presentation_To_Minimal_Length()
 {
-    int        i;
+    int   	i;
     
     long    Scratch;
-
-    Turn_Micro_Print_On();
+	if(Batch != 16 && Batch != 53) Turn_Micro_Print_On();
     Scratch = Length;
     i = NumGenerators;
     switch(Find_Flow_A(NORMAL,FALSE))
         {
         case 1:
-            Rewrite_Input();
+            if(Batch != 53) Rewrite_Input();
             break;
         case TOO_LONG:
-            printf("\n\n     This presentation may be too long for the program to handle. Sorry!");
-            return(0);    
+            printf("\n\n     This presentation may be too long for Heegaard to handle. Sorry!");
+            return(1);    
         }        
     if(Length == Scratch)
+    	{
         printf("\n\nThis presentation has minimal length.");
+        if(Batch == 16 && H_Results != NULL)
+        	{				
+			fprintf(H_Results,"\n\n%s",PresName);
+			Print_Relators2(Relators,NumRelators);        	
+        	}
+        if(Batch == 53) return(0);	
+        }
     else
         {
-        printf("\n\n%lu automorphism(s) reduced the length from %ld to %lu.\n",
-            Automorphisms,Scratch,Length);
+        printf("\n\n%lu automorphism(s) reduced the length from %ld to %lu.\n",Automorphisms,Scratch,Length);
         if(i > NumGenerators)
-            printf("\nand reduced the number of generators from %d to %d.\n",
-            i,NumGenerators);    
+            printf("\nand reduced the number of generators from %d to %d.\n",i,NumGenerators);    
         Canonical_Rewrite(Relators,FALSE,FALSE);
+		if(Batch == 16)
+			{
+			Print_Relators(Relators,NumRelators);
+			if(H_Results != NULL) 
+				{
+				fprintf(H_Results,"\n\n%s",PresName);
+				Print_Relators2(Relators,NumRelators);
+				}
+			return(0); 
+			} 
+		if(Batch == 53 && H_Results != NULL)
+			{
+			fprintf(H_Results,"\n\n%s <-- Not a HS Rep! (IP does not have minimal length.)",PresName);
+			return(1);
+			}	    
         if(Save_Pres(ReadPres,0,Length,1,2,1,0,0)) return(0);
         UDV[NumFilled - 1] = 0;
-        Report(0,0,0,0,0,0,0,0,1,0);
+        Report(0,0,0,0,0,0,0,0,1,NULL);
         printf("\n\nDISCARD THIS MINIMAL LENGTH PRESENTATION ?  HIT 'y' OR 'n'.");
-        GET_RESPONSE1:
+        GET_RESPONSE1:        
         switch(WaitkbHit())
             {
             case 'y':
@@ -3505,14 +3553,14 @@ Reduce_The_Initial_Presentation_To_Minimal_Length()
             case 'n':
                 return(1);
             default:
-                SysBeep(5);
+                if(Batch == FALSE) SysBeep(5);
                 goto GET_RESPONSE1;
             }
         }
     return(0);        
 }
 
-Initial_Realizability_Check()
+int Initial_Realizability_Check()
 {
     int     i;
 
@@ -3531,58 +3579,56 @@ Initial_Realizability_Check()
     if(Connected_(0,0) == FALSE) return(FALSE);
     if(Find_Cut_Vertices()) return(FALSE);
     if(Planar(TRUE,FALSE))
-        {
+        {        
         if(Save_Pres(ReadPres,0,Length,1,2,1,0,0)) return(TRUE);
         ReadPres = NumFilled - 1;
         Fatal_Error();
         printf("\n\n     The Whitehead graph is connected, has no cut-vertices and is non-planar.");
-        printf("\n     This is impossible if the presentation is realizable.");
-        fprintf(myout,"\n\n     The Whitehead graph is connected, has no cut-vertices and is non-planar.");
-        fprintf(myout,"\n     This is impossible if the presentation is realizable.");
+        printf("\n     This is impossible if the presentation is realizable.");        
         return(TRUE);
         }
     return(FALSE);    
-}
-        
-void Edit_MyOut(void)
-{
-    fflush(myout);
-    fclose(myout);
-    printf("\n\nThe file 'Heegaard_Results' is now closed.");
-    printf("\nYou may now transfer to an external program and edit this file.");
-    printf("\nWHEN DONE EDITING, HIT ANY KEY TO RESUME RUNNING HEEGAARD.");
-    WaitkbHit();
-    if((myout = fopen("Heegaard_Results","a+")) == NULL)
-        printf("\nUnable to open the file 'Heegaard_Results'.");
 }
 
 void Print_Realizability(int Del_Only_Triv_Rel, unsigned int WhichPres)
 {
     printf("\n\n                    The data appears consistent.");
-    fprintf(myout,"\n\n                    The data appears consistent.");            
     if(Del_Only_Triv_Rel)
-        {
+    	{
         printf("\n\n                    The initial presentation is realizable.");
-        fprintf(myout,"\n\n                    The initial presentation is realizable.");
+        if(Num_Saved_LPres && (Batch == 4 || Batch == 10 || Batch == 11 || Batch == 53))
+			{
+			printf("\n\nAnd is now:");
+			Print_Relators(Relators,NumRelators);
+			}
         }
     else
-        {    
+    	{
         printf("\n\n                    Presentation %d is realizable.",WhichPres);
-        fprintf(myout,"\n\n                    Presentation %d is realizable.",WhichPres);
+        if(Batch == 4 || Batch == 10 || Batch == 11 || Batch == 53)
+			{
+			printf("\n\nPresentation %d is:",WhichPres);
+			Print_Relators(Relators,NumRelators);
+			}
         }
+    if(Batch == 3) 
+    	{
+    	NumRealizable ++;
+    	if(H_Results != NULL) fprintf(H_Results,"\n\n%s\nRealizable.",PresName);
+    	}   
 }
 
-void Realization_Warning(FILE * fptr)
+void Realization_Warning()
 {
-    fprintf(fptr,"\n\n    NOTE: The program has not directly verified that the initial presentation is realizable.");
-    fprintf(fptr,"\n          This means it is possible that the initial presentation is not realizable,");
-    fprintf(fptr,"\n          even though 'derived' presentations are realizable.");  
+    printf("\n\n    NOTE: Heegaard has not directly verified that the initial presentation is realizable.");
+    printf("\n          This means it is possible that the initial presentation is not realizable,");
+    printf("\n          even though 'derived' presentations are realizable.");  
 }
 
 char mykbhit()
 {
 #ifdef MAC
-    char            charhit;
+    char            	charhit;
     EventRecord        theEvent;
     Boolean            gotEvent;
     

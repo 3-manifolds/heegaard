@@ -1,6 +1,24 @@
 #include "Heegaard.h"
 #include "Heegaard_Dec.h"
 
+/****************************** function prototypes *****************************************
+L   22 New_Relator(int)
+L  347 Long_Mult(unsigned char,unsigned char,unsigned int,unsigned int,unsigned int,
+	   unsigned int,unsigned int,unsigned int,unsigned int,long,unsigned)
+L  523 Inverse_Nr(unsigned char *)	
+L  552 Freely_Reduce_Nr(void)
+L  597 Canonical_Rewrite(unsigned char ***,int,int)
+L 1518 Final_Rewrite(unsigned char ***)
+L 1733 Find_Symmetries(int)
+L 1823 Report_Symmetries(unsigned char *,int,int)
+L 1868 Find_Cancellation_Paths(int,int,int)
+L 2547 CP_Concatenate_Paths(unsigned char **,unsigned char **,int)
+L 2684 CP_Check_Simple_Paths(unsigned int,int*,int,unsigned char**,unsigned char**)
+L 2785 CP_Fill_AA(void)
+L 2839 CP_Find_Primitives(void)
+L 3037 CP_Do_Aut(unsigned int Source)	
+********************************************************************************************/
+
 int New_Relator(int F1)
 {
 	/******************************************************************************************
@@ -53,15 +71,12 @@ int New_Relator(int F1)
 							vrt;
 	
 	long 					Diff,
-							LOR[MAXNUMRELATORS + 1],
 							length,
 							slength;
 	
 	unsigned long			max;
 	
 	for(d = 1,max = 0L; d <= NumRelators; d++) if(LR[d] > max) max = LR[d];
-	if(SRError == 3) for(d = 1; d <= NumRelators; d++)
-		LOR[d] = GetHandleSize((char **) OutRelators[d]);
 	Minimum = BIG_NUMBER;
 	
 	/******************************************************************************************
@@ -69,10 +84,12 @@ int New_Relator(int F1)
 		bandsums is determined by this parameter.
 	******************************************************************************************/	
 	
-	if(!GoingUp)
+	if(GoingDown)
 		Depth = 2*NumEdges;
 	else
 		Depth = 3*(2*NumGenerators - UDV[ReadPres]);
+		
+	if(Depth <= 0) Depth = NumEdges/2;	
 			
 	for(d = 1; d <= 2*NumEdges; d++) EL[d] = d;
 	uu = 0;
@@ -91,8 +108,8 @@ int New_Relator(int F1)
 		EL[c] = v;
 		
 		/**************************************************************************************
-			Determine which edges of the original diagram the chosen edge, of the dual
-			diagram, joins.
+			Determine which edges of the original diagram are connected by the chosen edge 
+			of the dual diagram.
 		**************************************************************************************/	
 		
 		for(v = c = 0; c + VWG[v] < EL[ss]; v++) c += VWG[v];
@@ -157,7 +174,7 @@ int New_Relator(int F1)
 					
 					printf("\nlength > max in a bandsum!");
 					Minimum = BIG_NUMBER;
-					return;
+					return(1);
 					}	
 				v = FV[w];
 				d = A[w][v];
@@ -244,18 +261,18 @@ int New_Relator(int F1)
 				/***************************************************************************
 						Compute Diff, which is the amount by which the length of the
 						presentation would be changed by performing this bandsum and
-						replacement. If Diff < Minimum and !GoingUp or Diff > 0, replace
+						replacement. If Diff < Minimum and GoingDown or Diff > 0, replace
 						the current saved set of parameters with the set of parameters we
 						have just found.
 				***************************************************************************/			
 				
 				if(s < 'a')
-					Diff = LOR[s - 64] - (length << 1) - 1;
+					Diff = GetHandleSize((char **) OutRelators[s - 64]) - (length << 1) - 1;
 				else	
-					Diff = LOR[s - 96] - (length << 1) - 1;
+					Diff = GetHandleSize((char **) OutRelators[s - 96]) - (length << 1) - 1;
 				if(Diff < Minimum)
 					{
-					if(!GoingUp || Diff > 0L)
+					if(GoingDown || Diff > 0)
 						{
 						Minimum = Diff;
 						sx 		= x;
@@ -281,7 +298,7 @@ int New_Relator(int F1)
 				else
 				if(Diff == Minimum)
 					{
-					if((!GoingUp || Diff > 0L) && abs(rand()) % 2)
+					if((GoingDown || Diff > 0) && abs(rand()) % 2)
 						{
 						sx 		= x;
 						sy 		= y;
@@ -305,13 +322,13 @@ int New_Relator(int F1)
 					}
 				}		
 			}		
-		if(uu >= Depth || (!GoingUp && Minimum < 0L && (uu << 2) >= Depth))
+		if(uu >= Depth || (GoingDown && Minimum < 0L && (uu << 2) >= Depth))
 			{
 			/**********************************************************************************
 				If uu >= Depth, we have looked at bandsums along at least Depth number of 
 				randomly chosen edges. If GoingUp and Minimum < BIG_NUMBER, call Long_Mult() to
 				perform our chosen bandsum. Otherwise return.
-					If !GoingUp, there is a bandsum which reduces the length of the
+					If GoingDown, there is a bandsum which reduces the length of the
 				presentation, and we have examined at least one-fourth of the possible
 				bandsums, call Long_Mult(). 
 			**********************************************************************************/		
@@ -328,16 +345,19 @@ int New_Relator(int F1)
 }
 
 int Long_Mult(unsigned char x,unsigned char y,unsigned int edgeRS,unsigned int edgeLS,unsigned int edgeRE,
-				unsigned int edgeLE,unsigned int vertexRS,unsigned int vertexLS,unsigned int vertex,long slength,
-				unsigned long max)
+	unsigned int edgeLE,unsigned int vertexRS,unsigned int vertexLS,unsigned int vertex,long slength,
+	unsigned long max)
 {
 	/******************************************************************************************
 				This routine is called by New_Relator() to perform a bandsum.
 	******************************************************************************************/
 		
 	register unsigned char 	*p,
+							*q,
 							*r;
 							
+	unsigned char			**Temp;
+						
 	register unsigned int 	d,
 							e,
 							v,
@@ -351,26 +371,19 @@ int Long_Mult(unsigned char x,unsigned char y,unsigned int edgeRS,unsigned int e
 		Minimum = BIG_NUMBER;
 		return(NO_ERROR);
 		}
-	ReallocateHandle((char **) Temp1,HS);
-	if((r = *Temp1) == NULL)
-		{
-		Minimum = BIG_NUMBER;
-		return(NO_ERROR);	
-		}
+	if(Temp1 != NULL) DisposeHandle((char **) Temp1);
+	Temp1 = (unsigned char **) NewHandle(HS);	
+	if(Temp1 == NULL) Mem_Error();
+	r = *Temp1;	
 	HS = 2*max + 2;
 	if(HS > MAXLENGTH)
 		{
 		Minimum = BIG_NUMBER;
-		ReallocateHandle((char **) Temp1,4L);
 		return(NO_ERROR);
-		}		
-	ReallocateHandle((char **) Temp2,HS);
-	if(*Temp2 == NULL)
-		{
-		Minimum = BIG_NUMBER;
-		ReallocateHandle((char **) Temp1,4L);
-		return(NO_ERROR);	
-		}		
+		}
+	if(Temp2 != NULL) DisposeHandle((char **) Temp2);
+	Temp2 = (unsigned char **) NewHandle(HS);		
+	if(Temp2 == NULL) Mem_Error();		
 	e = edgeLS;
 	v = vertexLS;
 	
@@ -404,12 +417,12 @@ int Long_Mult(unsigned char x,unsigned char y,unsigned int edgeRS,unsigned int e
 		e = B[w][v] - e;
 		}
 	*r = EOS;
-	if((r = *Temp2) == NULL)
+	if(Temp2 == NULL)
 		{
 		Minimum = BIG_NUMBER;
-		ReallocateHandle((char **) Temp1,4L);
 		return(NO_ERROR);	
 		}
+	r = *Temp2;	
 	v = vertexRS;
 	e = edgeRS;
 	
@@ -450,7 +463,7 @@ int Long_Mult(unsigned char x,unsigned char y,unsigned int edgeRS,unsigned int e
 			
 	Inverse_Nr(*Temp2);  		
 	p = *Temp1;
-	while(*r++ = *p++) ;
+	while( (*r++ = *p++) ) ;
 	
 	/******************************************************************************************
 		If vertex = vertexLS and edgeLS = edgeLE or vertex = vertexRS and edgeRS = edgeRE,
@@ -484,8 +497,22 @@ int Long_Mult(unsigned char x,unsigned char y,unsigned int edgeRS,unsigned int e
 				{
 				Minimum = BIG_NUMBER;
 				return(NO_ERROR);
-				}		   	   	   	   
-			SetHandleSize((char **) Temp2,HS);	
+				}
+			if(Temp1 != NULL) DisposeHandle((char **) Temp1);
+			Temp1 = (unsigned char **) NewHandle(HS);
+			if(Temp1 == NULL) Mem_Error();
+			p = *Temp2;
+			q = *Temp1;
+			r = q;
+			while( (*q++ = *p++) ) ;
+			if((q-r) != HS)
+				{
+				NumErrors ++;
+				printf("\n\nError in New_Relator! |Relator[1]| = %lu, HS = %lu.",q-r-1,HS);
+				}
+			Temp = 	Temp2;
+			Temp2 = Temp1;
+			Temp1 = Temp; 			   	   	   	   
 			}
 		}
 	if(HS == 1L) EmtyRel = TRUE;
@@ -493,7 +520,7 @@ int Long_Mult(unsigned char x,unsigned char y,unsigned int edgeRS,unsigned int e
 	return(NO_ERROR);				 																														
 }
 
-Inverse_Nr(p)
+void Inverse_Nr(p)
 register unsigned char *p;
 {
 	/******************************************************************************************
@@ -522,7 +549,7 @@ register unsigned char *p;
 		}					
 }
 
-Freely_Reduce_Nr()
+void Freely_Reduce_Nr()
 {		
 	/******************************************************************************************
 					This routine freely reduces the new relator found in Temp2.
@@ -533,12 +560,10 @@ Freely_Reduce_Nr()
 							
 	register char 			x;
 	
-	ReallocateHandle((char **) Temp12,GetHandleSize((char **) Temp2) + 2);
-	if((p = *Temp12) == NULL)
-		{
-		Minimum = BIG_NUMBER;
-		return;
-		}	
+	if(Temp12 != NULL) DisposeHandle((char **) Temp12);
+	Temp12 = (unsigned char **) NewHandle(GetHandleSize((char **) Temp2) + 2);
+	if(Temp12 == NULL) Mem_Error();
+	p = *Temp12;	
 	q = *Temp2;
 	*p = '@';
 	while(*q)
@@ -562,23 +587,17 @@ Freely_Reduce_Nr()
 		}	
 	p++;
 	*p = EOS;		
-	SetHandleSize((char **) Temp2,p + 1 - q);
-	if((p = *Temp2) == NULL)
-		{
-		Minimum = BIG_NUMBER;
-		return;
-		}
-	while(*p++ = *q++) ;						
+	if(Temp2 != NULL) DisposeHandle((char **) Temp2);
+	Temp2 = (unsigned char **) NewHandle(p + 1 - q);
+	if(Temp2 == NULL) Mem_Error();
+	p = *Temp2;	
+	while( (*p++ = *q++) ) ;						
 }		
 
-Canonical_Rewrite(MyRelators,Annulus_Exists,ReportSymmetries)
-unsigned char 	***MyRelators;
-
-int 			Annulus_Exists,
-				ReportSymmetries;
+int Canonical_Rewrite(unsigned char ***MyRelators,int Annulus_Exists,int ReportSymmetries)
 {
 	/******************************************************************************************
-		The program needs some means of determining whether two presentations correspond to 
+		Heegaard needs some means of determining whether two presentations correspond to 
 		isomorphic Heegaard diagrams.
 			Canonical_Rewrite() rewrites presentations in a canonical form so that two
 		presentations have isomorphic Heegaard diagrams only if the two rewritten
@@ -614,7 +633,8 @@ int 			Annulus_Exists,
 							y;
 							
 	register int 			i,
-							j;
+							j,
+							jj;
 							
 	register unsigned int	k;							
 							
@@ -629,7 +649,8 @@ int 			Annulus_Exists,
 							*Str2,
 							*T1,
 							*T2,
-							**Temp;
+							**Temp,
+							*Tempa;
 	
 	int 					CurrentR1,
 							CurrentR2,
@@ -639,15 +660,18 @@ int 			Annulus_Exists,
 							Match,
 							NumChanges,
 							NumDups,
-							Mem_Flag,
 							SaveR2,
 							Stack_Ptr,
+							TooManyDups,
 							UpdateStr1;
 							
 	unsigned int			Exp,
 							Max_Exp;						
 													
 	long 					length;
+	
+	
+	for(i = 1; i <= NumRelators; i++) Inst[i] = i;
 	
 	/******************************************************************************************
 		Sort the relators of the presentation according to length. Set length equal to the
@@ -663,14 +687,17 @@ int 			Annulus_Exists,
 		if(LR[j-1] < length)
 			{
 			Temp = MyRelators[i];
+			jj = Inst[i];
 			while(LR[j-1] < length)
 				{
 				LR[j] = LR[j-1];
 				MyRelators[j] = MyRelators[j-1];
+				Inst[j] = Inst[j-1];
 				j--;
 				}
 			LR[j] = length;
 			MyRelators[j] = Temp;
+			Inst[j] = jj;
 			}
 		}		
 
@@ -679,52 +706,46 @@ int 			Annulus_Exists,
 	/******************************************************************************************
 			Get some memory for the strings Str, Str1, Str2 and for the array T2[].
 	******************************************************************************************/
-		
-	ReallocateHandle((char **) Temp12,length + 2);
-	ReallocateHandle((char **) Temp13,length + 1);
-	ReallocateHandle((char **) Temp14,length + 1);
-	ReallocateHandle((char **) Temp15,125L);
 	
-	if((Str  = *Temp12) == NULL) return(TOO_LONG);
-	if((Str1 = *Temp13) == NULL) return(TOO_LONG);
-	if((Str2 = *Temp14) == NULL) return(TOO_LONG);
-	if((T2   = *Temp15) == NULL) return(TOO_LONG);
+	if(Temp12 != NULL) DisposeHandle((char **) Temp12);	
+	Temp12 = (unsigned char **) NewHandle(length + 2);
+	if(Temp12 == NULL) Mem_Error();	
+	if(Temp13 != NULL) DisposeHandle((char **) Temp13);
+	Temp13 = (unsigned char **) NewHandle(length + 1);
+	if(Temp13 == NULL) Mem_Error();
+	if(Temp14 != NULL) DisposeHandle((char **) Temp14);
+	Temp14 = (unsigned char **) NewHandle(length + 1);
+	if(Temp14 == NULL) Mem_Error();
+	if(Temp15 != NULL) DisposeHandle((char **) Temp15);
+	Temp15 = (unsigned char **) NewHandle(125);
+	if(Temp15 == NULL) Mem_Error();
 	
-	HLock((char **) Temp12);
-	HLock((char **) Temp13);
-	HLock((char **) Temp14);
-	HLock((char **) Temp15);
+	Str  = *Temp12;
+	Str1 = *Temp13;
+	Str2 = *Temp14;
+	T2   = *Temp15;
 	
 	/******************************************************************************************
-		Get a handle RWR[0] of size 125 bytes. Make T1 point to the first of these bytes
-		and initialize T1[]. T1[0] gives the current number of generators for which
-		substitutions have been determined. T1[1] -> T1[NumRelators] are flags
-		used to keep track of which relators have been used. One relator is used each time
-		depth is incremented. T1[A] -> T1[A + Numgenerators] and T1[a] ->
-		T1[a + NumGenerators] are used to hold info about substitutions of the generators.
+		Make T1 point to the array of unsigned chars in RWR[0] and initialize T1[]. T1[0] 
+		gives the current number of generators for which substitutions have been determined. 
+		T1[1] -> T1[NumRelators] are flags used to keep track of which relators have been used. 
+		One relator is used each time depth is incremented. T1[A] -> T1[A + Numgenerators] and 
+		T1[a] -> T1[a + NumGenerators] are used to hold info about substitutions of generators.
 	******************************************************************************************/
 		
-	RWR[0] = (unsigned char **) NewHandle(125L);
-	if((T1 = *RWR[0]) == NULL)
-		{
-		HUnlock((char **) Temp12);
-		HUnlock((char **) Temp13);
-		HUnlock((char **) Temp14);
-		HUnlock((char **) Temp15);
-		return(TOO_LONG);
-		}
+	T1 = RWR[0];	
 	for(i = 'A' + NumGenerators - 1; i >= 'A'; i--) T1[i] = EOS;
 	for(i = 'a' + NumGenerators - 1; i >= 'a'; i--) T1[i] = EOS;
 	for(i = NumRelators; i >= 0; i--) T1[i] = EOS;
 	T2[0] = 1;
 	
 	/******************************************************************************************
-		Set Mem_Flag FALSE, Mem_Flag will become TRUE only if the number of potential
+		Set TooManyDups FALSE, TooManyDups will become TRUE only if the number of potential
 		substitutions on the stack of potential substitutions exceeds the preset limit
 		MAXNUMDUPS.
 	******************************************************************************************/	
 	
-	Mem_Flag = FALSE;
+	TooManyDups = FALSE;
 	
 	/******************************************************************************************
 			Numdups keeps track of the number of handles that are on the stack.
@@ -733,17 +754,15 @@ int 			Annulus_Exists,
 	for(Depth = 1,NumDups = 0,Max_Exp = 0; Depth <= NumRelators; Depth ++)
 		{
 		length = LR[Depth];
-		if(length <= 0L) break;
+		if(length <= 0) break;
 		
 		/**************************************************************************************
-			Make Stack_Ptr point to the 'substitution' on the top of the stack. Lock the
-			corresponding handle, RWR[Stack_Ptr], and make T1 point to its data. Copy the
-			data about substitutions for the generators into T2[].
+			Make Stack_Ptr point to the 'substitution' on the top of the stack. Make T1 point 
+			to RWR[Stack_Ptr]. Copy the data about substitutions for the generators into T2[].
 		**************************************************************************************/
 			
-		Stack_Ptr = NumDups;		
-		HLock((char **) RWR[Stack_Ptr]);
-		T1 = *RWR[Stack_Ptr];
+		Stack_Ptr = NumDups;
+		T1 = RWR[Stack_Ptr];
 		for(i = 'A'; i < 'A' + NumGenerators; i++) T2[i] = T1[i];
 		for(i = 'a'; i < 'a' + NumGenerators; i++) T2[i] = T1[i];
 		
@@ -760,7 +779,7 @@ int 			Annulus_Exists,
 		p22 = *MyRelators[CurrentR2];	
 			
 		p12 = Str2;
-		while(*p12++ = *p22++) ;
+		while( (*p12++ = *p22++) ) ;
 		
 		/**************************************************************************************
 			Initialize Gen2, NumChanges, UpdateStr1, Invert, Match, and the pointers p21, p22
@@ -774,7 +793,7 @@ int 			Annulus_Exists,
 							we have determined tentative substitutions.						 */					
 		UpdateStr1 = TRUE;	/*	UpdateStr1 is set to True whenever the relator CurrentR2 is
 								changed or inverted.										 */
-		Invert = TRUE;	/*	Invert is a flag which tells the program whether it has examined
+		Invert = TRUE;	/*	Invert is a flag which tells Heegaard whether it has examined
 							the inverse of the relator CurrentR2.							 */
 		p21 = p22 = Str2;
 		s = Str;
@@ -855,11 +874,11 @@ int 			Annulus_Exists,
 				if(--k == 0)
 					{
 					j = TRUE;
-					if(length > 1L)
+					if(length > 1)
 						{
 						/**********************************************************************
 							If length <= 1, this "match" comes from a permutation of trivial
-							relators of length 1. The program chooses to treat such matches as
+							relators of length 1. Heegaard chooses to treat such matches as
 							trivial and ignores them.
 						**********************************************************************/
 							
@@ -867,24 +886,15 @@ int 			Annulus_Exists,
 						if(NumDups < MAXNUMDUPS)
 							{
 							/******************************************************************
-								A "match" has occured. The program has found more than one way
+								A "match" has occured. Heegaard has found more than one way
 								to get the same optimal image string at this current depth.
-								Save the relevant data in a new handle. Increment the number of
-								handles on the stack i.e. NumDups. Note however, that Stack_Ptr
+								Save the relevant data in a new pointer. Increment the number of
+								pointers on the stack i.e. NumDups. Note however, that Stack_Ptr
 								is not changed.
 							******************************************************************/
 								
-							RWR[NumDups] = (unsigned char **)NewHandle(125L);
 							p = p12;
-							p12 = *RWR[NumDups];
-							if(p12 == NULL)
-								{
-								NumDups --;
-								Mem_Flag = TRUE;
-								p12 = p;
-								printf("\nOut of memory set aside for potential symmetries. Sorry!");
-								goto _END;	
-								}
+							p12 = RWR[NumDups];
 							for(i = 'A'; i < 'A' + NumGenerators; i++) p12[i] = T2[i];
 							for(i = 'a'; i < 'a' + NumGenerators; i++) p12[i] = T2[i];
 							for(i = 1; i <= NumRelators; i++) p12[i] = T1[i];
@@ -895,7 +905,7 @@ int 			Annulus_Exists,
 						else
 							{
 							NumDups --;
-							Mem_Flag = TRUE;
+							TooManyDups = TRUE;
 							printf("\nOut of memory set aside for potential symmetries. Sorry!");
 							goto _END;		
 							}
@@ -922,11 +932,7 @@ _UPDATE:			{
 						T2 into T1.
 					**************************************************************************/	
 					
-					if(NumDups > Stack_Ptr)
-						{
-						for(i = NumDups; i > Stack_Ptr; i--) DisposeHandle((char **) RWR[i]);
-						NumDups = Stack_Ptr;
-						}
+					if(NumDups > Stack_Ptr) NumDups = Stack_Ptr;
 					if(UpdateStr1)
 						{
 						UpdateStr1 = FALSE;
@@ -934,7 +940,7 @@ _UPDATE:			{
 						p = p22;
 						p12 = Str1;
 						p22 = Str2;
-						while(*p12++ = *p22++) ;
+						while( (*p12++ = *p22++) ) ;
 						p22 = p;
 						}
 					p11 = Str1 + (p21 - Str2);	
@@ -984,7 +990,7 @@ _UPDATE:			{
 					y = *p22;
 					for(Exp = 0; y == *p22; Exp++,p22++) ;
 					if(Exp > Max_Exp) Max_Exp = Exp;
-					if(y = *p22) while(1)
+					if( (y = *p22) ) while(1)
 						{
 						for(Exp = 0; y == *p22; Exp++,p22++) ;
 						if(Exp >= Max_Exp)
@@ -1052,13 +1058,13 @@ _UPDATE:			{
 							
 							p = p12;
 							p12 = Str2;
-							while(*p12++ = *p22++) ;
+							while( (*p12++ = *p22++) ) ;
 							p12 = p;
 							}
 						else
 							{
 							/******************************************************************
-								The program may have been able to determine that the image of
+								Heegaard may have been able to determine that the image of
 								Str1 starting from the char *p11 is optimal without scanning 
 								all of Str1 and without determining substitutions for all of
 								the generators that appear in Str1. So finish reading Str1
@@ -1070,7 +1076,7 @@ _UPDATE:			{
 							if(Gen1 < NumGenerators)
 								{
 								p12 = p11;
-								while(x = *p12++) if(!T1[x])
+								while( (x = *p12++) ) if(!T1[x])
 									{
 									T1[x] = Gen1 + 'A';
 									if(x > 'Z')
@@ -1084,7 +1090,7 @@ _UPDATE:			{
 									p12 = Str1;
 									y = *p11;
 									*p11 = EOS;
-									while(x = *p12++) if(!T1[x])
+									while( (x = *p12++) ) if(!T1[x])
 										{
 										T1[x] = Gen1 + 'A';
 										if(x > 'Z')
@@ -1109,11 +1115,11 @@ _UPDATE:			{
 								
 							p22 = Str;
 							p12 = p11;
-							while(x = *p12++) *p22++ = T1[x];
+							while( (x = *p12++) ) *p22++ = T1[x];
 							y = *p11;
 							*p11 = EOS;
 							p12 = Str1;
-							while(x = *p12++) *p22++ = T1[x];
+							while( (x = *p12++) ) *p22++ = T1[x];
 							*p22 = EOS;
 							*p11 = y;
 							
@@ -1127,11 +1133,10 @@ _UPDATE:			{
 				s = Str;		
 				}									
 			}	
-		HUnlock((char **) RWR[Stack_Ptr]);
 		
 		/**************************************************************************************
-			Next, process any other handles which were on the stack when depth was
-			incremented. Note that this code for processing the remaining handles on the stack
+			Next, process any other pointers which were on the stack when depth was
+			incremented. Note that this code for processing the remaining pointers on the stack
 			differs from the code for processing the handle on the top of the stack in a few
 			ways. For example, we no longer need Str1 and its associated pointers p11 and
 			p12. What happens when a "match" occurs is also different.
@@ -1140,8 +1145,7 @@ _UPDATE:			{
 		Stack_Ptr --;
 		for( ; Stack_Ptr >= 0; Stack_Ptr--)
 			{
-			HLock((char **) RWR[Stack_Ptr]);
-			T1 = *RWR[Stack_Ptr];
+			T1 = RWR[Stack_Ptr];
 			for(i = 'A'; i < 'A' + NumGenerators; i++) T2[i] = T1[i];
 			for(i = 'a'; i < 'a' + NumGenerators; i++) T2[i] = T1[i];
 			
@@ -1156,7 +1160,7 @@ _UPDATE:			{
 			p22 = *MyRelators[CurrentR2];	
 				
 			p12 = Str2;
-			while(*p12++ = *p22++) ;
+			while( (*p12++ = *p22++) ) ;
 			
 			Gen1 = Gen2 = T1[0];
 			NumChanges = 0;
@@ -1200,7 +1204,7 @@ _UPDATE:			{
 						if(Match == 1)
 							{
 							/******************************************************************
-								The first "match" that occurs allows the handle RWR[Stack_Ptr]
+								The first "match" that occurs allows the pointer RWR[Stack_Ptr]
 								to survive this round at the current value of depth.
 								Update the data in RWR[Stack_Ptr]. Record the fact that
 								CurrentR2 was the relator used, at this depth, to get the
@@ -1219,7 +1223,7 @@ _UPDATE:			{
 							SaveR2 = CurrentR2;	
 							}
 						else
-						if(length > 1L)
+						if(length > 1)
 							{
 							NumDups ++;
 							if(NumDups < MAXNUMDUPS)
@@ -1232,16 +1236,8 @@ _UPDATE:			{
 									the data in this new handle would indicate that two
 									relators had been used at this depth. Bad! 
 								**************************************************************/
-									
-								RWR[NumDups] = (unsigned char **)NewHandle(125L);
-								p12 = *RWR[NumDups];
-								if(p12 == NULL)
-									{
-									NumDups --;
-									Mem_Flag = TRUE;
-									printf("\nOut of memory set aside for potential symmetries. Sorry!");
-									goto _END;	
-									}
+
+								p12 = RWR[NumDups];
 								for(i = 'A'; i < 'A' + NumGenerators; i++) p12[i] = T2[i];
 								for(i = 'a'; i < 'a' + NumGenerators; i++) p12[i] = T2[i];
 								for(i = 1; i <= NumRelators; i++) p12[i] = T1[i];
@@ -1252,7 +1248,7 @@ _UPDATE:			{
 							else
 								{
 								NumDups --;
-								Mem_Flag = TRUE;
+								TooManyDups = TRUE;
 								printf("\nOut of memory set aside for potential symmetries. Sorry!");
 								goto _END;		
 								}
@@ -1350,7 +1346,7 @@ _UPDATE:			{
 								**************************************************************/	
 								
 								p12 = Str2;
-								while(*p12++ = *p22++) ;
+								while( (*p12++ = *p22++) ) ;
 								}	
 							else
 								{
@@ -1371,11 +1367,9 @@ _UPDATE:			{
 									 
 								if(Match == 0)
 									{
-									Temp = RWR[Stack_Ptr];
+									Tempa = RWR[Stack_Ptr];
 									RWR[Stack_Ptr] = RWR[NumDups];
-									RWR[NumDups] = Temp;
-									HUnlock((char **) RWR[NumDups]);
-									DisposeHandle((char **) RWR[NumDups]);
+									RWR[NumDups] = Tempa;
 									NumDups --;
 									}
 								break;
@@ -1387,49 +1381,82 @@ _UPDATE:			{
 					s = Str;		
 					}									
 				}
-			HUnlock((char **) RWR[Stack_Ptr]);
 			}
-		if(NumDups == 0 && **RWR[0] == NumGenerators) break;		
+		if(NumDups == 0 && *RWR[0] == NumGenerators) break;
 		}									
 	
 	/******************************************************************************************
 				If we aren't reporting symmetries, rewrite the Relators.
 	******************************************************************************************/
+	
+_END:	
+
+	if(TooManyDups)
+		{
+		T1 = RWR[0];
+		Gen1 = T1[0];
+		while(Gen1 < NumGenerators)
+			{
+			for(x = 'A'; x <= 'Z'; x++) if(!T1[x])
+				{
+				T1[x] = Gen1 + 'A';
+				T1[x + 32] = Gen1 + 'a';
+				if(++Gen1 == NumGenerators)
+					{
+					T1[0] = NumGenerators;
+					break;
+					}
+				}
+			}
+		
+		}
 		
 	if(ReportSymmetries == FALSE)
 		{
-		T1 = *RWR[0];
+		T1 = RWR[0];
 		if(Compute_Stabilizers)
 			{
 			printf("\n        ");
 			for(i = 'A'; i < 'A' + NumGenerators; i++)	
-				printf("%c",T1[i]);	
-			fprintf(myout,"\n        ");
-			for(i = 'A'; i < 'A' + NumGenerators; i++)	
-				fprintf(myout,"%c",T1[i]);
+				printf("%c",T1[i]);
 			}
 		if(Micro_Print)
 			{
-			printf("\n\nRewrote the presentation using the substitution: ");
-			for(i = 'A'; i < 'A' + NumGenerators; i++)	
-				printf("%c",T1[i]);
-			if(Micro_Print_F)
-				{		
-				fprintf(myout,"\n\nRewrote the presentation using the substitution: ");
-				for(i = 'A'; i < 'A' + NumGenerators; i++)	
-					fprintf(myout,"%c",T1[i]);
-				}	
-			}		
+			for(i = 'A', j = FALSE; i < 'A' + NumGenerators; i++) if(T1[i] != i)
+				{
+				j = TRUE;
+				break;
+				}
+			if(j)
+				{
+				if(Batch == 3) printf("\n\n");
+				printf("Rewrote the presentation using the substitution: ");
+				for(i = 'A'; i < 'A' + NumGenerators; i++) printf("%c",T1[i]);
+				printf(".");
+				}
+			}
+/****			
+		printf("\nThe Incoming Relators Are:");
+		for(i = 1; i <= NumRelators; i++)
+			printf("\n R[%d] = %s",i,*MyRelators[i]);
+****/			
+			
 		for(i = 1; i <= NumRelators; i++)
 			{
 			s = *MyRelators[i];
-			while(x = *s) *s++ = T1[x];
+			while( (x = *s) ) *s++ = T1[x];
 			}
+/****		
+		printf("\nThe Rewritten Relators Are:");
+		for(i = 1; i <= NumRelators; i++)
+			printf("\n R[%d] = %s",i,*MyRelators[i]);
+****/			
+			
 		if(Annulus_Exists)
 			{
 			T1['@'] = '@';
 			s = *Relators[0];
-			while(x = *s) *s++ = T1[x];
+			while( (x = *s) ) *s++ = T1[x];
 			}			
 		}
 	else
@@ -1437,18 +1464,18 @@ _UPDATE:			{
 		/**************************************************************************************
 				Report symmetries. But first, filter out duplicate substitutions.
 		**************************************************************************************/
+		
 		for(i = NumDups; i > 0; i--)
 		for(j = i-1; j >= 0; j--)
 			{
-			p12 = *RWR[i] + 65;
-			p22 = *RWR[j] + 65;
+			p12 = RWR[i] + 65;
+			p22 = RWR[j] + 65;
 			for(k = NumGenerators; k > 0 && *p12++ == *p22++; k--) ;
 			if(k == 0)
 				{
-				Temp = RWR[i];
+				Tempa = RWR[i];
 				RWR[i] = RWR[NumDups];
-				RWR[NumDups] = Temp;
-				DisposeHandle((char **) RWR[NumDups]);
+				RWR[NumDups] = Tempa;
 				NumDups --;
 				break;
 				}
@@ -1456,68 +1483,27 @@ _UPDATE:			{
 							
 		if(NumDups > 0)
 			{
-			if(Mem_Flag == FALSE)
+			if(TooManyDups == FALSE)
 				{
 				if(WhichInput == -1)
 					{
 					if(NumDups == 1)
-						{
 						printf("\nThe following substitution induces an automorphism of the initial presentation.\n");
-						if(NoReport == FALSE)
-						fprintf(myout,"\nThe following substitution induces an automorphism of the initial presentation.\n");
-						}
 					else
-						{
 						printf("\nThe following substitutions induce automorphisms of the initial presentation.\n");
-						if(NoReport == FALSE)
-						fprintf(myout,"\nThe following substitutions induce automorphisms of the initial presentation.\n");
-						}
 					}
 				else
 					{	
 					if(NumDups == 1)
-						{
-						printf("\nThe following substitution induces an automorphism of presentation %d:",
-						WhichInput + 1);
-						if(NoReport == FALSE)
-						fprintf(myout,"\nThe following substitution induces an automorphism of presentation %d:",
-						WhichInput + 1);
-						}
+						printf("\nThe following substitution induces an automorphism of presentation %d:",WhichInput + 1);
 					else
-						{
-						printf("\nThe following substitutions induce automorphisms of presentation %d:",
-						WhichInput + 1);
-						if(NoReport == FALSE)
-						fprintf(myout,"\nThe following substitutions induce automorphisms of presentation %d:",
-						WhichInput + 1);
-						}
+						printf("\nThe following substitutions induce automorphisms of presentation %d:",WhichInput + 1);
 					}	
-				HLock((char **) RWR[0]);
-				T1 = *RWR[0];
-				for(i = 1; i <= NumDups; i++)
-					{
-					HLock((char **) RWR[i]);
-					Report_Symmetries(*RWR[i],i,NumDups);
-					HUnlock((char **) RWR[i]);
-					}
-				HUnlock((char **) RWR[0]);
+				T1 = RWR[0];
+				for(i = 1; i <= NumDups; i++) Report_Symmetries(RWR[i],i,NumDups);
 				}
-			else
-				if(NoReport == FALSE)
-					{
-					fprintf(myout,"\nWe ran out of memory set aside for potential substitutions");
-					fprintf(myout," for presentation %d",WhichInput + 1);
-					}		
 			}
-		}	
-_END:					
-	HUnlock((char **) Temp12);
-	HUnlock((char **) Temp13);
-	HUnlock((char **) Temp14);
-	HUnlock((char **) Temp15);		
-	for(i = 0; i <= NumDups; i++) DisposeHandle((char **) RWR[i]);
-	
-	if(Mem_Flag) return(TOO_LONG);
+		}		
 	
 	/******************************************************************************************
 				If we aren't reporting symmetries, call Final_Rewrite().
@@ -1529,8 +1515,7 @@ _END:
 	return(NO_ERROR);			
 }		
 
-Final_Rewrite(MyRelators)
-unsigned char	***MyRelators;
+int Final_Rewrite(unsigned char	***MyRelators)
 {
 	/******************************************************************************************
 		Final_Rewrite() is called by Canonical_Rewrite(). It proceeds through the relators
@@ -1540,7 +1525,7 @@ unsigned char	***MyRelators;
 			Together, the routines Canonical_Rewrite() and Final_Rewrite() guarantee that two
 		presentations have isomorphic Heegaard diagrams iff the presentations are identical.
 		Thus determining whether two presentations give rise to isomorphic Heegaard diagrams
-		becomes trivial, both for the program and the user.
+		becomes trivial, both for Heegaard and the user.
 	******************************************************************************************/
 		
 	register unsigned char 	*p11,
@@ -1550,6 +1535,7 @@ unsigned char	***MyRelators;
 							y;
 							
 	register unsigned int 	j,
+							jj,
 							k,
 							length;
 													
@@ -1574,7 +1560,6 @@ unsigned char	***MyRelators;
 		   Find a cyclic conjugate of the current Relator which is lexicographically minimal.
 		*************************************************************************************/	
 		
-		HLock((char **) Relator);
 		p11 = p12 = p21 = p22 = *Relator;
 		p21++;
 		p22++;
@@ -1609,19 +1594,17 @@ unsigned char	***MyRelators;
 			Save a copy of this lexicographically minimal cyclic conjugate in Temp6.
 		*************************************************************************************/		
 		
-		ReallocateHandle((char **) Temp6,length);
-		if((p22 = *Temp6) == NULL)
-			{
-			HUnlock((char **) Relator);
-			return(TOO_LONG);
-			}
+		if(Temp6 != NULL) DisposeHandle((char **) Temp6);
+		Temp6 = (unsigned char **) NewHandle(length);
+		if(Temp6 == NULL) Mem_Error();
+		p22 = *Temp6;	
 		p12 = p11;
-		while(*p22++ = *p12++) ;
+		while( (*p22++ = *p12++) ) ;
 		p22--;
 		p12 = *Relator;
 		x = *p11;
 		*p11 = EOS;
-		while(*p22++ = *p12++) ;
+		while( (*p22++ = *p12++) ) ;
 		*p11 = x;
 		
 		/*************************************************************************************
@@ -1664,19 +1647,17 @@ unsigned char	***MyRelators;
 			Save a copy of this lexicographically minimal cyclic conjugate in Temp7.
 		*************************************************************************************/			
 		
-		ReallocateHandle((char **) Temp7,length);
-		if((p22 = *Temp7) == NULL)
-			{
-			HUnlock((char **) Relator);
-			return(TOO_LONG);
-			}
+		if(Temp7 != NULL) DisposeHandle((char **) Temp7);
+		Temp7 = (unsigned char **) NewHandle(length);
+		if(Temp7 == NULL) Mem_Error();
+		p22 = *Temp7;	
 		p12 = p11;
-		while(*p22++ = *p12++) ;
+		while( (*p22++ = *p12++) ) ;
 		p22--;
 		p12 = *Relator;
 		x = *p11;
 		*p11 = EOS;
-		while(*p22++ = *p12++) ;
+		while( (*p22++ = *p12++) ) ;
 		*p11 = x;
 		
 		/*************************************************************************************
@@ -1684,7 +1665,6 @@ unsigned char	***MyRelators;
 			with whichever string is lexicographically minimal.
 		*************************************************************************************/	
 		
-		HUnlock((char **) Relator);
 		p22 = *Temp6 + length - 1;
 		*p22 = 125;
 		for(p11 = *Temp6,p12 = *Temp7; *p11 == *p12; p11++,p12++) ;
@@ -1714,7 +1694,7 @@ unsigned char	***MyRelators;
 	for(j = 1; j < NumRelators; j++)
 		{
 		length = LR[j];
-		if(length > 0L)
+		if(length > 0)
 		for(k = j+1; k <= NumRelators && LR[k] == length; k++)
 			{
 			p22 = *MyRelators[j] + length;
@@ -1724,17 +1704,33 @@ unsigned char	***MyRelators;
 			if(*p11 > *p12)
 				{
 				Temp = MyRelators[j];
+				jj = Inst[j];
 				MyRelators[j] = MyRelators[k];
+				Inst[j] = Inst[k];
 				MyRelators[k] = Temp;
+				Inst[k] = jj;
 				}	
 			}	
 		}
 	
+	if((Micro_Print || ((NumFilled == 0) && (Input == INITIAL_PRES))) && NumRelators > 1)
+		{
+		for(j = 1, k = FALSE; j < NumRelators; j++) 
+			{
+			if(Inst[j] != j) k = TRUE;
+			break;
+			}
+		if(k)
+			{	
+			printf(" The rewritten relators appear in the following order: (");
+			for(j = 1; j < NumRelators; j++) printf("%u, ",Inst[j]);
+			printf("%u)\n\n",Inst[j]);
+			}
+		}
 	return(NO_ERROR);		
 }			
 	
-Find_Symmetries(Flag)
-int		Flag;
+int Find_Symmetries(int Flag)
 {
 	/******************************************************************************************
 			This routine calls Canonical_Rewrite() for each nontrivial presentation that the
@@ -1751,12 +1747,30 @@ int		Flag;
 							*q;
 							
 	int 					i,
-							SNoReport;
+							SNoReport,
+							TrivialRelExists;
+							
+	unsigned long			HS;							
 	
-	SNoReport = NoReport;
-	NoReport = FALSE;
-	printf("\n\n    Looking for symmetries. . .\n");
-	NumSymmetries = 0;
+	SNoReport 			= NoReport;
+	NoReport 			= FALSE;
+	TrivialRelExists 	= FALSE;
+	NumSymmetries 		= 0;
+	
+	if(Batch != 12) printf("\n\n    Looking for symmetries. . .\n");
+	
+	if(Batch == 12)
+		{
+		for(i = NumRelators, TrivialRelExists = FALSE; i > 0; i--) if(GetHandleSize((char **) Relators[i]) == 2)
+			{
+			TrivialRelExists = TRUE;
+			break;
+			}
+		Canonical_Rewrite(Relators,FALSE,TRUE);
+		if(TrivialRelExists) printf("\n\nNote! Relators of length one are ignored when Heegaard looks for symmetries!");	
+		if(NumSymmetries == 0) printf("\n\n    No nontrivial symmetries exist.");
+		return(0);	
+		}
 	
 	if(Modified_Init_Pres || Flag)
 		{
@@ -1765,10 +1779,13 @@ int		Flag;
 		NumGenerators = CopyNumGenerators;
 		for(i = 1; i <= NumRelators; i++)
 			{
-			ReallocateHandle((char **) Relators[i],GetHandleSize((char **) Copy_Of_Input[i]));				
-			if((q = *Relators[i]) == NULL) return(TOO_LONG);
+			if((HS = GetHandleSize((char **) Copy_Of_Input[i])) == 2) TrivialRelExists = TRUE;
+			if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+			Relators[i] = (unsigned char **) NewHandle(HS);
+			if(Relators[i] == NULL) Mem_Error();
+			q = *Relators[i];
 			p = *Copy_Of_Input[i];
-			while(*q++ = *p++) ;
+			while( (*q++ = *p++) ) ;
 			}
 		Canonical_Rewrite(Relators,FALSE,TRUE);
 		}
@@ -1782,38 +1799,24 @@ int		Flag;
 			NumGenerators = NG[WhichInput];
 			for(i = 1; i <= NumRelators; i++)
 				{
-				ReallocateHandle((char **) Relators[i],GetHandleSize((char **) SUR[WhichInput][i]));				
-				if((q = *Relators[i]) == NULL) return(TOO_LONG);
+				if((HS = GetHandleSize((char **) SUR[WhichInput][i])) == 2) TrivialRelExists = TRUE;
+				if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+				Relators[i] = (unsigned char **) NewHandle(HS);
+				if(Relators[i] == NULL) Mem_Error();
+				q = *Relators[i];
 				p = *SUR[WhichInput][i];
-				while(*q++ = *p++) ;
+				while( (*q++ = *p++) ) ;
 				}
 			Canonical_Rewrite(Relators,FALSE,TRUE);	
 			}
 		}	
-		
+	
+	if(TrivialRelExists)
+		printf("\n\nNote! Relators of length one are ignored when Heegaard looks for symmetries!"); 
+	
 	if(NumSymmetries == 0)
-		{
-		printf("\n\n    No non-trivial symmetries exist.");
-		fprintf(myout,"\n\n    No non-trivial symmetries exist.");
-		}
-	NoReport = SNoReport;	
-	if(NoReport == TRUE && NumSymmetries)
-		{
-		printf("\n\n    Info about these symmetries has been printed in 'Heegaard_Results'.");
-		printf("\n\nALSO SAVE THE CURRENT PRESENTATIONS TO 'Heegaard_Results' ?  HIT 'y' OR 'n'.");
-		GET_RESPONSE1:
-		switch(WaitkbHit())
-			{
-			case 'y':
-				Report(Band_Sums,NumDiagrams,OnStack,0,1,1,0,0,1,0);
-				break;
-			case 'n':
-				break;
-			default:
-				SysBeep(5);
-				goto GET_RESPONSE1;
-			}	
-		}
+		printf("\n\n    No nontrivial symmetries exist.");
+	NoReport = SNoReport;
 	return(NO_ERROR);				
 }	
 
@@ -1824,11 +1827,12 @@ void Report_Symmetries(unsigned char *T2,int j,int NumDups)
 		presentations to the user.
 	******************************************************************************************/
 		
-	unsigned char 	*T;
+	unsigned char 	*T = NULL;
 	
 	int 			i;
 
-	T = (unsigned char *) NewPtr(100L);
+	T = (unsigned char *) NewPtr(100);
+	if(T == NULL) Mem_Error();
 	NumSymmetries ++;
 	
 	for(i = 'A'; i < 'A' + NumGenerators; i++)
@@ -1847,15 +1851,6 @@ void Report_Symmetries(unsigned char *T2,int j,int NumDups)
 		printf("\n       ");
 		for(i = 'A'; i < 'A' + NumGenerators; i++)	
 			printf("%2c",T[i]);
-		if(NoReport == FALSE)
-			{		
-			fprintf(myout,"\n       ");
-			for(i = 'A'; i < 'A' + NumGenerators; i++)
-				fprintf(myout,"%2c",i);
-			fprintf(myout,"\n       ");
-			for(i = 'A'; i < 'A' + NumGenerators; i++)	
-				fprintf(myout,"%2c",T[i]);
-			}
 		}
 	else
 		{
@@ -1865,21 +1860,12 @@ void Report_Symmetries(unsigned char *T2,int j,int NumDups)
 		printf("\n       ");
 		for(i = 'A'; i < 'A' + NumGenerators; i++)	
 			printf("%2c",T[i]);
-		if(NoReport == FALSE)
-			{		
-			fprintf(myout,"\n%4d)  ",j);
-			for(i = 'A'; i < 'A' + NumGenerators; i++)
-				fprintf(myout,"%2c",i);
-			fprintf(myout,"\n       ");
-			for(i = 'A'; i < 'A' + NumGenerators; i++)	
-				fprintf(myout,"%2c",T[i]);
-			}
 		}	
-	DisposePtr((char *) T);	
+	DisposePtr((char *) T);
 }
 
 
-void Find_Cancellation_Paths(void)
+void Find_Cancellation_Paths(int F1,int F2,int Pres)
 {
 	/******************************************************************************************
 		Find_Cancellation_Paths() finds those paths which join the major faces of the
@@ -1888,7 +1874,8 @@ void Find_Cancellation_Paths(void)
 		
 	register unsigned char 	*p,
 							*q,
-							*r;
+							*r,
+							*ptr = NULL;
 							
 	register unsigned int 	c,
 							d,
@@ -1896,33 +1883,54 @@ void Find_Cancellation_Paths(void)
 							v,
 							w;
 							
-	unsigned char 			x,
-							y,
-							**SP,
-							sx,
-							sy,
+	unsigned char 			*FacesVisited = NULL,
+							*FacesVisitedList = NULL,
+							InitialFace,
+							NumPathsInCircuit,
+							**PM = NULL,
+							*PM_From = NULL,
+							*PM_To = NULL,
+							**PP = NULL,
+							*PP_From = NULL,
+							*PP_To = NULL,
+							PossibleNewTerminalFace,
+							*SRelator1 = NULL,
+							*SRelator2 = NULL,
+							TerminalFace,
 							tl,
-							tr;
+							tr,
+							V1,
+							V2,
+							V3,
+							V4,
+							x;
 													
-	int 					Error,
-							ss;
+	int 					Big_Number = 50000,
+							Error,
+							ii,
+							*PathsInCircuit = NULL,
+							**P_From_Face = NULL,
+							*pp,
+							ss,
+							SNumGenerators,
+							SNumRelators;
 							
 	unsigned int 			edge,
 							EL[6*VERTICES],
 							ee,
+							Flag1,
 							h,
 							i,
 							j,
 							k,
+							NumCircuitsFound,
+							NumNotFullRank,
 							NumPaths,
 							vertex,
-							vertexLS,
 							vertexRS,
-							vertexLE,
-							vertexRE;
+							vertexLE;
 	
-	long 					HS,
-							LOR[MAXNUMRELATORS + 1],
+	long 					HSS = 0,
 							length;
 	
 	unsigned long			max;
@@ -1930,129 +1938,175 @@ void Find_Cancellation_Paths(void)
 	Error = 0;
 	NumPaths = 0;
 	
-	r = (unsigned char *) NewPtr(100L);		
-	printf("\n\nENTER A PRESENTATION FROM 0 TO %u FOR WHICH YOU WANT PATHS AND HIT 'return'.     ",NumFilled);
-	for(i = j = 0; j < NumFilled; j++) if(SURL[j] == 0L) i ++;
-	if(i)
+	if(F1 == 2)
 		{
-		if(i == 1)
+		ptr = (unsigned char *) NewPtr(100);
+		if(ptr == NULL) Mem_Error();	
+		printf("\n\nENTER A PRESENTATION FROM 0 TO %u FOR WHICH YOU WANT PATHS AND HIT 'return'.     ",NumFilled);
+		for(i = j = 0; j < NumFilled; j++) if(SURL[j] == 0) i ++;
+		if(i)
 			{
-			for(i = 0; i < NumFilled && SURL[i]; i++) ;
-			i++;
-			printf("\n\nExcept for presentation %d which is a presentation of S1 X S2 or S1 X D2 and is empty.     ",i);
+			if(i == 1)
+				{
+				for(i = 0; i < NumFilled && SURL[i]; i++) ;
+				i++;
+				printf("\n\nExcept for presentation %d which is a presentation of S1 X S2 or S1 X D2 and is empty.     ",i);
+				}
+			else
+				{
+				j = 0;
+				j += printf("\n\nExcept for presentations: ");
+				for(h = 0,k = 1; h < NumFilled; h++) if(SURL[h] == 0)
+					{
+					h++;
+					j += printf("{%d,",h);	
+					break;
+					}
+				for( ; h < NumFilled; h++) if(SURL[h] == 0)
+					{
+					if(++k < i)
+						j += printf("%d,",h+1);
+					else
+						j += printf("%d}.",h+1);	
+					if(j > 80)
+						{
+						j = 0;
+						printf("\n");
+						}
+					}	
+				printf("\nThese are presentations of S1 X S2 (s) or S1 X D2 (s) and are empty.     ");
+				}
+			}
+		GET_RESPONSE1:
+		WhichInput = -1;		
+		ReadString((char *)ptr, GetPtrSize(ptr));
+		sscanf((char *) ptr,"%d",&WhichInput);	
+		if(WhichInput == 0)
+			{
+			printf("\n\nFinding paths of the original presentation.\n");
+			NumRelators = CopyNumRelators;
+			for(i = 1; i <= NumRelators; i++)
+				{
+				if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+				Relators[i] = (unsigned char **) NewHandle(GetHandleSize((char **) Copy_Of_Input[i]));
+				p = *Copy_Of_Input[i];
+				if(Relators[i] == NULL) Mem_Error();
+				q = *Relators[i];	
+				while( (*q++ = *p++) ) ;
+				}
 			}
 		else
 			{
-			j = 0;
-			j += printf("\n\nExcept for presentations: ");
-			for(h = 0,k = 1; h < NumFilled; h++) if(SURL[h] == 0L)
+			if(WhichInput < 1 || WhichInput > NumFilled || SURL[WhichInput-1] == 0)
 				{
-				h++;
-				j += printf("{%d,",h);	
-				break;
-				}
-			for( ; h < NumFilled; h++) if(SURL[h] == 0L)
-				{
-				if(++k < i)
-					j += printf("%d,",h+1);
-				else
-					j += printf("%d}.",h+1);	
-				if(j > 80)
-					{
-					j = 0;
-					printf("\n");
-					}
+				if(Batch == FALSE) SysBeep(5);
+				goto GET_RESPONSE1;
 				}	
-			printf("\nThese are presentations of S1 X S2 (s) or S1 X D2 (s) and are empty.     ");
-			}
-		}
-	GET_RESPONSE1:
-	WhichInput = -1;		
-	ReadString((char *)r, GetPtrSize(r));
-	sscanf((char *) r,"%d",&WhichInput);	
-	if(WhichInput == 0)
-		{
-		printf("\n\nFinding paths of the original presentation.\n");
-		NumRelators = CopyNumRelators;
-		for(i = 1; i <= NumRelators; i++)
-			{
-			ReallocateHandle((char **) Relators[i],GetHandleSize((char **) Copy_Of_Input[i]));				
-			p = *Copy_Of_Input[i];
-			if((q = *Relators[i]) == NULL)
-				{
-				DisposePtr((char *) r);
-				printf("\n\n	Memory Error. Sorry!");
-				Error = 1;
-				goto END;
-				}
-			while(*q++ = *p++) ;
-			}
-		}
-	else
-		{
-		if(WhichInput < 1 || WhichInput > NumFilled || SURL[WhichInput-1] == 0L)
-			{
-			SysBeep(5);
-			goto GET_RESPONSE1;
-			}	
-		printf("\n\nFinding paths of presentation %d.\n",WhichInput);
+			printf("\n\nFinding paths of presentation %d.\n",WhichInput);
 
-		WhichInput --;
-		NumRelators = NR[WhichInput];
-		NumGenerators = NG[WhichInput];
-		Vertices = 2*NumGenerators;
-		Length = SURL[WhichInput];
-		Saved_Vertices = 0;
-		for(i = 1; i <= NumRelators; i++)
-			{
-			ReallocateHandle((char **) Relators[i],GetHandleSize((char **) SUR[WhichInput][i]));				
-			p = *SUR[WhichInput][i];
-			if((q = *Relators[i]) == NULL)
+			WhichInput --;
+			NumRelators = NR[WhichInput];
+			NumGenerators = NG[WhichInput];
+			Vertices = 2*NumGenerators;
+			Length = SURL[WhichInput];
+			Saved_Vertices = 0;
+			for(i = 1; i <= NumRelators; i++)
 				{
-				DisposePtr((char *) r);
-				printf("\n\n	Memory Error. Sorry!");
-				Error = 1;
-				goto END;
-				}			
-			while(*q++ = *p++) ;
+				if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+				Relators[i] = (unsigned char **) NewHandle(GetHandleSize((char **) SUR[WhichInput][i]));
+				p = *SUR[WhichInput][i];
+				if(Relators[i] == NULL) Mem_Error();
+				q = *Relators[i];				
+				while( (*q++ = *p++) ) ;
+				}
 			}
-		}
-	DisposePtr((char *) r);
-		
-	if(Find_Flow_A(NORMAL,FALSE))
-		{
-		printf("\n\nUnable to find paths. Sorry!");
-		Error = 1;
-		goto END;
-		}
-	if(Whitehead_Graph())
-		{
-		printf("\n\nUnable to find paths. Sorry!");
-		Error = 1;
-		goto END;
-		}
+		DisposePtr((char *) ptr);
+			
+		if(Find_Flow_A(NORMAL,FALSE))
+			{
+			printf("\n\nUnable to find paths. Sorry!");
+			Error = 1;
+			goto END;
+			}
+		if( (Flag1 = Whitehead_Graph()) ) 
+			{
+			WhichInput ++;
+			printf("\n\nUnable to find paths for the diagram of presentation %d because:\n",WhichInput);
+			switch(Flag1)
+				{
+				case NON_PLANAR:
+					printf("The Whitehead graph of presentation %d is non-planar.",WhichInput);
+					break;
+				case FATAL_ERROR:
+					printf("An unspecified fatal-error occured. Sorry!");
+					break;
+				case TOO_LONG:
+					printf("Presentation %d is too long.",WhichInput);
+					break;
+				case TOO_MANY_COMPONENTS:
+					printf("The Whitehead graph of presentation %d has too many components.",WhichInput);
+					break;
+				case NON_UNIQUE_1:
+				case NON_UNIQUE_2:
+				case NON_UNIQUE_3:
+				case NON_UNIQUE_4:
+					printf("The diagram of presentation %d is not unique.",WhichInput);
+					break;
+				case V2_ANNULUS_EXISTS:
+					printf("The diagram of presentation %d is not unique because a valence-two annulus exists.",WhichInput);
+					break;
+				case REDUCE_GENUS:
+					printf("Heegaard needs to reduce the genus in order to find the diagram of presentation %d.",WhichInput);
+					break;
+				case NOT_CONNECTED:
+					printf("The Whitehead graph of presentation %d is not connected.",WhichInput);
+					break;
+				case SEP_PAIRS:
+					printf("The Whitehead graph of presentation %d has a separating pair of vertices.",WhichInput);
+					break;
+				default:
+					printf("An unspecified error occured. Sorry!");
+				}
+			Error = 1;
+			goto END;	
+			}
+		}	
 	
 	for(d = 1,max = 0L; d <= NumRelators; d++) if(LR[d] > max) max = LR[d];
-	if(SRError == 3) for(d = 1; d <= NumRelators; d++)
-		LOR[d] = GetHandleSize((char **) OutRelators[d]);
-	
-	ReallocateHandle((char **) Temp1,max + 2);
-	if(*Temp1 == NULL)
-		{
-		printf("\n\nNot enough memory available. Sorry!");
-		Error = 1;
-		goto END;
-		}
+	if(Temp1 != NULL) DisposeHandle((char **) Temp1);
+	Temp1 = (unsigned char **) NewHandle(max + 2);
+	if(Temp1 == NULL) Mem_Error();
 				
 	for(d = 1; d <= 2*NumEdges; d++) EL[d] = d;
 	NumPaths = 0;
-	SP = (unsigned char **) NewPtr(sizeof(long)*(NumEdges + 1));
-	if(SP == NULL)
-		{
-		printf("\n\nNot enough memory available. Sorry!");
-		Error = 1;
-		goto END;
-		}
+	
+	PM = (unsigned char **) NewPtr(sizeof(long)*(NumEdges + 1));
+	if(PM == NULL) Mem_Error();	
+	for(d = 1; d <= NumEdges; d++) PM[d] = NULL;
+	PP = (unsigned char **) NewPtr(sizeof(long)*(NumEdges + 1));
+	if(PP == NULL) Mem_Error();
+	for(d = 1; d <= NumEdges; d++) PP[d] = NULL;
+	P_From_Face = (int **) NewPtr(sizeof(long)*(NumFaces + 1));
+	if(P_From_Face == NULL) Mem_Error();
+	for(d = 1; d <= NumFaces; d++) P_From_Face[d] = NULL;	
+	PM_From = (unsigned char *) NewPtr(sizeof(long)*(NumFaces + 1));
+	if(PM_From == NULL) Mem_Error();
+	PP_From = (unsigned char *) NewPtr(sizeof(long)*(NumFaces + 1));
+	if(PP_From == NULL) Mem_Error();
+	PM_To = (unsigned char *) NewPtr(sizeof(long)*(NumFaces + 1));
+	if(PM_To == NULL) Mem_Error();
+	PP_To = (unsigned char *) NewPtr(sizeof(long)*(NumFaces + 1));
+	if(PP_To == NULL) Mem_Error();
+	PathsInCircuit = (int *) NewPtr(sizeof(int)*(NumFaces + 2));
+	if(PathsInCircuit == NULL) Mem_Error();
+	FacesVisitedList = (unsigned char *) NewPtr(sizeof(char)*(NumFaces+1));
+	if(FacesVisitedList == NULL) Mem_Error();
+	FacesVisited = (unsigned char *) NewPtr(sizeof(char)*(NumFaces+1));
+	if(FacesVisited == NULL) Mem_Error();
+		
+	if(!F1) Print_Bdry_Comp_Info(F2,Pres,HSS);
+			
+	printf("\n\n The paths of this diagram and the faces they connect are:\n");
 	
 	for(ss = 2*NumEdges; ss > 0; ss --)
 		{		
@@ -2069,7 +2123,6 @@ void Find_Cancellation_Paths(void)
 			vertexLE = d;
 			d = CO[v][d];
 			}
-		vertexRE = CO[v][vertexLE];	
 		e = ee - 1;
 		if(v & 1)
 			{	
@@ -2099,6 +2152,7 @@ void Find_Cancellation_Paths(void)
 		
 		length	= 0L;
 		vertex  = v;
+		V2 		= vertex;
 		edge    = ee % V[v];
 		e 		= edge;
 		r		= *Temp1;
@@ -2121,6 +2175,7 @@ void Find_Cancellation_Paths(void)
 				*r = (v >> 1) + 65;
 				w = v + 1;
 				}
+			V4 = v;	
 			r++;	
 			e = OSA[v] - e;
 			if(e >= V[v]) e -= V[v];
@@ -2145,8 +2200,11 @@ void Find_Cancellation_Paths(void)
 				***********************************************************************/
 				
 				*r++ = EOS;
+				if(V4 & 1)
+					V4 -= 1;
+				else
+					V4 += 1;
 				vertexRS = v;
-				vertexLS = CO[w][v];
 				
 				/***********************************************************************
 					Determine which edge of the dual diagram corresponds to the end of
@@ -2185,54 +2243,310 @@ void Find_Cancellation_Paths(void)
 					x = (vertexLE >> 1) + 97;
 				else
 					x = (vertexLE >> 1) + 65;
-				if(vertexRE & 1)
-					y = (vertexRE >> 1) + 97;
-				else
-					y = (vertexRE >> 1) + 65;
-				if(vertexLS & 1)
-					sx = (vertexLS >> 1) + 97;
-				else
-					sx = (vertexLS >> 1) + 65;
-				if(vertexRS & 1)
-					sy = (vertexRS >> 1) + 97;
-				else
-					sy = (vertexRS >> 1) + 65;
+				V1 = vertexLE;
+				V3 = vertexRS;
 				
-				HS = r - *Temp1;
-				NumPaths ++;				
-				SP[NumPaths] = (unsigned char *) NewPtr(HS);		
-				if((q = SP[NumPaths]) == NULL)
-					{
-					NumPaths --;
-					printf("\n\nNot enough memory available. Sorry!");
-					Error = 2;
-					goto END;
-					}
+				HSS = r - *Temp1;
+				NumPaths ++;
+				
+				PP[NumPaths] = (unsigned char *) NewPtr(HSS);		
+				if(PP[NumPaths] == NULL) Mem_Error();
+				q = PP[NumPaths];	
 				p = *Temp1;
-				while(*q++ = *p++) ;	
-									
-				printf("\n %3u) %c %c %c %c %c %c: %s",NumPaths,x,y,sx,sy,tl,tr,*Temp1);
-				fprintf(myout,"\n %3u) %c %c %c %c %c %c: %s",NumPaths,x,y,sx,sy,tl,tr,*Temp1);			
+				while( (*q++ = *p++) ) ;
+
+				PM[NumPaths] = (unsigned char *) NewPtr(HSS);		
+				if(PM[NumPaths] == NULL) Mem_Error();
+				Inverse(PP[NumPaths]);
+				q = PM[NumPaths];	
+				p = PP[NumPaths];
+				while( (*q++ = *p++) ) ;
+				Inverse(PP[NumPaths]);	
+
+				for(i = 1; i <= NumFaces; i++)
+					{
+					FacesVisited[i] = FALSE;
+					p = Face[i];
+					j = 2;
+					while(*p++ < VERTICES) j++;
+					P_From_Face[i] = (int *)NewPtr(sizeof(int)*j);
+					if(P_From_Face[i] == NULL) Mem_Error();
+					P_From_Face[i][0] = 1;
+					P_From_Face[i][j-1] = Big_Number;
+					for(h = 1; h < j-1; h++) P_From_Face[i][h] = 0;	
+					}
+			
+				
+				/***********************************************************************************
+							Identify the initial and terminal faces of this path.
+				***********************************************************************************/
+				for(h = 1,i = FALSE; h <= NumFaces; h++)
+					{
+					p = Face[h];
+                	while((x = *p) < VERTICES) 
+                		{
+                		if(x == V1)
+							{
+							q = p;
+							q++;
+							if(*q == VERTICES) q = Face[h];
+							if(*q == V2)
+								{
+								i = TRUE;
+								break;
+								}	
+							}
+						p++;
+						}
+                	if(i) break;	
+					}
+					
+				for(j = 1,i = FALSE; j <= NumFaces; j++)
+					{
+					p = Face[j];
+                	while((x = *p) < VERTICES) 
+                		{
+                		if(x == V3)
+							{
+							q = p;
+							q++;
+							if(*q == VERTICES) q = Face[j];
+							if(*q == V4)
+								{
+								i = TRUE;
+								break;
+								}	
+							}
+						p++;
+						}
+                	if(i) break;	
+					}
+
+				PP_From[NumPaths] = h;
+				PP_To[NumPaths]   = j;
+				PM_From[NumPaths] = j;
+				PM_To[NumPaths]   = h;
+						
+				printf("\nP%2u) F%2u --> F%2u: %s",NumPaths,h,j,PP[NumPaths]);
 				break;
 				}
 			e = B[w][v] - e;
 			}	
 		while(v != vertex || e != edge);	
 	}
+	
+	for(ii = 1; ii <= NumPaths; ii++)
+		{
+		pp = P_From_Face[PP_From[ii]];
+		while(*pp && *pp != Big_Number) pp++;
+		*pp = ii;
+		pp = P_From_Face[PP_To[ii]];
+		while(*pp && *pp != Big_Number) pp++;
+		*pp = -ii;	
+		}	
+	
+	printf("\n");
+	for(i = 1; i <= NumFaces; i++)
+		{
+		pp = P_From_Face[i];
+		printf("\nPaths from F%2d: ",i);
+		pp ++;
+		while(*pp != Big_Number) 
+			{
+			printf("%d ",*pp);
+			pp++;
+			}
+		}
+	
+	if(Batch == FALSE)
+		{
+		GET_RESPONSE3:
+		printf("\n\nTest each simple circuit disjoint from the relators for primitivity etc? Hit 'y' or 'n'.");
+		printf("\n 	Note: A 'simple' circuit traverses each face of the diagram at most once.");	
+		switch(WaitkbHit())
+			{
+			case 'y':
+				if(Error == 0) break;
+			case 'n':
+				goto END;
+			default:
+				goto GET_RESPONSE3;
+			}
+		}
+		
+	if((Batch == 5) && (B5TestSimpleCircuits == FALSE)) goto END;		
+		
+	/* Save copies of Relators[1], Relators[2], NumGenerators and NumRelators. */
+	
+	SNumGenerators = NumGenerators;
+	SNumRelators   = NumRelators;
+	
+	if(Relators[1])
+		{
+		SRelator1 = (unsigned char *) NewPtr(GetHandleSize((char **) Relators[1]));
+		if(SRelator1 == NULL) Mem_Error();		
+		p = *Relators[1];
+		q = SRelator1;
+		while((*q++ = *p++)) ;	
+		}
+		
+	if(Relators[2])
+		{
+		SRelator2 = (unsigned char *) NewPtr(GetHandleSize((char **) Relators[2]));
+		if(SRelator2 == NULL) Mem_Error();		
+		p = *Relators[2];
+		q = SRelator2;
+		while((*q++ = *p++)) ;	
+		}				
 
-END:	
-	printf("\n\n HIT ANY KEY TO CONTINUE.");
-	WaitkbHit();
+	printf("\n");
+	for(i = 1,NumCircuitsFound = NumNotFullRank = 0; i <= NumFaces; i++)
+		{
+		InitialFace = i;
+		TerminalFace = i;
+		NumPathsInCircuit = 0;
+		for(j = 1; j <= InitialFace; j++) FacesVisited[j] = TRUE;
+		FacesVisitedList[1] = InitialFace;
+		while(1)
+			{
+			h = P_From_Face[TerminalFace][0];
+			P_From_Face[TerminalFace][0] ++;
+			ii = P_From_Face[TerminalFace][h];
+			if(ii == Big_Number)
+				{
+				/*  We've reached a dead end. No new path from the current terminal face leads to a new face.
+					Clear info for the current terminal face and reset the terminal face to the previous face. 	*/ 
 
-	if(Error == 0) CP_Concatanate_Paths(SP,NumPaths);	
+				P_From_Face[TerminalFace][0] = 1;
+				FacesVisited[TerminalFace] = FALSE;
+				if(NumPathsInCircuit == 0) break; 
+				NumPathsInCircuit --;
+				TerminalFace = FacesVisitedList[NumPathsInCircuit + 1];		
+				continue;
+				}
+			if(ii != Big_Number)
+				{
+				if(ii > 0) PossibleNewTerminalFace = PP_To[ii];
+				if(ii < 0) PossibleNewTerminalFace = PM_To[-ii];
+				if(PossibleNewTerminalFace == InitialFace)
+					{
+					if((NumPathsInCircuit == 0) && (ii < 0)) continue;
+					if((NumPathsInCircuit > 0) && (ii == -PathsInCircuit[1])) continue;
+					if((NumPathsInCircuit > 1) && (TerminalFace < FacesVisitedList[2])) continue;
+					if((NumPathsInCircuit == 1) && (abs(ii) < abs(PathsInCircuit[1]))) continue;
+					NumPathsInCircuit ++;
+					PathsInCircuit[NumPathsInCircuit] = ii;
+					NumCircuitsFound ++;										
+					k = CP_Check_Simple_Paths(NumCircuitsFound,PathsInCircuit,NumPathsInCircuit,PP,PM);	
+					switch(k)
+						{
+						case 1:
+						case 2:
+						case 3:
+							{
+							NumNotFullRank ++;
+							printf(" Circuit Faces and Paths: ");
+							for(j = 1; j <= NumPathsInCircuit; j++) 
+								printf("F%d,P%d,",FacesVisitedList[j],PathsInCircuit[j]);
+								printf("F%d", PossibleNewTerminalFace);					
+							}
+						}	
+					NumPathsInCircuit --;
+					continue;	
+					}		
+		
+				if((PossibleNewTerminalFace > InitialFace) && (FacesVisited[PossibleNewTerminalFace] == FALSE))
+					{
+					TerminalFace = PossibleNewTerminalFace;
+					NumPathsInCircuit ++;
+					PathsInCircuit[NumPathsInCircuit] = ii;
+					FacesVisited[TerminalFace] = TRUE;
+					FacesVisitedList[NumPathsInCircuit + 1] = TerminalFace;
+					}
+				}			
+			}	
+		}
+		
+	/* Restore Relators[1], Relators[2], NumGenerators and NumRelators. */
+	
+	NumGenerators = SNumGenerators;
+	NumRelators   = SNumRelators;
+	
+	if(SRelator1)
+		{
+		if(Relators[1] != NULL) DisposeHandle((char **) Relators[1]);
+		Relators[1] = (unsigned char **) NewHandle(GetPtrSize((char *) SRelator1));
+		if(Relators[1] == NULL) Mem_Error();		
+		p = SRelator1;
+		q = *Relators[1];
+		while((*q++ = *p++)) ;	
+		DisposePtr((unsigned char *) SRelator1);
+		}
+				
+	if(SRelator2)
+		{
+		if(Relators[2] != NULL) DisposeHandle((char **) Relators[2]);
+		Relators[2] = (unsigned char **) NewHandle(GetPtrSize((char *) SRelator2));
+		if(Relators[2] == NULL) Mem_Error();		
+		p = SRelator2;
+		q = *Relators[2];
+		while((*q++ = *p++)) ;	
+		DisposePtr((unsigned char *) SRelator2);		
+		}
 
-	for(j = 1; j <= NumPaths; j++) DisposePtr((char *) SP[j]);
-	if(Error != 1) DisposePtr((char *) SP);
+	if(NumNotFullRank == 0)		
+		printf("\n\nAll %u simple circuits are of full rank. Suggests perhaps there are no disjoint disks.",
+			NumCircuitsFound);
+	else
+		{
+		if(NumNotFullRank > 1)
+		printf("\n\nOf %u simple circuits, %u were primitive, proper-powers, or not of full rank.",
+			NumCircuitsFound,NumNotFullRank);
+		else
+		printf("\n\nOf %u simple circuits, only %u was primitive, a proper-power, or not of full rank.",
+			NumCircuitsFound,NumNotFullRank);	
+		}			
+		
+END:
+
+	if(Batch == FALSE)
+		{	
+		GET_RESPONSE2:
+		printf("\n\nConcatenate & Test Paths? Hit 'y' or 'n'.");	
+		switch(WaitkbHit())
+			{
+			case 'y':
+				if(Error == 0) CP_Concatenate_Paths(PM,PP,NumPaths);
+				break;
+			case 'n':
+				break;
+			default:
+				goto GET_RESPONSE2;
+			}
+		}		
+
+	for(j = 1; j <= NumPaths; j++) 
+		{
+		if(PM[j]) DisposePtr((char *) PM[j]);
+		if(PP[j]) DisposePtr((char *) PP[j]);		
+		}
+	
+	for(j = 1; j <= NumFaces; j++)  if(P_From_Face[j]) DisposePtr((int *) P_From_Face[j]);
+	if(PM != NULL) 					DisposePtr((unsigned char **) PM);
+	if(PP != NULL) 					DisposePtr((unsigned char **) PP);		
+	if(P_From_Face != NULL) 		DisposePtr((int **) P_From_Face);	
+	if(PM_From != NULL) 			DisposePtr((unsigned char *)  PM_From);
+	if(PP_From != NULL) 			DisposePtr((unsigned char *)  PP_From);
+	if(PM_To != NULL) 				DisposePtr((unsigned char *)  PM_To);
+	if(PP_To != NULL) 				DisposePtr((unsigned char *)  PP_To);
+	if(PathsInCircuit != NULL) 		DisposePtr((int *) PathsInCircuit);
+	if(FacesVisitedList != NULL) 	DisposePtr((unsigned char *) FacesVisitedList);
+	if(FacesVisited != NULL) 		DisposePtr((unsigned char *) FacesVisited);
 }
 
-void CP_Concatanate_Paths(unsigned char **MySP,int NumPaths)
+void CP_Concatenate_Paths(unsigned char **PM, unsigned char **PP,int NumPaths)
 {
-	char			*r;
+	char			*ptr = NULL;
 	
 	unsigned char	*p,
 					*q;
@@ -2247,30 +2561,32 @@ void CP_Concatanate_Paths(unsigned char **MySP,int NumPaths)
 
 	ANOTHER_PATH:	
 	printf("\n\nPlease enter the numbers of the paths you wish to concatenate.");
-	printf("\nTerminate path entry by entering '0'.\n");
+	printf("\nHit 'return' after entering each path's number. Enter -j for the inverse of path j.");
+	printf("\nTerminate path entry by entering '0' and hitting 'return'.\n");
 	NumEntries = 0;
 		
 	GET_RESPONSE1:
-	r = (char *) NewPtr(100);		
-	ReadString((char *)r, GetPtrSize(r));	
-	sscanf((char *) r,"%d",&NewEntry);
-	DisposePtr(r);
+	ptr = (char *) NewPtr(100);
+	if(ptr == NULL) Mem_Error();	
+	ReadString((char *)ptr, GetPtrSize(ptr));	
+	sscanf((char *) ptr,"%d",&NewEntry);
+	DisposePtr((char *) ptr);
 	if(NewEntry)
 		{
 		if(NewEntry < - NumPaths || NewEntry > NumPaths)
 			{
-			SysBeep(5);
+			if(Batch == FALSE) SysBeep(5);
 			printf("\nThe last entry was out of bounds. Please reenter it.");
 			goto GET_RESPONSE1;
 			}
 		PathList[NumEntries++] = NewEntry;
-		goto GET_RESPONSE1;
+		if(NumEntries >= 198) printf("\nCan't accept any additional paths. Sorry!");
+		else goto GET_RESPONSE1;
 		}
 	
 	if(NumEntries == 0)
 		{
-		GET_RESPONSE2:
-		printf("\n\nTry another path? Hit 'y' or 'n'.");
+		printf("\n\nTry another path? Hit 'y' or 'n'.");		
 		switch(WaitkbHit())
 			{
 			case 'y':
@@ -2282,43 +2598,38 @@ void CP_Concatanate_Paths(unsigned char **MySP,int NumPaths)
 
 	for(i = 0,HS = 1L; i < NumEntries; i++)	
 		{
-		j= abs(PathList[i]);
-		HS += GetPtrSize((char *) MySP[j]) - 1;
+		j   = abs(PathList[i]);
+		HS += GetPtrSize((char *) PP[j]) - 1;
 		}
-	ReallocateHandle((char **) Relators[1],HS);
-	HLock((char **) Relators[1]);
-	if((q = *Relators[1]) == NULL)
-		{
-		printf("\nMemory Error. Sorry!");
-		HUnlock((char **) Relators[1]);
-		return;
-		}
+	if(Relators[1] != NULL) DisposeHandle((char **) Relators[1]);
+	Relators[1] = (unsigned char **) NewHandle(HS);
+	if(Relators[1] == NULL) Mem_Error();
+	q = *Relators[1];	
 	for(i = 0; i < NumEntries; i++)
 		{
 		j = PathList[i];
 		if(j > 0)
 			{
-			p = MySP[j];
-			while(*q++ = *p++) ;
+			p = PP[j];
+			while( (*q++ = *p++) ) ;
 			q--;
 			}
 		else
 			{
 			j = -j;
-			Inverse(MySP[j]);
-			p = MySP[j];
-			while(*q++ = *p++) ;
+			p = PM[j];
+			while( (*q++ = *p++) ) ;
 			q--;
-			Inverse(MySP[j]);
 			}	
 		}
-	HUnlock((char **) Relators[1]);
+	
+	printf("\nCurrently the path is %s.",*Relators[1]);
 				
-	j = CP_Find_Primitives();
+	j = CP_Find_Primitives(FALSE);
 	switch(j)
 		{
 		case 0:
-			printf("\n This path has a good graph.");
+			printf("\n This path has a connected graph without cut vertices.");
 			break;
 		case 1:
 			printf("\n The graph of this path has a cut vertex.");
@@ -2330,32 +2641,154 @@ void CP_Concatanate_Paths(unsigned char **MySP,int NumPaths)
 			printf("\n Memory error. Sorry!");
 			break;
 		}
+		
 	switch(j)
 		{
+		case 0:
 		case 1:
 		case 2:
-			printf("\n Augment path by adding more edges? Hit 'y' or 'n'.");
-			GET_RESPONSE3:
+			printf("\n Hit 'a' to add edges to this path. Hit 'n' to start a new path. Hit 'q' to quit checking paths.");			
 			switch(WaitkbHit())
 				{
-				case 'y':
-					goto GET_RESPONSE1;
+				case 'a':
+					if(NumEntries >= 198) 
+						printf("\nCan't accept any additional paths. Sorry!");
+					else
+						{
+						printf("\n Enter the additional edges and terminate with 0, as before.\n");
+						goto GET_RESPONSE1;
+						}
 					break;
 				case 'n':
 					goto ANOTHER_PATH;
 					break;
+				case 'q':
+					return;	
 				}	
-		}		
-	
-	goto ANOTHER_PATH;				
+		}
+		
+	printf("\nTry another path? Hit 'y' or 'n'.");
+	GET_RESPONSE2:	
+	switch(WaitkbHit())
+		{
+		case 'y':
+			goto ANOTHER_PATH;
+			break;
+		case 'n':
+			return;
+		default:
+			goto GET_RESPONSE2;
+		}				
 }
 
-CP_Fill_AA()
+int CP_Check_Simple_Paths(unsigned int NCF,int* My_PathsInCircuit,int NumPaths,unsigned char** MyPP,
+	unsigned char** MyPM)
+{
+	unsigned char	*p,
+					*q;
+					
+	int				i,
+					j,
+					k,
+					SNumGenerators;
+					
+	unsigned int	C[125];					
+	
+	unsigned long	HS;
+
+	for(i = 1,HS = 1L; i <= NumPaths; i++)	
+		{
+		j   = abs(My_PathsInCircuit[i]);
+		HS += GetPtrSize((char *) MyPP[j]);
+		}
+	HS -= NumPaths;	
+	if(Relators[1] != NULL) DisposeHandle((char **) Relators[1]);
+	Relators[1] = (unsigned char **) NewHandle(HS);
+	if(Relators[1] == NULL) Mem_Error();
+	q = *Relators[1];	
+	for(i = 1; i <= NumPaths; i++)
+		{
+		j = My_PathsInCircuit[i];
+		if(j > 0)
+			{
+			p = MyPP[j];
+			while( (*q++ = *p++) ) ;
+			q--;
+			}
+		else
+			{
+			p = MyPM[-j];
+			while( (*q++ = *p++) ) ;
+			q--;
+			}	
+		}
+	
+	if(Relators[2] != NULL) DisposeHandle((char **) Relators[2]);
+	Relators[2] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[1]));
+	if(Relators[2] == NULL) Mem_Error();
+	p = *Relators[1];
+	q = *Relators[2];
+	while((*q++ = *p++)) ;
+	
+	SNumGenerators = NumGenerators;
+	NumRelators = 1;
+	j = Find_Primitives(2);
+	switch(j)
+		{
+		case 0:
+		case 1: 
+			/*******************************************************************************************
+			 Check if Relators[1] is a defining relator, proper-power, full-rank or less than full-rank.
+			********************************************************************************************/	
+			for(i = 0; i < SNumGenerators; i++) C[i+'A'] = C[i+'a'] = 0;
+			p = *Relators[1];
+			while(*p)
+				C[*p++]++;
+			for(i = j = k = 0; i < SNumGenerators; i++,j+=2)
+				{
+				C[i+'A'] += C[i+'a'];
+				C[j] = C[i+'A'];
+				if(C[j] == 1) 
+					{
+					printf("\n %3u) %s is primitive.",NCF,*Relators[2]);
+					NumGenerators = SNumGenerators;
+					return(1);
+					}
+				if(C[j]) k++;
+				}
+			if(k == 1) 
+				{
+				printf("\n %3u) %s is a proper-power.",NCF,*Relators[2]);
+				NumGenerators = SNumGenerators;
+				return(2);				
+				}
+			if(k < SNumGenerators)
+				{
+				printf("\n %3u) %s has rank %d with 1 < %d < %d.",NCF,*Relators[2],k,k,SNumGenerators);
+				NumGenerators = SNumGenerators;
+				return(3);				
+				}
+			if(k == SNumGenerators)
+				{
+				NumGenerators = SNumGenerators;
+				return(0);				
+				}			
+			break;
+		case TOO_LONG:
+			printf("\n Memory error. Sorry!");
+			break;
+		}
+		
+	return(0);	
+}
+
+void CP_Fill_AA(char Flag)
 {
 	/******************************************************************************************
 		This routine takes Relators[1] and examines each pair of consecutive letters that
 		appear in the relator. For each such pair of letters, it adds the appropriate edge
-		to the array AA[][].
+		to the array AA[][]. If Flag != 0 the routine also adds an edge to AA[][] 
+		corresponding to the pair consisting of the last and first letters of Relators[1].	
 	******************************************************************************************/
 	
 	register unsigned char 	i,
@@ -2375,7 +2808,7 @@ CP_Fill_AA()
 	else x -= 194;
 	i = x;
 	p++;
-	while(x = *p)
+	while( (x = *p) )
 		{
 		x = x << 1;
 		if(x < 194) x -= 130;
@@ -2386,6 +2819,15 @@ CP_Fill_AA()
 		p++;
 		}
 		
+	if(Flag)
+		{
+		p = *Relators[1];		
+		x = *p << 1;
+		if(x < 194) x -= 130;
+		else x -= 193;
+		AA[i][x]++;
+		}	
+		
 	for(i = 0; i < Vertices - 1; i++)
 	for(j = i + 1; j < Vertices; j++)
 		{
@@ -2394,27 +2836,16 @@ CP_Fill_AA()
 		}						
 }
 
-int CP_Find_Primitives(void)
+int CP_Find_Primitives(char Flag)
 {
 	/******************************************************************************************
-		This procedure is used to determine whether the relator Relators[1] is a primitive or a
-		proper power of a primitive. It exploits the fact that if Relators[1] is a primitive or
-		a proper power of a primitive, then the Whitehead graph of Relators[1] is either not
-		connected or has a separating vertex. (This is assuming, as we may, that more than one
-		generator appears in Relators[1].) If the parameter flag = 2, then the routine is
-		being called by CheckPrimitivity() to check whether Relators[1] is a primitive or
-		proper power of a free generator. If the parameter flag = 1, then this routine is
-		being called by Reduce_Genus() under circumstances where we know that a primitive
-		exists. In this case, we want to apply enough automorphisms to the relators to reduce
-		Relators[1] to a defining relator and then call Defining_Relator() to make the
-		substitution which deletes appearances of Relators[1] in the other relators.
-		If the parameter flag = 3, this routine is being called by Reduce_Genus when we
-		know that Relators[1] is a proper power. As in the case when the parameter flag
-		= 1, we want to perform enough automorphisms to reduce Relators[1] to a proper
-		power and then make the appropriate substitutions in the remaining relators.
+		This procedure is used to determine whether the relator Relators[1] is a primitive, a
+		proper power of a primitive, has less than full rank, or has full rank.
 	******************************************************************************************/
 	
 	register unsigned char	*p;
+	
+	int						SNumGenerators;
 		
 	register unsigned int 	h,
 							i,
@@ -2431,25 +2862,28 @@ int CP_Find_Primitives(void)
 							SLength2;
 
 	/******************************************************************************************
-						Check whether Relators[1] is a defining relator.
+					Check if Relators[1] is a defining relator or proper-power.
 	******************************************************************************************/		
 	
 	for(i = 0; i < NumGenerators; i++) C[i+'A'] = C[i+'a'] = 0;
 	p = *Relators[1];
 	while(*p)
 		C[*p++]++;
-	for(i = j = 0; i < NumGenerators; i++,j+=2)
+	for(i = j = k = 0; i < NumGenerators; i++,j+=2)
 		{
 		C[i+'A'] += C[i+'a'];
 		C[j] = C[i+'A'];
-		if(C[j] == 1) return(TRUE);
+		if(C[j] == 1) return(1); /* Relators[1] is a defining relator. */
+		if(C[j]) k++;
 		}
+		
+	if(k == 1) return(3);	/* Relators[1] is a proper-power. */
 
 	SLength1 = GetHandleSize((char **) Relators[1]);
 		
 	while(1)
 		{
-		CP_Fill_AA();
+		CP_Fill_AA(Flag);
 		for(i = 0; i < Vertices; i++)
 			{
 			for(j = k = 0; j < Vertices; j++) if(AA[i][j])
@@ -2466,7 +2900,7 @@ int CP_Find_Primitives(void)
 		 
 		for(i = 0; i < Vertices; i++) ZZ[i] = 0;
 		
-		if(Connected_AJ3(0,0) == FALSE) return(2);
+		if(Connected_AJ3(0,0) == FALSE) return(2); /* If Flag, the circuit is not of full rank. */
 				
 		/**********************************************************************************
 			The graph is connected. Use vertex '0' as the root of a depth-first-search of
@@ -2560,9 +2994,12 @@ int CP_Find_Primitives(void)
 			reduces the length of Relators[1]. Perform the appropriate automorphism
 			and, if necessary, return to the top of this loop.
 		**********************************************************************************/
+		
+		SNumGenerators = NumGenerators;
 			
 		DO_AUT:
-		return(TRUE);	/* Remove this line in order to perform automorphisms. */
+		if(Flag == 0) return(TRUE);		/* Only perform automorphisms if Flag is TRUE. */
+		
 		i = Father[j];
 		if(i & 1)
 			{
@@ -2576,7 +3013,7 @@ int CP_Find_Primitives(void)
 					ZZ[j] = 1;
 				}	
 
-			if(CP_Do_Aut(i-1) == TOO_LONG) return(TOO_LONG);
+			if(CP_Do_Aut(i-1,Flag) == TOO_LONG) return(TOO_LONG);
 				
 			SLength2 = GetHandleSize((char **) Relators[1]);
 			C[i-1] -= SLength1 - SLength2;			
@@ -2587,7 +3024,7 @@ int CP_Find_Primitives(void)
 			{
 			ZZ[i] = 0;
 				
-			if(CP_Do_Aut(i) == TOO_LONG) return(TOO_LONG);
+			if(CP_Do_Aut(i,Flag) == TOO_LONG) return(TOO_LONG);
 				
 			SLength2 = GetHandleSize((char **) Relators[1]);
 			C[i] -= SLength1 - SLength2;			
@@ -2597,7 +3034,7 @@ int CP_Find_Primitives(void)
 		}	
 }
 
-int CP_Do_Aut(unsigned int Source)
+int CP_Do_Aut(unsigned int Source,char Flag)
 {		
 	/******************************************************************************************
 		This routine performs the automorphism(s) determined by the routines Find_Flow_A()
@@ -2628,14 +3065,14 @@ int CP_Do_Aut(unsigned int Source)
 							a,
 							*p,
 							*q,
+							*r,
 							x,
 							y;
 							
 	register 				int i;
 	
 	unsigned char 			TX[125],
-							TY[125],
-							**Temp;
+							TY[125];
 	
 	unsigned long			HS;						
 			
@@ -2654,13 +3091,15 @@ int CP_Do_Aut(unsigned int Source)
 			
 	HS = GetHandleSize((char **) Relators[1]);
 	if(HS > MAXLENGTH) return(TOO_LONG);
-	ReallocateHandle((char **) Temp5,HS);
-	if((p = *Temp5) == NULL) return(TOO_LONG);
+	if(Temp5 != NULL) DisposeHandle((char **) Temp5);
+	Temp5 = (unsigned char **) NewHandle(HS);
+	if(Temp5 == NULL) Mem_Error();
+	p = *Temp5;
 	q = *Relators[1];
-	if(*q == EOS)
-		return(0);
+	r = q;
+	if(*q == EOS) return(0);
 	x = *q++;
-	while(y = *q++)
+	while( (y = *q++) )
 		{
 		if(x != A && x != a) *p++ = x;
 		if(TX[x] && !TY[y])
@@ -2671,15 +3110,24 @@ int CP_Do_Aut(unsigned int Source)
 		x = y;
 		}
 	if(x != A && x != a) *p++ = x;
+	if(Flag)
+		{
+		if(TX[x] && !TY[*r])
+			*p++ = a;
+		else
+		if(!TX[x] && TY[*r])
+			*p++ = A;
+		}	
 	*p = EOS;
 	q = *Temp5;
 	HS = p + 1 - q;
 	if(HS > MAXLENGTH) return(TOO_LONG);
-	SetHandleSize((char **) Temp5,HS);
-	Temp = Relators[1];
-	Relators[1] = Temp5;
-	Temp5 = Temp;
-		
+	if(Relators[1] != NULL)	DisposeHandle((char **) Relators[1]);
+	Relators[1] = (unsigned char **) NewHandle(HS);
+	if(Relators[1] == NULL) Mem_Error();
+	p = *Temp5;
+	q = *Relators[1];
+	while( (*q++ = *p++) ) ; 	
 	TotalAuts ++;	
 	return(0);				
 }	
