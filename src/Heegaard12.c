@@ -1,66 +1,171 @@
 #include "Heegaard.h"
 #include "Heegaard_Dec.h"
 
-int     *Table;
+/****************************** function prototypes *****************************************
+L   33 Sort_Presentations_In_Memory(int F1)
+L  144 qkst_compare(int i,int j)
+L  187 qkst_swap(i,j)
+L  198 Report(long Band_Sums,long NumDiagrams,unsigned int OnStack,unsigned int Starting_Pres,unsigned int Flag1,
+            unsigned int Flag2,unsigned int Flag3,unsigned int Flag4,unsigned int Flag5,unsigned char * Ptr1)
+L  627 Update_Bdry_Data(void)
+L  705 Print_Bdry_Data(unsigned int WhichPres)
+L  768 Print_Bdry_Data2(unsigned int WhichPres)
+L  831 Fatal_Error(void)
+L  941 Print_Relators(unsigned char ***MyRelators,int MyNumRelators)
+L  950 Print_Relators2(unsigned char ***MyRelators,int MyNumRelators)
+L  957 Micro_Print_Reset(void)
+L  967 Micro_Print_Freely_Reduce(unsigned long length, unsigned long origlength)
+L  975 Micro_Print_Dualize(void)
+L  981 Micro_Print_Bandsum(void)
+L  998 Micro_Print_Do_Aut(unsigned int Source, unsigned int NumReps)
+L 1040 Print_DelRelators(void)
+L 1049 Print_DualRelators(int F1,int F2,int Pres,int HS)
+L 1063 Print_OutRelators(int F1,int F2,int Pres,int HS)
+L 1077 Print_SLR(int i,int Found_L_Annulus)
+L 1092 Display_A_Diagram(int,int,int)
+L 1211 Display_Diagrams(void)
+L 1505 Batch_Report(int*)  
+L 2187 Print_SFComp(int*)       
+********************************************************************************************/
 
-void Sort_Presentations_In_Memory(void)
+int     *Table = NULL;
+
+int Sort_Presentations_In_Memory(int F1)
 {    
-    int         i;    
-    int         qkst_compare();
-    void        qkst_swap();
+    int         	i; 
+    unsigned int 	SOnStack; 
+         
+    int         	qkst_compare();
+    void        	qkst_swap();
     
+    if(Batch == 4)
+    	{
+		if(NumFilled < (MyMaxSavedPres + 3))
+			{
+			printf("\nHeegaard saved %u presentation(s), performed %lu automorphism(s), %lu Sep-Vert-Slide(s),",
+				NumFilled,TotalAuts,Num_Level_Slides);
+			printf("\nexamined %ld bandsum(s), examined %ld diagram(s), dualized %lu diagram(s), Mergers %u, ToDo %u.\n",
+				Band_Sums,NumDiagrams,NumDualized,Mergers,OnStack);
+			}
+		return(0);
+		}	
+        
     Table = (int*) NewPtr((sizeof(int)*NumFilled));
-    if(Table == NULL) return;
+    if(Table == NULL) Mem_Error();
     
     for(i = 0; i < NumFilled; i++) Table[i] = i;
     
     qksort(NumFilled);
     
-    printf("\n\nHIT 'v' TO REVIEW THESE SORTED PRESENTATIONS.");
-    if(NoReport)
-        printf("\nHIT 's' TO SAVE THESE SORTED PRESENTATIONS TO THE FILE 'Heegaard_Results'.");
-    printf("\nOR HIT ANY OTHER KEY TO CONTINUE.");
-    switch(WaitkbHit())
-        {
-        case 'v':
-            qksort_Report(Band_Sums,NumDiagrams,OnStack,0,0,0,0,0,1,NULL);
-            break;
-        case 's':
-            if(NoReport)
-            qksort_Report(Band_Sums,NumDiagrams,OnStack,0,1,1,1,0,1,NULL);
-            break;    
-        default:
-            break;        
-        }
-    
-    DisposePtr((char *) Table);
+    if(Batch == FALSE)
+    	{
+		printf("\n\nHIT 'v' TO REVIEW THESE SORTED PRESENTATIONS.");
+		printf("\nOR HIT ANY OTHER KEY TO CONTINUE.");    
+		switch(WaitkbHit())
+			{
+			case 'v':
+				if(F1 == 2)
+					Report_SPC(Table);
+				else
+					Report(Band_Sums,NumDiagrams,OnStack,0,1,0,0,0,1,NULL);
+				break;
+			default:
+				break;        
+			}
+		GET_RESPONSE:
+		if(F1)
+			{
+			printf("\n\nFIND_CANONICAL_ORBIT_REPS? HIT 'y' OR 'n'.");
+			switch(WaitkbHit())
+				{
+				case 'y':
+					SOnStack = OnStack;
+					printf("\n	This may take awhile. Hit 's' to get a status report.");
+					Find_Canonical_Orbit_Reps(Table,F1);
+					OnStack = SOnStack;
+					break;
+				case 'n':
+					break;
+				default:
+					goto GET_RESPONSE;
+				}
+			}	            
+    	}
+    if(Batch == 10 || Batch == 11 || Batch == 53)
+    	{
+    	if(B10B11HSReps || Batch == 53)
+    		{
+    		if(Batch == 53) printf("\n");
+			printf("\nLooking for Heegaard Splitting Reps. . . .\n");
+			SOnStack = OnStack;
+			FoundSF = FoundFiniteSF = FALSE;
+			switch(Find_Canonical_Orbit_Reps(Table,F1))
+				{
+				case INTERRUPT:
+					OnStack = SOnStack;
+					DisposePtr((int*) Table);
+					return(INTERRUPT);			
+				case TOO_LONG:
+					FoundSF = FoundFiniteSF = FALSE;
+					break;
+				}
+			}
+		if(Batch == 10 || Batch == 11)	Batch_Report(Table);
+		if(Batch == 53) printf("\n");
+    	if(NumFilled < MyMaxSavedPres)
+    		{
+    		printf("\nHeegaard saved %u presentation(s), performed %lu automorphism(s), %lu Sep-Vert-Slide(s),",
+    			NumFilled,TotalAuts,Num_Level_Slides);
+        	printf("\nexamined %ld bandsum(s), examined %ld diagram(s), dualized %lu diagram(s), Mergers %u, ToDo %u.\n",
+        		Band_Sums,NumDiagrams,NumDualized,Mergers,OnStack);
+    		}			  	
+    	}
+    if(Batch == 14)
+    	{
+    	if((NumFilled > 1) && (B14B15PrintPres || (NG[Table[NumFilled -1]] <= 1) || (NR[Table[NumFilled -1]] == 0)))
+    		Report_SPC(Table);
+    	else
+    		{	
+			SOnStack = OnStack;
+			if(Find_Canonical_Orbit_Reps(Table,F1) == INTERRUPT)
+				{
+				OnStack = SOnStack;
+				DisposePtr((int*) Table);
+				return(INTERRUPT);
+				} 
+			}   	    	
+    	}
+    if(Batch == 15 && NumFilled > 1) Report_SPC(Table);
+    		
+    DisposePtr((int*) Table);
+    return(0);
 }
 
-int    qkst_compare(int i,int j)
+int qkst_compare(int i,int j)
 {
-    register unsigned char    *p,
-                            *q;
+    register unsigned char  	*p,
+                            	*q;
                             
-    int                        Ti,
-                            Tj,
-                            k;
+    int                        	Ti,
+                            	Tj,
+                            	k;
                             
                 
     Ti = Table[i];
     Tj = Table[j];
     if(Ti == Tj) return(0);
-    if(ComponentNum[Ti] > ComponentNum[Tj]) return(-1);
-    if(ComponentNum[Ti] < ComponentNum[Tj]) return(1);
-    if(NG[Ti] < NG[Tj]) return(-1);
-    if(NG[Ti] > NG[Tj]) return(1);
-    if(NR[Ti] < NR[Tj]) return(-1);
-    if(NR[Ti] > NR[Tj]) return(1);
-    if(SURL[Ti] < SURL[Tj]) return(-1);
-    if(SURL[Ti] > SURL[Tj]) return(1);
+    if(ComponentNum[Ti] > ComponentNum[Tj]) return(1);
+    if(ComponentNum[Ti] < ComponentNum[Tj]) return(-1);
+    if(NG[Ti] < NG[Tj]) return(1);
+    if(NG[Ti] > NG[Tj]) return(-1);
+    if(NR[Ti] < NR[Tj]) return(1);
+    if(NR[Ti] > NR[Tj]) return(-1);
+    if(SURL[Ti] < SURL[Tj]) return(1);
+    if(SURL[Ti] > SURL[Tj]) return(-1);
     for(k = 1; k <= NR[Ti]; k++)
         {
-        if(GetHandleSize((char **) SUR[Ti][k]) > GetHandleSize((char **) SUR[Tj][k])) return(-1);
-        if(GetHandleSize((char **) SUR[Ti][k]) < GetHandleSize((char **) SUR[Tj][k])) return(1);
+        if(GetHandleSize((char **) SUR[Ti][k]) > GetHandleSize((char **) SUR[Tj][k])) return(1);
+        if(GetHandleSize((char **) SUR[Ti][k]) < GetHandleSize((char **) SUR[Tj][k])) return(-1);
         }
     for(k = 1; k <= NR[Ti]; k++)
         {
@@ -71,176 +176,172 @@ int    qkst_compare(int i,int j)
             p++;
             q++;
             }
-        if(*p < *q) return(-1);
-        if(*p > *q) return(1);
+        if(*p < *q) return(1);
+        if(*p > *q) return(-1);
         }    
-    if(Ti < Tj) return(-1);
-    if(Ti > Tj) return(1);
+    if(Ti < Tj) return(1);
+    if(Ti > Tj) return(-1);
     return(0);
-}
+}						
 
 void qkst_swap(i,j)
-int            i,
+int       	i,
             j;
 {
     int            Temp;
     
-    Temp        = Table[i];
+    Temp         = Table[i];
     Table[i]     = Table[j];
     Table[j]     = Temp;
 }            
 
-int qksort_Report(long Band_Sums,long NumDiagrams,unsigned int OnStack,unsigned int Starting_Pres,
-                unsigned int Flag1,unsigned int Flag2,unsigned int Flag3,unsigned int Flag4,
-                unsigned int Flag5,unsigned char * Ptr1)
+int Report(long Band_Sums,long NumDiagrams,unsigned int OnStack,unsigned int Starting_Pres,unsigned char Flag1,
+            unsigned char Flag2,unsigned char Flag3,unsigned char Flag4,unsigned char Flag5,unsigned char * Ptr1)
 {
     /******************************************************************************************
-        This variant of Report() is an output routine called on termination of the sorting
-        routine which sorts the presentations presently in memory.
-    ******************************************************************************************/    
-
-    char            c;
+        Report() is an output routine called automatically when Heegaard terminates. It
+        can also be called by the user when Heegaard has been interrupted.
+    ******************************************************************************************/ 
             
-    unsigned char     *p,
+    unsigned char   *p,
                     x,
                     y;
     
-    int                NumRelators,
-                    One_By_One,
-                    SNumFilled,
-                    SStarting_Pres;
-                    
-    unsigned int     h,
-                    i,
+    int             NumRelators;
+                     
+    unsigned int    i,
                     j,
                     k,
                     m,
                     n;                                
     
-    unsigned long    Length;
+    unsigned long   Length;
     
-    if(Flag5) Update_Bdry_Data();
-
-LIST_PRESENTATIONS:
-    
-    One_By_One = FALSE;
-    ObscureCursor();
-    for(k = Flag1; k <= Flag2; k++)
-    {
-    if(k == 0)
-        fptr = stdout;
-    else
-        fptr = myout;
-    
-    if(Flag5)            
-    fprintf(fptr,"\n\n<------------------------------------   REPORT   ---------------------------------------->");
-    
-    if(k == 0 && NumFilled > 1 && Flag5)
-        {
-        printf("\n\n      Hit 'return' to stop reviewing this report.");
-        printf("\n      Hit the 'space-bar' to alternately stop and start scrolling.");
-        printf("\n      Use the 'd','i','n','p' and 's' keys to: view diagrams, save a presentation in");
-        printf("\n      'Input_Presentations', see the next presentation, see the previous presentation,");
-        printf("\n      or save a presentation in 'Heegaard_Results'.");
+    if(Batch == 4)
+    	{
+    	for(i = j = k = m = 0; i < NumFilled; i++) 
+        	{
+        	j += SURNumX[i];
+        	k += NumLoops[i];
+            if(PRIM[i] == 6 || PRIM[i] == 106) m++;  	
+        	}
+        printf("\n\nHeegaard performed %lu automorphism(s), %lu Sep-Vert-Slide(s), examined %ld bandsum(s),",
+            TotalAuts,Num_Level_Slides,Band_Sums);
+        printf("\nexamined %ld diagram(s), dualized %lu diagram(s), Hits %u, Loops %u, Mergers %u,",
+            NumDiagrams,NumDualized,j,k,Mergers);
+        printf("\nNumFP %u, ToDo %u.\n",m,OnStack);
+        return(0);
         }
         
-    if(BdryData && Flag5)
+    
+    if(Flag5) Update_Bdry_Data(); 
+    
+    if(Flag5 && (Batch != 3))
+    printf("\n\n------------------------------------");
+            
+    if(BdryData && Flag5 && (NumFilled > 1))
         {
-        fprintf(fptr,"\n");
+        printf("\n");
         Print_Bdry_Data(Starting_Pres);
         }
-
-    fprintf(fptr,"\n\nThe initial presentation was: %s",PresName);    
-    
+	
+	if(Batch != 3)
+    printf("\n\nThe initial presentation was: %s",PresName);    
+      
+    if(Batch != 3)        
     for(n = Starting_Pres; n < NumFilled; n++)
         {
-        i = Table[n];
-        if(Flag4 == 1 && !Ptr1[i]) continue;
-        if(Flag4 && Ptr1[i] != Flag4) continue;
+        i = n;
+        if(Flag1) i = Table[n];
+        if(Flag2)
+        	{
+        	if(Flag4 == 1 && !Ptr1[i]) continue;
+        	if(Flag4 != 1 && Ptr1[i] != Flag4) continue;
+        	}
         NumRelators = NR[i];
         Length = SURL[i];
-        fprintf(fptr,"\n\nPresentation %d  of Summand %u:  %d Generator(s)  Length  %lu  From Presentation %u  ",
-        i+1,ComponentNum[i],NG[i],Length,FR[i]+1);
+        printf("\n\nPresentation %d  of Summand %u:  Gen  %d  Length  %lu  From Pres %u  NumHits %d NumLoops %d HegSplNum %u ",
+        i+1,ComponentNum[i],NG[i],Length,FR[i]+1,SURNumX[i],NumLoops[i],HegSplNum[i]);
         
         switch(PRIM[i])
             {
             case 1:
             case 101:
-                fprintf(fptr,"DR");
+                printf("DR");
                 break;
             case 2:
             case 102:
-                fprintf(fptr,"IP");
+                printf("IP");
                 break;
             case 3:
             case 103:
-                fprintf(fptr,"LS");
+                printf("LS");
                 break;
             case 4:
             case 104:
-                fprintf(fptr,"1G");
+                printf("1G");
                 break;
             case 5:
             case 105:
-                fprintf(fptr,"S3");
+                printf("S3");
                 break;
             case 6:
             case 106:
-                fprintf(fptr,"FP");
+                printf("FP");
                 break;
             case 7:
             case 107:
-                fprintf(fptr,"BC");
+                printf("BC");
                 break;
             case 8:
             case 108:
-                fprintf(fptr,"PM");
+                printf("PM");
                 break;
             case 9:
             case 109:
-                fprintf(fptr,"PM");
+                printf("PM");
                 break;
             case 10:
             case 110:
-                fprintf(fptr,"BC");
+                printf("BC");
                 break;
             case 11:
             case 111:
-                fprintf(fptr,"CF");
+                printf("CF");
                 break;
             case 12:
             case 112:
-                fprintf(fptr,"ER");
+                printf("ER");
                 break;
             case 13:
             case 113:
-                fprintf(fptr,"Er");
-                break;                    
+                printf("Er");
+                break;                
             case 20:
             case 120:
-                fprintf(fptr,"NC");
+                printf("NC");
                 break;
             case 30:
             case 130:
             case 40:
             case 140:
-                fprintf(fptr,"MG");
+                printf("MG");
                 break;
             case 60:
             case 160:
-                fprintf(fptr,"PP");
+                printf("PP");
                 break;    
             case 70:
             case 170:
-                fprintf(fptr,"Lt");
+                printf("Lt");
                 break;
             case 75:
             case 175:
-                fprintf(fptr,"LT");
+                printf("LT");
                 break;    
             case 80:
             case 180:
-                fprintf(fptr,"A2");
+                printf("A2");
                 break;    
             default:
                 break;
@@ -255,654 +356,12 @@ LIST_PRESENTATIONS:
                     {
                     case 40:
                     case 140:
-                        fprintf(fptr,"\nThe presentation dual to presentation %d 'split' into presentations %u through %u of M",
+                        printf("\nThe presentation dual to presentation %d 'split' into presentations %u and %u of M",
                                     i + 1,j + 1,m + 1);
-                        fprintf(fptr,"\nwhich correspond to summands %u through %u of M.",ComponentNum[j],ComponentNum[m]);                    
+                        printf("\nwhich correspond to summands %u and %u of M.",ComponentNum[j],ComponentNum[m]);                    
                         break;
                     default:
-                        fprintf(fptr,"\n'split' into presentations %u through %u corresponding to summands %u through %u of M.",
-                        j + 1,m + 1,ComponentNum[j],ComponentNum[m]);
-                        break;                    
-                    }
-                if(BdryData) for(m = 0; m < NCS[i]; m++) Print_Bdry_Data(j + m);
-                break;
-                
-            case GENERIC_LENS_SPACE:
-                if(LSP[i] > 4L)
-                    fprintf(fptr,"\npresents a Lens space of the form L(%lu,Q).",LSP[i]);
-                else
-                if(LSP[i] == 1L)
-                    fprintf(fptr,"\npresents the 3-Sphere.");
-                else
-                    fprintf(fptr,"\npresents a Lens space of the form L(%lu,1).",LSP[i]);
-                break;        
-            
-            case THREE_SPHERE:
-                fprintf(fptr,"\npresents the 3-Sphere.");
-                break;
-            
-            case NOT_CONNECTED:
-                fprintf(fptr,"\nthe diagram is not connected.");
-                break;
-                
-            case S1_X_S2:
-                if(NG[i] == 1)
-                    fprintf(fptr,"\npresents S1 X S2.");
-                else
-                    fprintf(fptr,"\npresents %d copies of S1 X S2.",NG[i]);
-                break;
-            
-            case S1_X_D2:
-                if(NG[i] == 1)
-                    fprintf(fptr,"\npresents S1 X D2.");
-                else
-                    fprintf(fptr,"\npresents %d copies of S1 X D2.",NG[i]);
-                break;
-            
-            case S1_X_X2:
-                if(NG[i] == 1)
-                    fprintf(fptr,"\npresents S1 X ?2.");
-                else
-                    fprintf(fptr,"\npresents %d copies of S1 X ?2.",NG[i]);
-                break;
-
-            case MISSING_GEN_DONE2:
-                fprintf(fptr,"\npresents: ");
-                if(N1H[ComponentNum[i]] == 1)
-                    fprintf(fptr,"1 copy of I X D2, ");
-                else
-                    fprintf(fptr,"%d copies of I X D2, ",N1H[ComponentNum[i]]);
-                if(NS1XS2[ComponentNum[i]] == 1)
-                    fprintf(fptr,"1 copy of S1 X S2, ");
-                else
-                    fprintf(fptr,"%d copies of S1 X S2, ",NS1XS2[ComponentNum[i]]);
-                if(NS1XD2[ComponentNum[i]] == 1)
-                    fprintf(fptr,"and 1 copy of S1 X D2.");
-                else
-                    fprintf(fptr,"and %d copies of S1 X D2.",NS1XD2[ComponentNum[i]]);                                        
-                fprintf(fptr,"\nThe program was not able to unambiguously determine the boundary components.");
-                break;
-                
-            case MISSING_GEN_DONE1:
-                fprintf(fptr,"\npresents: ");
-                if(N1H[ComponentNum[i]] == 1)
-                    fprintf(fptr,"1 copy of I X D2, ");
-                else
-                    fprintf(fptr,"%d copies of I X D2, ",N1H[ComponentNum[i]]);
-                if(NS1XS2[ComponentNum[i]] == 1)
-                    fprintf(fptr,"1 copy of S1 X S2, ");
-                else
-                    fprintf(fptr,"%d copies of S1 X S2, ",NS1XS2[ComponentNum[i]]);
-                if(NS1XD2[ComponentNum[i]] == 1)
-                    fprintf(fptr,"and 1 copy of S1 X D2.");
-                else
-                    fprintf(fptr,"and %d copies of S1 X D2.",NS1XD2[ComponentNum[i]]);                            
-                break;
-                
-            case KNOWN_LENS_SPACE:
-                switch(LSP[i])
-                    {
-                    case 0L:
-                        fprintf(fptr,"\npresents S1 X S2.");
-                        break; 
-                    case 1L:
-                        fprintf(fptr,"\npresents the 3-Sphere.");
-                        break;
-                    default:
-                        fprintf(fptr,"\npresents the Lens space L(%lu,%lu).",LSP[i],LSQ[i]);
-                        break;
-                    }
-                break;
-            
-            case SEP_PAIRS:
-                if(PRIM[i] >= 100)
-                    {
-                    fprintf(fptr,"\ndual of presentation %u is pseudo-minimal.",
-                            Daughters[i] + 1);
-                    fprintf(fptr," Vertex '%c' and vertex '%c' separate.",    
-                        x = LSP[i],y = LSQ[i]);                    
-                    }
-                else                        
-                    fprintf(fptr,"\nvertex '%c' and vertex '%c' separate the diagram.",
-                    x = LSP[i],y = LSQ[i]);
-                break;
-            
-            case ANNULUS_EXISTS:
-                p = *SUR[i][0];
-                x = *p++;
-                y = *p++;                
-                fprintf(fptr,"\nVertices '%c' and '%c' separate the diagram.",x,y);
-                fprintf(fptr,"\nThe component consisting of vertice(s) {%c",*p);
-                p++;
-                while((x = *p) != '@')
-                    {
-                    fprintf(fptr,",%c",x);
-                    p++;
-                    }
-                fprintf(fptr,"}");    
-                p++;        
-                fprintf(fptr,"\nlies in an annulus which swallows the component and otherwise follows the curve:\n");
-                h = 0;
-                while(*p)
-                    {
-		    fputc(*p++,fptr);
-                    if(h++ >= 90 && *p)
-                        {
-                        fprintf(fptr,"\n");
-                        h = 0;
-                        }
-                    }
-                break;
-            
-            case V2_ANNULUS_EXISTS:
-                p = *SUR[i][0];
-                fprintf(fptr,"\nThere exists an annulus which swallows vertice(s) {%c",*p);
-                p++;
-                while((x = *p) != '@')
-                    {
-                    fprintf(fptr,",%c",x);
-                    p++;
-                    }
-                fprintf(fptr,"}");    
-                p++;        
-                fprintf(fptr,"\nand otherwise follows the curve:\n");
-                h = 0;
-                while(*p)
-                    {
-		    fputc(*p++,fptr);
-                    if(h++ >= 90 && *p)
-                        {
-                        fprintf(fptr,"\n");
-                        h = 0;
-                        }
-                    }
-                break;                
-            
-            case DELETED_RELATOR:
-                break;
-            
-            case NON_UNIQUE_4:
-                fprintf(fptr,"\nthe diagram is not unique because there is a generator which appears");
-                fprintf(fptr,"\nwith only one exponent and that exponent is greater than 6.");
-                break;
-            
-            case NON_UNIQUE_3:
-                fprintf(fptr,"\nthe diagram is not unique because there is a generator which appears");
-                fprintf(fptr,"\nonly with exponent 5.");
-                break;
-            
-            case NON_UNIQUE_2:
-                fprintf(fptr,"\nthe diagram is not unique because there is a generator which appears");
-                fprintf(fptr,"\nonly with exponent 3 or only with exponent 4 and this exponent occurs more than once.");
-                break;
-            
-            case NON_UNIQUE_1:
-                fprintf(fptr,"\nthe diagram is not unique because there is a generator which appears");
-                fprintf(fptr,"\nwith only one exponent, either 3,4 or 6, and a needed symmetry does not exist.");
-                break;
-            
-            case DUPLICATE:
-                fprintf(fptr,"\nis a duplicate of presentation %d of summand %u.",
-                Daughters[i] + 1,ComponentNum[Daughters[i]]);
-                break;                                                                                                                break;        
-            
-            default:
-                {
-                j = PRIM[i];
-                switch(j)
-                    {
-                    case 8:
-                    case 108:
-                        fprintf(fptr,"\ndual of presentation %u is pseudo-minimal.",
-                        Daughters[i] + 1);
-                        break;
-                    case 70:
-                        if(QPM[i])
-                            {
-                            fprintf(fptr,"\nvia level transformations of sep_pairs,");
-                            fprintf(fptr," is quasi-pseudo-minimal.");
-                            }
-                        else        
-                            fprintf(fptr,"\nvia level transformations of sep_pairs.");
-                        break;
-                    case 75:
-                        if(QPM[i])
-                            {
-                            fprintf(fptr,"\nvia general level transformations,");
-                            fprintf(fptr," is quasi-pseudo-minimal.");
-                            }
-                        else
-                            fprintf(fptr,"\nvia general level transformations.");
-                        break;    
-                    case 170:
-                        fprintf(fptr,"\nvia level transformations of sep_pairs and ");
-                        fprintf(fptr,"dual of presentation %u is pseudo-minimal.",
-                        Daughters[i] + 1);
-                        break;
-                    case 175:
-                        fprintf(fptr,"\nvia general level transformations and ");
-                        fprintf(fptr,"dual of presentation %u is pseudo-minimal.",
-                        Daughters[i] + 1);
-                        break;    
-                    default:
-                        if(j >= 100)
-                            fprintf(fptr,"\ndual of presentation %u is pseudo-minimal.",
-                            Daughters[i] + 1);
-                        if(QPM[i])
-                            fprintf(fptr,"\nis quasi-pseudo-minimal.");    
-                        break;
-                    }
-                break;
-                }                                                                                
-            }
-                
-        fprintf(fptr,"\n");
-        for(j = 1; j <= NumRelators; j++)
-            {    
-            HLock((char **) SUR[i][j]);
-            fprintf(fptr,"\nR%3u)    ",j);
-            p = *SUR[i][j];
-            h = 9;
-            while(*p)
-                {
-		fputc(*p++,fptr);
-                if(h++ >= 90 && *p)
-                    {
-                    fprintf(fptr,"\n         ");
-                    h = 9;
-                    }
-                }
-            HUnlock((char **) SUR[i][j]);
-            }
-        
-        GET_RESPONSE1:
-        if(k == 0 && Flag5 && One_By_One && (c = mykbhit())) switch(c)
-            {
-            case ' ':
-                One_By_One = FALSE;
-                ObscureCursor();
-                break;
-            case 'd':
-                WhichInput = i;
-                if(Display_A_Diagram())
-                    {
-                    if(n > Starting_Pres) n -= 2;
-                    else n --;                    
-                    }
-                fptr = stdout;
-                ObscureCursor();
-                break;
-            case 'i':
-                Save_Pres_To_Input_Presentations(Table[n]);
-                ObscureCursor();
-                goto GET_RESPONSE1;                    
-            case 'n':
-                ObscureCursor();
-                break;
-            case 'p':
-                if(n > Starting_Pres) n -= 2;
-                else
-                    {
-                    n --;
-                    SysBeep(5);
-                    }
-                ObscureCursor();
-                break;        
-            case '\n':
-                return(NO_ERROR);
-            case '\r':
-                return(NO_ERROR);    
-            case 's':
-                SNumFilled = NumFilled;
-                SStarting_Pres = Starting_Pres;
-                Starting_Pres = n;
-                NumFilled = Starting_Pres + 1;
-                qksort_Report(Band_Sums,NumDiagrams,OnStack,Starting_Pres,
-                    1,1,Flag3,Flag4,0,Ptr1);                        
-                NumFilled = SNumFilled;
-                Starting_Pres = SStarting_Pres;
-                printf("\n\n    Saved Presentation %d in 'Heegaard_Results'.",i + 1);
-                fptr = stdout;
-                ObscureCursor();
-                goto GET_RESPONSE1;                    
-            default:
-                SysBeep(5);
-                printf("\n\n      Hit 'd' to see the diagram of presentation %d.",i + 1);
-                printf("\n      Hit 'i' to save presentation %d to 'Input_Presentations'.",i + 1);            
-                printf("\n      Hit 'n' to see the next presentation.");
-                if(n > Starting_Pres)
-                printf("\n      Hit 'p' to see the previous presentation.");
-                printf("\n      Hit 's' to save presentation %d to 'Heegaard_Results'.",i + 1);
-                printf("\n      Hit 'return' to stop reviewing this report.");
-                printf("\n      Hit the 'space-bar' to start scrolling.");
-                goto GET_RESPONSE1;                    
-            }        
-            
-        if(k == 0 && Flag5 && (c = mykbhit())) switch(c)
-            {
-            case ' ':
-                WAIT:
-                switch(WaitkbHit())
-                    {
-                    case ' ':
-                        ObscureCursor();
-                        break;
-                    case 'd':
-                        WhichInput = i;
-                        if(Display_A_Diagram())
-                            {
-                            if(n > Starting_Pres) n -= 2;
-                            else n --;                            
-                            }
-                        fptr = stdout;
-                        ObscureCursor();
-                        One_By_One = TRUE;
-                        break;
-                    case 'i':
-                        Save_Pres_To_Input_Presentations(Table[n]);
-                        ObscureCursor();
-                        One_By_One = TRUE;
-                        goto GET_RESPONSE1;                                                    
-                    case 'n':
-                        One_By_One = TRUE;
-                        ObscureCursor();
-                        break;
-                    case 'p':
-                        if(n > Starting_Pres) n -= 2;
-                        else
-                            {
-                            n --;
-                            SysBeep(5);
-                            }
-                        One_By_One = TRUE;
-                        ObscureCursor();
-                        break;                                    
-                    case '\n':
-                        return(NO_ERROR);
-                    case '\r':
-                        return(NO_ERROR);    
-                    case 's':
-                        SNumFilled = NumFilled;
-                        SStarting_Pres = Starting_Pres;
-                        Starting_Pres = n;
-                        NumFilled = Starting_Pres + 1;
-                        qksort_Report(Band_Sums,NumDiagrams,OnStack,Starting_Pres,
-                            1,1,Flag3,Flag4,0,Ptr1);                        
-                        NumFilled = SNumFilled;
-                        Starting_Pres = SStarting_Pres;
-                        printf("\n\n    Saved Presentation %d in 'Heegaard_Results'.",i + 1);
-                        fptr = stdout;
-                        One_By_One = TRUE;
-                        goto GET_RESPONSE1;                        
-                    default:
-                        SysBeep(5);
-                        printf("\n\n      Hit 'd' to see the diagram of presentation %d.",i + 1);
-                        printf("\n      Hit 'i' to save presentation %d to 'Input_Presentations'.",i + 1);            
-                        printf("\n      Hit 'n' to see the next presentation.");
-                        if(n > Starting_Pres)
-                        printf("\n      Hit 'p' to see the previous presentation.");
-                        printf("\n      Hit 's' to save presentation %d to 'Heegaard_Results'.",i + 1);
-                        printf("\n      Hit 'return' to stop reviewing this report.");
-                        printf("\n      Hit the 'space-bar' to alternately stop and start scrolling.");
-                        One_By_One = TRUE;
-                        goto GET_RESPONSE1;    
-                    }
-                break;
-            case 'n':
-            case 'p':
-                printf("\n\n      Hit 'd' to see the diagram of presentation %d.",i + 1);
-                printf("\n      Hit 'i' to save presentation %d to 'Input_Presentations'.",i + 1);            
-                printf("\n      Hit 'n' to see the next presentation.");
-                if(n > Starting_Pres)
-                printf("\n      Hit 'p' to see the previous presentation.");
-                printf("\n      Hit 's' to save presentation %d to 'Heegaard_Results'.",i + 1);
-                printf("\n      Hit 'return' to stop reviewing this report.");
-                printf("\n      Hit the 'space-bar' to alternately stop and start scrolling.");            
-                One_By_One = TRUE;
-                goto GET_RESPONSE1;                
-            case '\n':
-                if(Flag2 == 0)
-                    return(NO_ERROR);
-                else
-                    {
-                    k = 1;
-                    goto LIST_PRESENTATIONS;
-                    }
-            case '\r':
-                if(Flag2 == 0)
-                    return(NO_ERROR);
-                else
-                    {
-                    k = 1;
-                    goto LIST_PRESENTATIONS;
-                    }        
-            default:
-                SysBeep(5);
-                printf("\n\n      Hit 'd' to see the diagram of presentation %d.",i + 1);
-                printf("\n      Hit 'i' to save presentation %d to 'Input_Presentations'.",i + 1);            
-                printf("\n      Hit 'n' to see the next presentation.");
-                if(n > Starting_Pres)
-                printf("\n      Hit 'p' to see the previous presentation.");
-                printf("\n      Hit 's' to save presentation %d to 'Heegaard_Results'.",i + 1);
-                printf("\n      Hit 'return' to stop reviewing this report.");
-                printf("\n      Hit the 'space-bar' to alternately stop and start scrolling.");
-                One_By_One = TRUE;
-                goto GET_RESPONSE1;        
-            }            
-        }                    
-    
-    if(Flag3 && Flag5)
-        {
-        fprintf(fptr,"\n\nThe program performed %lu automorphism(s), examined %ld bandsum(s),",
-            TotalAuts,Band_Sums);
-        fprintf(fptr,"\nexamined %ld diagram(s), and dualized %lu diagram(s).",
-            NumDiagrams,NumDualized);
-        fprintf(fptr," Left to do %u.\n",OnStack);
-        }
-    }
-    if(Flag2 && Flag5)
-        {
-        printf("\n\nThese results are printed in the file 'Heegaard_Results'.");    
-        NoReport = FALSE;
-        }
-    
-    if(Flag5)
-        {    
-        printf("\n\nHIT 'v' TO REVIEW THESE PRESENTATIONS.");
-        if(NoReport)
-            printf("\nHIT 's' TO SAVE THESE PRESENTATIONS TO THE FILE 'Heegaard_Results'.");
-        printf("\nOR HIT ANY OTHER KEY TO CONTINUE.");
-        switch(WaitkbHit())
-            {
-            case 'v':
-                Flag1 = 0;
-                Flag2 = 0;
-                Flag3 = 1;
-                goto LIST_PRESENTATIONS;    
-            case 's':
-                if(NoReport)
-                    {
-                    Flag1 = 1;
-                    Flag2 = 1;
-                    Flag3 = 1;
-                    goto LIST_PRESENTATIONS;
-                    }
-                break;    
-            default:
-                break;        
-            }
-        }
-    return(NO_ERROR);    
-}
-
-int Report(long Band_Sums,long NumDiagrams,unsigned int OnStack,unsigned int Starting_Pres,unsigned int Flag1,
-            unsigned int Flag2,unsigned int Flag3,unsigned int Flag4,unsigned int Flag5,unsigned char * Ptr1)
-{
-    /******************************************************************************************
-        Report() is an output routine called automatically on termination of the program. It
-        can also be called by the user when the program has been interrupted.
-    ******************************************************************************************/    
-
-    char            c;
-            
-    unsigned char     *p,
-                    x,
-                    y;
-    
-    int                NumRelators,
-                    One_By_One,
-                    SNumFilled,
-                    SStarting_Pres;
-                    
-    unsigned int     h,
-                    i,
-                    j,
-                    k,
-                    m;                                
-    
-    unsigned long     Length;
-    
-    if(Flag5) Update_Bdry_Data();
-
-LIST_PRESENTATIONS:
-    
-    One_By_One = FALSE;
-    ObscureCursor();
-    for(k = Flag1; k <= Flag2; k++)
-    {
-    if(k == 0)
-        fptr = stdout;
-    else
-        fptr = myout;    
-    
-    if(Flag5)            
-    fprintf(fptr,"\n\n<------------------------------------   REPORT   ---------------------------------------->");
-    
-    if(k == 0 && NumFilled > 1 && Flag5)
-        {
-        printf("\n\n      Hit 'return' to stop reviewing this report.");
-        printf("\n      Hit the 'space-bar' to alternately stop and start scrolling.");
-        printf("\n      Use the 'd','i','n','p' and 's' keys to: view diagrams, save a presentation in");
-        printf("\n      'Input_Presentations', see the next presentation, see the previous presentation,");
-        printf("\n      or save a presentation in 'Heegaard_Results'."); 
-        }
-        
-    if(BdryData && Flag5)
-        {
-        fprintf(fptr,"\n");
-        Print_Bdry_Data(Starting_Pres);
-        }
-
-    fprintf(fptr,"\n\nThe initial presentation was: %s",PresName);    
-            
-    for(i = Starting_Pres; i < NumFilled; i++)
-        {
-        if(Flag4 == 1 && !Ptr1[i]) continue;
-        if(Flag4 && Ptr1[i] != Flag4) continue;
-        NumRelators = NR[i];
-        Length = SURL[i];
-        fprintf(fptr,"\n\nPresentation %d  of Summand %u:  %d Generator(s)  Length  %lu  From Presentation %u  ",
-        i+1,ComponentNum[i],NG[i],Length,FR[i]+1);
-        
-        switch(PRIM[i])
-            {
-            case 1:
-            case 101:
-                fprintf(fptr,"DR");
-                break;
-            case 2:
-            case 102:
-                fprintf(fptr,"IP");
-                break;
-            case 3:
-            case 103:
-                fprintf(fptr,"LS");
-                break;
-            case 4:
-            case 104:
-                fprintf(fptr,"1G");
-                break;
-            case 5:
-            case 105:
-                fprintf(fptr,"S3");
-                break;
-            case 6:
-            case 106:
-                fprintf(fptr,"FP");
-                break;
-            case 7:
-            case 107:
-                fprintf(fptr,"BC");
-                break;
-            case 8:
-            case 108:
-                fprintf(fptr,"PM");
-                break;
-            case 9:
-            case 109:
-                fprintf(fptr,"PM");
-                break;
-            case 10:
-            case 110:
-                fprintf(fptr,"BC");
-                break;
-            case 11:
-            case 111:
-                fprintf(fptr,"CF");
-                break;
-            case 12:
-            case 112:
-                fprintf(fptr,"ER");
-                break;
-            case 13:
-            case 113:
-                fprintf(fptr,"Er");
-                break;                
-            case 20:
-            case 120:
-                fprintf(fptr,"NC");
-                break;
-            case 30:
-            case 130:
-            case 40:
-            case 140:
-                fprintf(fptr,"MG");
-                break;
-            case 60:
-            case 160:
-                fprintf(fptr,"PP");
-                break;    
-            case 70:
-            case 170:
-                fprintf(fptr,"Lt");
-                break;
-            case 75:
-            case 175:
-                fprintf(fptr,"LT");
-                break;    
-            case 80:
-            case 180:
-                fprintf(fptr,"A2");
-                break;    
-            default:
-                break;
-            }
-                
-        switch(UDV[i])
-            {
-            case SPLIT:
-                j = Daughters[i];
-                m = j + NCS[i] - 1;
-                switch(PRIM[j])
-                    {
-                    case 40:
-                    case 140:
-                        fprintf(fptr,"\nThe presentation dual to presentation %d 'split' into presentations %u through %u of M",
-                                    i + 1,j + 1,m + 1);
-                        fprintf(fptr,"\nwhich correspond to summands %u through %u of M.",ComponentNum[j],ComponentNum[m]);                    
-                        break;
-                    default:
-                        fprintf(fptr,"\n'split' into presentations %u through %u corresponding to summands %u through %u of M.",
+                        printf("\n'split' into presentations %u and %u corresponding to summands %u and %u of M.",
                         j + 1,m + 1,ComponentNum[j],ComponentNum[m]);
                         break;                    
                     }
@@ -910,88 +369,88 @@ LIST_PRESENTATIONS:
                 break;
             
             case GENERIC_LENS_SPACE:
-                if(LSP[i] > 4L)
-                    fprintf(fptr,"\npresents a Lens space of the form L(%lu,Q).",LSP[i]);
+                if(LSP[i] > 4)
+                    printf("\npresents a Lens space of the form L(%lu,Q).",LSP[i]);
                 else
-                if(LSP[i] == 1L)
-                    fprintf(fptr,"\npresents the 3-Sphere.");
+                if(LSP[i] == 1)
+                    printf("\npresents the 3-Sphere.");
                 else
-                    fprintf(fptr,"\npresents a Lens space of the form L(%lu,1).",LSP[i]);
+                    printf("\npresents a Lens space of the form L(%lu,1).",LSP[i]);
                 break;        
             
             case THREE_SPHERE:
-                fprintf(fptr,"\npresents the 3-Sphere.");
+                printf("\npresents the 3-Sphere.");
                 break;
 
             case NOT_CONNECTED:
-                fprintf(fptr,"\nthe diagram is not connected.");
+                printf("\nthe diagram is not connected.");
                 break;
                     
             case S1_X_S2:
                 if(NG[i] == 1)
-                    fprintf(fptr,"\npresents S1 X S2.");
+                    printf("\npresents S1 X S2.");
                 else
-                    fprintf(fptr,"\npresents %d copies of S1 X S2.",NG[i]);
+                    printf("\npresents %d copies of S1 X S2.",NG[i]);
                 break;
             
             case S1_X_D2:
                 if(NG[i] == 1)
-                    fprintf(fptr,"\npresents S1 X D2.");
+                    printf("\npresents S1 X D2.");
                 else
-                    fprintf(fptr,"\npresents %d copies of S1 X D2.",NG[i]);
+                    printf("\npresents %d copies of S1 X D2.",NG[i]);
                 break;
             
             case S1_X_X2:
                 if(NG[i] == 1)
-                    fprintf(fptr,"\npresents S1 X ?2.");
+                    printf("\npresents S1 X ?2.");
                 else
-                    fprintf(fptr,"\npresents %d copies of S1 X ?2.",NG[i]);
+                    printf("\npresents %d copies of S1 X ?2.",NG[i]);
                 break;
             
             case MISSING_GEN_DONE2:
-                fprintf(fptr,"\npresents: ");
+                printf("\npresents: ");
                 if(N1H[ComponentNum[i]] == 1)
-                    fprintf(fptr,"1 copy of I X D2, ");
+                    printf("1 copy of I X D2, ");
                 else
-                    fprintf(fptr,"%d copies of I X D2, ",N1H[ComponentNum[i]]);
+                    printf("%d copies of I X D2, ",N1H[ComponentNum[i]]);
                 if(NS1XS2[ComponentNum[i]] == 1)
-                    fprintf(fptr,"1 copy of S1 X S2, ");
+                    printf("1 copy of S1 X S2, ");
                 else
-                    fprintf(fptr,"%d copies of S1 X S2, ",NS1XS2[ComponentNum[i]]);
+                    printf("%d copies of S1 X S2, ",NS1XS2[ComponentNum[i]]);
                 if(NS1XD2[ComponentNum[i]] == 1)
-                    fprintf(fptr,"and 1 copy of S1 X D2.");
+                    printf("and 1 copy of S1 X D2.");
                 else
-                    fprintf(fptr,"and %d copies of S1 X D2.",NS1XD2[ComponentNum[i]]);                                        
-                fprintf(fptr,"\nThe program was not able to unambiguously determine the boundary components.");
+                    printf("and %d copies of S1 X D2.",NS1XD2[ComponentNum[i]]);                                        
+                printf("\nHeegaard was not able to unambiguously determine the boundary components.");
                 break;
                 
             case MISSING_GEN_DONE1:
-                fprintf(fptr,"\npresents: ");
+                printf("\npresents: ");
                 if(N1H[ComponentNum[i]] == 1)
-                    fprintf(fptr,"1 copy of I X D2, ");
+                    printf("1 copy of I X D2, ");
                 else
-                    fprintf(fptr,"%d copies of I X D2, ",N1H[ComponentNum[i]]);
+                    printf("%d copies of I X D2, ",N1H[ComponentNum[i]]);
                 if(NS1XS2[ComponentNum[i]] == 1)
-                    fprintf(fptr,"1 copy of S1 X S2, ");
+                    printf("1 copy of S1 X S2, ");
                 else
-                    fprintf(fptr,"%d copies of S1 X S2, ",NS1XS2[ComponentNum[i]]);
+                    printf("%d copies of S1 X S2, ",NS1XS2[ComponentNum[i]]);
                 if(NS1XD2[ComponentNum[i]] == 1)
-                    fprintf(fptr,"and 1 copy of S1 X D2.");
+                    printf("and 1 copy of S1 X D2.");
                 else
-                    fprintf(fptr,"and %d copies of S1 X D2.",NS1XD2[ComponentNum[i]]);                            
+                    printf("and %d copies of S1 X D2.",NS1XD2[ComponentNum[i]]);                            
                 break;
                                 
             case KNOWN_LENS_SPACE:
                 switch(LSP[i])
                     {
                     case 0L:
-                        fprintf(fptr,"\npresents S1 X S2.");
+                        printf("\npresents S1 X S2.");
                         break; 
                     case 1L:
-                        fprintf(fptr,"\npresents the 3-Sphere.");
+                        printf("\npresents the 3-Sphere.");
                         break;
                     default:
-                        fprintf(fptr,"\npresents the Lens space L(%lu,%lu).",LSP[i],LSQ[i]);
+                        printf("\npresents the Lens space L(%lu,%lu).",LSP[i],LSQ[i]);
                         break;
                     }
                 break;
@@ -999,13 +458,13 @@ LIST_PRESENTATIONS:
             case SEP_PAIRS:
                 if(PRIM[i] >= 100)
                     {
-                    fprintf(fptr,"\ndual of presentation %u is pseudo-minimal.",
+                    printf("\ndual of presentation %u is pseudo-minimal.",
                             Daughters[i] + 1);
-                    fprintf(fptr," Vertex '%c' and vertex '%c' separate.",
+                    printf(" The pair of vertices (%c,%c) separate.",
                         x = LSP[i],y = LSQ[i]);                    
                     }
                 else                        
-                    fprintf(fptr,"\nvertex '%c' and vertex '%c' separate the diagram.",
+                    printf("\nthe pair of vertices (%c,%c) separate the diagram.",
                     x = LSP[i],y = LSQ[i]);            
                 break;
             
@@ -1013,78 +472,62 @@ LIST_PRESENTATIONS:
                 p = *SUR[i][0];
                 x = *p++;
                 y = *p++;                
-                fprintf(fptr,"\nVertices '%c' and '%c' separate the diagram.",x,y);
-                fprintf(fptr,"\nThe component consisting of vertice(s) {%c",*p);
+                printf("\nThe pair of vertices (%c,%c) separate the diagram.",x,y);
+                printf("\nThe component consisting of vertice(s) {%c",*p);
                 p++;
                 while((x = *p) != '@')
                     {
-                    fprintf(fptr,",%c",x);
+                    printf(",%c",x);
                     p++;
                     }
-                fprintf(fptr,"}");    
+                printf("}");    
                 p++;        
-                fprintf(fptr,"\nlies in an annulus which swallows the component and otherwise follows the curve:\n");
-                h = 0;
+                printf("\nlies in an annulus which swallows the component and otherwise follows the curve:\n");
                 while(*p)
-                    {
-		    fputc(*p++,fptr);
-                    if(h++ >= 90 && *p)
-                        {
-                        fprintf(fptr,"\n");
-                        h = 0;
-                        }
-                    }
+		   			fputc(*p++,stdout);
                 break;
             
             case V2_ANNULUS_EXISTS:
                 p = *SUR[i][0];
-                fprintf(fptr,"\nThere exists an annulus which swallows vertice(s) {%c",*p);
+                printf("\nThere exists an annulus which swallows vertice(s) {%c",*p);
                 p++;
                 while((x = *p) != '@')
                     {
-                    fprintf(fptr,",%c",x);
+                    printf(",%c",x);
                     p++;
                     }
-                fprintf(fptr,"}");    
+                printf("}");    
                 p++;        
-                fprintf(fptr,"\nand otherwise follows the curve:\n");
-                h = 0;
-                while(*p)
-                    {
-		    fputc(*p++,fptr);
-                    if(h++ >= 90 && *p)
-                        {
-                        fprintf(fptr,"\n");
-                        h = 0;
-                        }
-                    }
+                printf("\nand otherwise follows the curve:\n");
+				while(*p) fputc(*p++,stdout);
+
                 break;                
             
             case DELETED_RELATOR:
                 break;
             
             case NON_UNIQUE_4:
-                fprintf(fptr,"\nthe diagram is not unique because there is a generator which appears");
-                fprintf(fptr,"\nwith only one exponent and that exponent is greater than 6.");
+                printf("\nthe diagram is not unique because there is a generator which appears");
+                printf("\nwith only one exponent and that exponent is greater than 6.");
                 break;
             
             case NON_UNIQUE_3:
-                fprintf(fptr,"\nthe diagram is not unique because there is a generator which appears");
-                fprintf(fptr,"\nonly with exponent 5.");
+                printf("\nthe diagram is not unique because there is a generator which appears");
+                printf("\nonly with exponent 5.");
                 break;
             
             case NON_UNIQUE_2:
-                fprintf(fptr,"\nthe diagram is not unique because there is a generator which appears");
-                fprintf(fptr,"\nonly with exponent 3 or only with exponent 4 and this exponent occurs more than once.");
+                printf("\nthe diagram is not unique because there is a generator which appears");
+                printf("\nonly with exponent 3 or only with exponent 4 and this exponent occurs more than once.");
                 break;
             
             case NON_UNIQUE_1:
-                fprintf(fptr,"\nthe diagram is not unique because there is a generator which appears");
-                fprintf(fptr,"\nwith only one exponent, either 3,4 or 6, and a needed symmetry does not exist.");
+                printf("\nthe diagram is not unique because there is a generator which appears");
+                printf("\nwith only one exponent, either 3,4 or 6, and a needed symmetry does not exist.");
                 break;
             
             case DUPLICATE:
-                fprintf(fptr,"\nis a duplicate of presentation %d of summand %u.",
+                printf("\nis a duplicate of presentation %d of summand %u.",
                 Daughters[i] + 1,ComponentNum[Daughters[i]]);
                 break;                                                                                                                break;        
             
@@ -1095,290 +538,95 @@ LIST_PRESENTATIONS:
                     {
                     case 8:
                     case 108:
-                        fprintf(fptr,"\ndual of presentation %u is pseudo-minimal.",
+                        printf("\ndual of presentation %u is pseudo-minimal.",
                         Daughters[i] + 1);
                         break;
                     case 70:
                         if(QPM[i])
                             {
-                            fprintf(fptr,"\nvia level transformations of sep_pairs,");
-                            fprintf(fptr," is quasi-pseudo-minimal.");
+                            printf("\nvia level transformations of sep_pairs,");
+                            printf(" is quasi-pseudo-minimal.");
                             }
                         else        
-                            fprintf(fptr,"\nvia level transformations of sep_pairs.");
+                            printf("\nvia level transformations of sep_pairs.");
                         break;
                     case 75:
                         if(QPM[i])
                             {
-                            fprintf(fptr,"\nvia general level transformations,");
-                            fprintf(fptr," is quasi-pseudo-minimal.");
+                            printf("\nvia general level transformations,");
+                            printf(" is quasi-pseudo-minimal.");
                             }
                         else
-                            fprintf(fptr,"\nvia general level transformations.");
+                            printf("\nvia general level transformations.");
                         break;    
                     case 170:
-                        fprintf(fptr,"\nvia level transformations of sep_pairs and ");
-                        fprintf(fptr,"dual of presentation %u is pseudo-minimal.",
+                        printf("\nvia level transformations of sep_pairs and ");
+                        printf("dual of presentation %u is pseudo-minimal.",
                         Daughters[i] + 1);
                         break;
                     case 175:
-                        fprintf(fptr,"\nvia general level transformations and ");
-                        fprintf(fptr,"dual of presentation %u is pseudo-minimal.",
+                        printf("\nvia general level transformations and ");
+                        printf("dual of presentation %u is pseudo-minimal.",
                         Daughters[i] + 1);
                         break;    
                     default:
                         if(j >= 100)
-                            fprintf(fptr,"\ndual of presentation %u is pseudo-minimal.",
+                            printf("\ndual of presentation %u is pseudo-minimal.",
                             Daughters[i] + 1);
                         if(QPM[i])
-                            fprintf(fptr,"\nis quasi-pseudo-minimal.");                                
+                            printf("\nis quasi-pseudo-minimal.");                                
                         break;
                     }
                 break;
                 }                                                                                
             }
                 
-        fprintf(fptr,"\n");
-        for(j = 1; j <= NumRelators; j++)
-            {    
-            HLock((char **) SUR[i][j]);
-            fprintf(fptr,"\nR%3u)    ",j);
-            p = *SUR[i][j];
-            h = 9;
-            while(*p)
-                {
-		fputc(*p++,fptr);
-                if(h++ >= 90 && *p)
-                    {
-                    fprintf(fptr,"\n         ");
-                    h = 9;
-                    }
-                }
-            HUnlock((char **) SUR[i][j]);
-            }
-        
-        GET_RESPONSE1:
-        if(k == 0 && Flag5 && One_By_One && (c = mykbhit())) switch(c)
-            {
-            case ' ':
-                One_By_One = FALSE;
-                ObscureCursor();
-                break;
-            case 'd':
-                WhichInput = i;
-                if(Display_A_Diagram())
-                    {
-                    if(i > Starting_Pres) i -= 2;
-                    else i --;                            
-                    }                
-                fptr = stdout;
-                ObscureCursor();
-                break;
-            case 'i':
-                Save_Pres_To_Input_Presentations(i);
-                ObscureCursor();
-                goto GET_RESPONSE1;                        
-            case 'n':
-                ObscureCursor();
-                break;
-            case 'p':
-                if(i > Starting_Pres) i -= 2;
-                else
-                    {
-                    i--;
-                    SysBeep(5);
-                    }
-                ObscureCursor();
-                break;    
-            case '\n':
-                return(NO_ERROR);
-            case 0:
-                return(NO_ERROR);        
-            case 's':
-                SNumFilled = NumFilled;
-                SStarting_Pres = Starting_Pres;
-                Starting_Pres = i;
-                NumFilled = Starting_Pres + 1;
-                Report(Band_Sums,NumDiagrams,OnStack,Starting_Pres,
-                    1,1,Flag3,Flag4,0,Ptr1);                        
-                NumFilled = SNumFilled;
-                Starting_Pres = SStarting_Pres;
-                printf("\n\n    Saved Presentation %d in 'Heegaard_Results'.",i + 1);
-                fptr = stdout;
-                ObscureCursor();
-                goto GET_RESPONSE1;                    
-            default:
-                SysBeep(5);
-                printf("\n\n      Hit 'd' to see the diagram of presentation %d.",i + 1);
-                printf("\n      Hit 'i' to save presentation %d to 'Input_Presentations'.",i + 1);
-                printf("\n      Hit 'n' to see the next presentation.");
-                if(i > Starting_Pres)
-                printf("\n      Hit 'p' to see the previous presentation.");
-                printf("\n      Hit 's' to save presentation %d to 'Heegaard_Results'.",i + 1);
-                printf("\n      Hit 'return' to stop reviewing this report.");
-                printf("\n      Hit the 'space-bar' to start scrolling.");
-                goto GET_RESPONSE1;                    
-            }
-                
-        if(k == 0 && Flag5 && (c = mykbhit())) switch(c)
-            {
-            case ' ':
-                WAIT:
-                switch(WaitkbHit())
-                    {
-                    case ' ':
-                        ObscureCursor();
-                        break;
-                    case 'd':
-                        WhichInput = i;
-                        if(Display_A_Diagram())
-                            {
-                            if(i > Starting_Pres) i -= 2;
-                            else i --;                            
-                            }    
-                        fptr = stdout;
-                        ObscureCursor();
-                        One_By_One = TRUE;
-                        break;
-                    case 'i':
-                        Save_Pres_To_Input_Presentations(i);
-                        ObscureCursor();
-                        One_By_One = TRUE;
-                        goto GET_RESPONSE1;                                                    
-                    case 'n':
-                        One_By_One = TRUE;
-                        ObscureCursor();
-                        break;
-                    case 'p':
-                        if(i > Starting_Pres) i -= 2;
-                        else
-                            {
-                            i--;
-                            SysBeep(5);
-                            }
-                        ObscureCursor();
-                        One_By_One = TRUE;
-                        break;                                
-                    case '\n':
-                        return(NO_ERROR);
-                    case '\r':
-                        return(NO_ERROR);    
-                    case 's':
-                        SNumFilled = NumFilled;
-                        SStarting_Pres = Starting_Pres;
-                        Starting_Pres = i;
-                        NumFilled = Starting_Pres + 1;
-                        Report(Band_Sums,NumDiagrams,OnStack,Starting_Pres,
-                            1,1,Flag3,Flag4,0,Ptr1);                        
-                        NumFilled = SNumFilled;
-                        Starting_Pres = SStarting_Pres;
-                        printf("\n\n    Saved Presentation %d in 'Heegaard_Results'.",i + 1);
-                        fptr = stdout;
-                        One_By_One = TRUE;
-                        goto GET_RESPONSE1;    
-                    default:
-                        SysBeep(5);
-                        printf("\n\n      Hit 'd' to see the diagram of presentation %d.",i + 1);
-                        printf("\n      Hit 'i' to save presentation %d to 'Input_Presentations'.",i + 1);
-                        printf("\n      Hit 'n' to see the next presentation.");
-                        if(i > Starting_Pres)
-                        printf("\n      Hit 'p' to see the previous presentation.");
-                        printf("\n      Hit 's' to save presentation %d to 'Heegaard_Results'.",i + 1);
-                        printf("\n      Hit 'return' to stop reviewing this report.");
-                        printf("\n      Hit the 'space-bar' to alternately stop and start scrolling.");
-                        One_By_One = TRUE;
-                        goto GET_RESPONSE1;        
-                    }
-                break;
-            case 'n':
-                printf("\n\n      Hit 'd' to see the diagram of presentation %d.",i + 1);
-                printf("\n      Hit 'i' to save presentation %d to 'Input_Presentations'.",i + 1);
-                printf("\n      Hit 'n' to see the next presentation.");
-                if(i > Starting_Pres)
-                printf("\n      Hit 'p' to see the previous presentation.");
-                printf("\n      Hit 's' to save presentation %d to 'Heegaard_Results'.",i + 1);
-                printf("\n      Hit 'return' to stop reviewing this report.");
-                printf("\n      Hit the 'space-bar' to alternately stop and start scrolling.");                
-                One_By_One = TRUE;
-                goto GET_RESPONSE1;                        
-            case '\n':
-                if(Flag2 == 0)
-                    return(NO_ERROR);
-                else
-                    {
-                    k = 1;
-                    goto LIST_PRESENTATIONS;
-                    }
-            case '\r':
-                if(Flag2 == 0)
-                    return(NO_ERROR);
-                else
-                    {
-                    k = 1;
-                    goto LIST_PRESENTATIONS;
-                    }        
-            default:
-                SysBeep(5);
-                printf("\n\n      Hit 'd' to see the diagram of presentation %d.",i + 1);
-                printf("\n      Hit 'i' to save presentation %d to 'Input_Presentations'.",i + 1);
-                printf("\n      Hit 'n' to see the next presentation.");
-                if(i > Starting_Pres)
-                printf("\n      Hit 'p' to see the previous presentation.");
-                printf("\n      Hit 's' to save presentation %d to 'Heegaard_Results'.",i + 1);
-                printf("\n      Hit 'return' to stop reviewing this report.");
-                printf("\n      Hit the 'space-bar' to alternately stop and start scrolling.");
-                One_By_One = TRUE;
-                goto GET_RESPONSE1;            
-            }            
+        printf("\n");
+        for(j = 1; j <= NumRelators; j++) printf("\n    %s",*SUR[i][j]);           
         }                    
     
+    if(Batch == 3) Flag3 = FALSE;
     if(Flag3 && Flag5)
         {
-        fprintf(fptr,"\n\nThe program performed %lu automorphism(s), examined %ld bandsum(s),",
-            TotalAuts,Band_Sums);
-        fprintf(fptr,"\nexamined %ld diagram(s), and dualized %lu diagram(s).",
-            NumDiagrams,NumDualized);
-        fprintf(fptr," Left to do %u.\n",OnStack);
-        }
-    }
-    if(Flag2 && Flag5)
-        {
-        printf("\n\nThese results are printed in the file 'Heegaard_Results'.");    
-        NoReport = FALSE;
+        for(i = j = k = m = 0; i < NumFilled; i++) 
+        	{
+        	j += SURNumX[i];
+        	k += NumLoops[i];
+            if(PRIM[i] == 6 || PRIM[i] == 106) m++;  	
+        	}
+        printf("\n\nHeegaard performed %lu automorphism(s), %lu Sep-Vert-Slide(s), examined %ld bandsum(s),",
+            TotalAuts,Num_Level_Slides,Band_Sums);
+        printf("\nexamined %ld diagram(s), dualized %lu diagram(s), Hits %u, Loops %u, Mergers %u,",
+            NumDiagrams,NumDualized,j,k,Mergers);
+        printf("\nNumFP %u, ToDo %u.\n",m,OnStack);
+        if(NumSepAnnuli == 1)
+			printf("\nHeegaard found one diagram containing a separating annulus. Scroll back for details.");  
+		if(NumSepAnnuli > 1)
+			printf("\nHeegaard found %u diagrams containing a separating annulus. Scroll back for details.",NumSepAnnuli); 
+		if(NumNonSepAnnuli == 1)
+			printf("\nHeegaard found one diagram containing a nonseparating annulus. Scroll back for details.");			       		
+		if(NumNonSepAnnuli > 1)
+			printf("\nHeegaard found %u diagrams containing a nonseparating annulus. Scroll back for details.",NumNonSepAnnuli);
+		if(NumRelTooLong == 1)
+			printf("\nDeleting primitives produced one relator which was too long. Scroll back for details.");				
+		if(NumRelTooLong > 1)
+			printf("\nDeleting primitives produced %u relators which were too long. Scroll back for details.",NumRelTooLong);	
+		if(CouldNotRemove == 1)
+			printf("\nHeegaard could not remove all pairs of separating vertices from one presentation. Scroll back for details.");			
+		if(CouldNotRemove > 1)
+			printf("\nHeegaard could not remove all pairs of separating vertices from %u presentations. Scroll back for details.",CouldNotRemove);
+		if(NumErrors == 1)
+			printf("\nOne error was detected. Scroll back for details.");
+		if(NumErrors > 1)
+			printf("\n%lu errors were detected. Scroll back for details.",NumErrors);
         }
     
-    if(Flag5)
-        {    
-        printf("\n\nHIT 'v' TO REVIEW THESE PRESENTATIONS.");
-        if(NoReport)
-            printf("\nHIT 's' TO SAVE THESE PRESENTATIONS TO THE FILE 'Heegaard_Results'.");
-        printf("\nOR HIT ANY OTHER KEY TO CONTINUE.");
-        switch(WaitkbHit())
-            {
-            case 'v':
-                Flag1 = 0;
-                Flag2 = 0;
-                Flag3 = 1;
-                goto LIST_PRESENTATIONS;
-            case 's':
-                if(NoReport)
-                    {
-                    Flag1 = 1;
-                    Flag2 = 1;
-                    Flag3 = 1;
-                    goto LIST_PRESENTATIONS;
-                    }
-                break;    
-            default:
-                break;        
-            }
-        }
     return(NO_ERROR);    
 }        
 
 void Update_Bdry_Data(void)
 {
-    int            h,
+    int         h,
                 i,
                 j,
                 k,
@@ -1468,10 +716,9 @@ void Print_Bdry_Data(unsigned int WhichPres)
     if(CBC[k][0] == BDRY_UNKNOWN)
         {
         if(TotalComp == 1)
-            fprintf(fptr,"\n    The program was unable to determine the boundary components of this manifold.");
-        else    
-            fprintf(fptr,"\n    The program was unable to determine the boundary components of 'summand' %u of M.",
-                kk);
+            printf("\n    Heegaard was unable to determine the boundary components of this manifold.");
+        else
+            printf("\n    Heegaard was unable to determine the boundary components of 'summand' %u of M.",kk);
         return;
         }
         
@@ -1480,18 +727,17 @@ void Print_Bdry_Data(unsigned int WhichPres)
         {
         case 0:
             if(TotalComp == 1)
-                fprintf(fptr,"\n    This manifold is closed.");
+                printf("\n    This manifold is closed.");
             else
-                fprintf(fptr,"\n    'Summand' %u of M is closed.",kk);
+                printf("\n    'Summand' %u of M is closed.",kk);
             break;
         case 1:
             for(i = 1; CBC[k][i] < BDRY_UNKNOWN; i++) if(CBC[k][i])
                 {
                 if(TotalComp == 1)
-                    fprintf(fptr,"\n    This manifold has one boundary component of genus %u.",i);                
+                    printf("\n    This manifold has one boundary component of genus %u.",i);                
                 else
-                    fprintf(fptr,"\n    'Summand' %u of M has one boundary component of genus %u.",
-                        kk,i);
+                    printf("\n    'Summand' %u of M has one boundary component of genus %u.",kk,i);
                 break;
                 }
             break;        
@@ -1499,23 +745,84 @@ void Print_Bdry_Data(unsigned int WhichPres)
             for(i = 1; CBC[k][i] < BDRY_UNKNOWN; i++) if(CBC[k][i] == j)
                 {
                 if(TotalComp == 1)
-                    fprintf(fptr,"\n    This manifold has %u boundary components of genus %u.",
-                        j,i);                
+                    printf("\n    This manifold has %u boundary components of genus %u.",j,i);                
                 else
-                    fprintf(fptr,"\n    'Summand' %u of M has %u boundary components of genus %u.",
-                        kk,j,i);
+                    printf("\n    'Summand' %u of M has %u boundary components of genus %u.",kk,j,i);
                 return;
                 }
             if(TotalComp == 1)
-                fprintf(fptr,"\n    This manifold has the following boundary components:");
-            else    
-                fprintf(fptr,"\n    'Summand' %u of M has the following boundary components:",kk);
-            for(i = 1; CBC[k][i] < BDRY_UNKNOWN; i++) if(j = CBC[k][i])
+                printf("\n    This manifold has the following boundary components:");
+            else 
+                printf("\n    'Summand' %u of M has the following boundary components:",kk);
+            for(i = 1; CBC[k][i] < BDRY_UNKNOWN; i++) if( (j = CBC[k][i]) )
                 {
                 if(j == 1)
-                    fprintf(fptr,"\n        %2u component  of genus %2u.",j,i);
+                    printf("\n        %2u component  of genus %2u.",j,i);
                 else
-                    fprintf(fptr,"\n        %2u components of genus %2u.",j,i);
+                    printf("\n        %2u components of genus %2u.",j,i);
+                }
+            break;    
+        }
+}
+
+void Print_Bdry_Data2(unsigned int WhichPres)
+{
+    unsigned int    i,
+                    j,
+                    k,
+                    kk;
+    
+    k = kk = ComponentNum[WhichPres];
+    if(UDV[WhichPres] == DUPLICATE)
+        k = ComponentNum[Daughters[WhichPres]];
+        
+    if(CBC[k][0] == BDRY_UNKNOWN)
+        {
+        if(TotalComp == 1)
+            fprintf(H_Results,"\n    Heegaard was unable to determine the boundary components of this manifold.");
+        else
+            fprintf(H_Results,"\n    Heegaard was unable to determine the boundary components of 'summand' %u of M.",kk);
+        return;
+        }
+        
+    for(i = 1,j = 0; CBC[k][i] < BDRY_UNKNOWN; i++) j += CBC[k][i];
+    switch(j)
+        {
+        case 0:
+            if(TotalComp == 1)
+                fprintf(H_Results,"\n    This manifold is closed.");
+            else
+                fprintf(H_Results,"\n    'Summand' %u of M is closed.",kk);
+            break;
+        case 1:
+            for(i = 1; CBC[k][i] < BDRY_UNKNOWN; i++) if(CBC[k][i])
+                {
+                if(TotalComp == 1)
+                    fprintf(H_Results,"\n    This manifold has one boundary component of genus %u.",i);                
+                else
+                    fprintf(H_Results,"\n    'Summand' %u of M has one boundary component of genus %u.",kk,i);
+                break;
+                }
+            break;        
+        default:
+            for(i = 1; CBC[k][i] < BDRY_UNKNOWN; i++) if(CBC[k][i] == j)
+                {
+                if(TotalComp == 1)
+                    fprintf(H_Results,"\n    This manifold has %u boundary components of genus %u.",j,i);                
+                else
+                    fprintf(H_Results,"\n    'Summand' %u of M has %u boundary components of genus %u.",kk,j,i);
+                return;
+                }
+            if(TotalComp == 1)
+                fprintf(H_Results,"\n    This manifold has the following boundary components:");
+            else 
+                fprintf(H_Results,"\n    'Summand' %u of M has the following boundary components:",kk);
+            for(i = 1; CBC[k][i] < BDRY_UNKNOWN; i++) if( (j = CBC[k][i]) )
+                {
+                if(j == 1)
+                    fprintf(H_Results,"\n        %2u component  of genus %2u.",j,i);
+                else
+                    fprintf(H_Results,"\n        %2u components of genus %2u.",j,i);
                 }
             break;    
         }
@@ -1524,116 +831,137 @@ void Print_Bdry_Data(unsigned int WhichPres)
 void Fatal_Error(void)
 {
     /******************************************************************************************
-        Fatal_Error() is called when the program has discovered that a presentation is not
+        Fatal_Error() is called when Heegaard has discovered that a presentation is not
         realizable by a Heegaard diagram. It prints a message to this effect, and also prints
         the offending presentation.
     ******************************************************************************************/
     
-    SysBeep(5);
+    if(Batch == FALSE) SysBeep(5);
     BdryData = FALSE;
     if(NR[ReadPres] == NumRelators && Compare_Pres(ReadPres))
         {
-        fprintf(stdout,"\n\nPresentation %d is not realizable.\n",
-            ReadPres + 1);
-        Print_Relators(Relators,NumRelators,stdout);        
-        fprintf(myout,"\n\nPresentation %d is not realizable.\n",
-            ReadPres + 1);
+        printf("\n\n                    Presentation %d, from presentation %u, is not realizable. ",
+            ReadPres + 1,FR[ReadPres] + 1);
+        switch(PRIM[ReadPres])
+            {
+            case 1:
+            case 101:
+                printf("DR");
+                break;
+            case 2:
+            case 102:
+                printf("IP");
+                break;
+            case 3:
+            case 103:
+                printf("LS");
+                break;
+            case 4:
+            case 104:
+                printf("1G");
+                break;
+            case 5:
+            case 105:
+                printf("S3");
+                break;
+            case 6:
+            case 106:
+                printf("FP");
+                break;
+            case 7:
+            case 107:
+                printf("BC");
+                break;
+            case 8:
+            case 108:
+                printf("PM");
+                break;
+            case 9:
+            case 109:
+                printf("PM");
+                break;
+            case 10:
+            case 110:
+                printf("BC");
+                break;
+            case 11:
+            case 111:
+                printf("CF");
+                break;
+            case 12:
+            case 112:
+                printf("ER");
+                break;
+            case 13:
+            case 113:
+                printf("Er");
+                break;                    
+            case 20:
+            case 120:
+                printf("NC");
+                break;
+            case 30:
+            case 130:
+            case 40:
+            case 140:
+                printf("MG");
+                break;
+            case 60:
+            case 160:
+                printf("PP");
+                break;    
+            case 70:
+            case 170:
+                printf("Lt");
+                break;
+            case 75:
+            case 175:
+                printf("LT");
+                break;    
+            case 80:
+            case 180:
+                printf("A2");
+                break;    
+            default:
+                break;
+            } 
+        printf("\n");       
+        Print_Relators(Relators,NumRelators);        
         }
     else
         {    
-        fprintf(stdout,"\n\nThis presentation, obtained from presentation %d, is not realizable.\n",
+        printf("\n\n                    This presentation, obtained from presentation %d, is not realizable.\n",
             ReadPres + 1);
-        Print_Relators(Relators,NumRelators,stdout);        
-        fprintf(myout,"\n\nThis presentation obtained, from presentation %d, is not realizable.\n",
-            ReadPres + 1);
+        Print_Relators(Relators,NumRelators);
         }    
-    Print_Relators(Relators,NumRelators,myout);    
-
+        
     UDV[ReadPres] = DONE;
 }
 
-void Print_Relators(unsigned char ***MyRelators,int MyNumRelators,FILE *fptr)
+void Print_Relators(unsigned char ***MyRelators,int MyNumRelators)
 {
-    register int    i,
-                    j;
-        
-    register unsigned char *p;
+  int    i;
     
-    for(i = 1; i <= MyNumRelators; i++)    
-        {
-        HLock((char **) MyRelators[i]);        
-        fprintf(fptr,"\n R%3u:   ",i);
-            p = *MyRelators[i];
-            j = 9;
-            while(*p)
-                {
-		fputc(*p++,fptr);
-                if(j++ >= 90 && *p)
-                    {
-                    fprintf(fptr,"\n         ");
-                    j = 9;
-                    }
-                }
-        HUnlock((char **) MyRelators[i]);                                                        
-        }        
-    fprintf(fptr,"\n");
+    for(i = 1; i <= MyNumRelators; i++) printf("\n    %s",*MyRelators[i]); 
+
+    if(Batch == 0) printf("\n");
+}
+
+void Print_Relators2(unsigned char ***MyRelators,int MyNumRelators)
+{
+    int    i;
+    
+    for(i = 1; i <= MyNumRelators; i++) fprintf(H_Results,"\n    %s",*MyRelators[i]); 
 }
 
 void Micro_Print_Reset(void)
 {
-    register int     i,
-                    j;
-        
-    register unsigned char *p;
+    int     i;
     
-    printf("\n\nStarted with Presentation %d of Summand %d, Length %lu:\n",
-        ReadPres + 1,CurrentComp,SURL[ReadPres]);
-    if(Micro_Print_F)    
-        fprintf(myout,"\n\nStarted with Presentation %d of Summand %d, Length %lu:\n",
-            ReadPres + 1,CurrentComp,SURL[ReadPres]);
-    
-    fptr = stdout;
-    for(i = 1; i <= NumRelators; i++)    
-        {
-        HLock((char **) SUR[ReadPres][i]);        
-        fprintf(fptr,"\n R%3u:   ",i);
-            p = *SUR[ReadPres][i];
-            j = 9;
-            while(*p)
-                {
-		fputc(*p++,fptr);
-                if(j++ >= 90 && *p)
-                    {
-                    fprintf(fptr,"\n         ");
-                    j = 9;
-                    }
-                }
-        HUnlock((char **) SUR[ReadPres][i]);                                                        
-        }        
-    fprintf(fptr,"\n");
-    
-    if(Micro_Print_F)
-        {
-        fptr = myout;
-        for(i = 1; i <= NumRelators; i++)    
-            {
-            HLock((char **) SUR[ReadPres][i]);        
-            fprintf(fptr,"\n R%3u:   ",i);
-                p = *SUR[ReadPres][i];
-                j = 9;
-                while(*p)
-                    {
-		    fputc(*p++,fptr);
-                    if(j++ >= 90 && *p)
-                        {
-                        fprintf(fptr,"\n         ");
-                        j = 9;
-                        }
-                    }
-            HUnlock((char **) SUR[ReadPres][i]);                                                        
-            }        
-        fprintf(fptr,"\n");
-        }
+    printf("\n\nStarted with Presentation %d of Summand %d, Length %lu:\n",ReadPres + 1,CurrentComp,SURL[ReadPres]);    
+    for(i = 1; i <= NumRelators; i++)  printf("\n    %s",*SUR[ReadPres][i]);  
+   
+    printf("\n");
 }
 
 void Micro_Print_Freely_Reduce(unsigned long length, unsigned long origlength)
@@ -1641,25 +969,13 @@ void Micro_Print_Freely_Reduce(unsigned long length, unsigned long origlength)
     printf("\n\nFree reductions reduced the length of the current presentation from %lu to %lu.",
         length,origlength);
     printf("\nThe reduced presentation is:\n");
-    Print_Relators(Relators,NumRelators,stdout);
-    if(Micro_Print_F)
-        {
-        fprintf(myout,"\n\nFree reductions reduced the length of the current presentation from %lu to %lu.",
-            length,origlength);
-        fprintf(myout,"\nThe reduced presentation is:\n");
-        Print_Relators(Relators,NumRelators,myout);
-        }    
+    Print_Relators(Relators,NumRelators);
 }
 
 void Micro_Print_Dualize(void)
 {
     printf("\n\nDualized the current relators to get the following dual relators:\n");
-    Print_Relators(Relators,NumRelators,stdout);
-    if(Micro_Print_F)
-        {
-        fprintf(myout,"\n\nDualized the current relators to get the following dual relators:\n");
-        Print_Relators(Relators,NumRelators,myout);
-        }
+    Print_Relators(Relators,NumRelators);
 }
 
 void Micro_Print_Bandsum(void)
@@ -1669,439 +985,128 @@ void Micro_Print_Bandsum(void)
     SNumRelators = NumRelators;    
     printf("\n\nReplaced Relator %u with the following bandsum of Relator %u and Relator %u.",
         Word1,Word1,Word2);
-    printf(" Delta Length = %ld.\n",Length - SLength);    
-    if(Micro_Print_F)
-        {
-        fprintf(myout,"\n\nReplaced Relator %u with the following bandsum of Relator %u and Relator %u.",
-            Word1,Word1,Word2);
-        fprintf(myout," Delta Length = %ld.\n",Length - SLength);
-        }        
+    printf(" Delta Length = %ld.\n",Length - SLength);     
     NumRelators = 1;
-    Print_Relators(Relators,NumRelators,stdout);
-    if(Micro_Print_F)
-        Print_Relators(Relators,NumRelators,myout);
+    Print_Relators(Relators,NumRelators);
     NumRelators = SNumRelators;
     if(Word1 != 1)
-        {
         printf("\n\nAnd then swapped Relator %u and Relator 1.",Word1);
-        if(Micro_Print_F)
-            fprintf(myout,"\n\nAnd then swapped Relator %u and Relator 1.",Word1);
-        }
     printf("\n\nThe current presentation is:\n");
-    Print_Relators(Relators,NumRelators,stdout);
-    if(Micro_Print_F)
-        {
-        fprintf(myout,"\n\nThe current presentation is:\n");
-        Print_Relators(Relators,NumRelators,myout);
-        }        
-}    
-
-void Micro_Print_Level_Transformations_Reset(void)
-{
-    printf("\n\nLooking for level-transformations of:\n");
-    Print_Relators(Relators,NumRelators,stdout);
-    if(Micro_Print_F)
-        {
-        fprintf(myout,"\n\nLooking for level-transformations of:\n");
-        Print_Relators(Relators,NumRelators,myout);
-        }
-}
-
-void Micro_Print_Level_Transformations(unsigned int TheComp,
-				       unsigned int V1,
-				       unsigned int V2,
-				       unsigned int Type,
-				       unsigned int NumReps)
-{
-    char            x,
-                    y;
-                                        
-    unsigned char     *p;
-    
-    int             i;
-    
-    unsigned int    j;
-    
-    if(V1 & 1)
-        x = V1/2 + 97;
-    else
-        x = V1/2 + 65;
-    if(V2 & 1)
-        y = V2/2 + 97;
-    else
-        y = V2/2 + 65;                
-    printf("\n\nVertices %c and %c form a Type %u separating pair.",x,y,Type);
-    if(Micro_Print_F)
-        fprintf(myout,"\n\nVertices %c and %c form a Type %u separating pair.",x,y,Type);
-    
-    ReallocateHandle((char **) Temp9,2*VERTICES);
-    p = *Temp9;
-    
-    for(i = 0; i < Vertices; i++)
-        {
-        if(XX[i] == TheComp)
-            {
-            if(i & 1)
-                *p++ = i/2 + 97;
-            else
-                *p++ = i/2 + 65;
-            *p++ = ',';    
-            }
-        }
-    p--;
-    *p = EOS;
-    HLock((char **) Temp8);
-    HLock((char **) Temp9);    
-    printf("\nPerformed a level-transformation by sliding vertice(s):");
-    printf("\n{%s}",*Temp9);
-    printf("\nalong a path represented by: ");
-    for(j = 0; j < NumReps; j++) printf("%s",*Temp8);
-    printf("\nto obtain the presentation:\n");
-    if(Micro_Print_F)
-        {
-        fprintf(myout,"\nPerformed a level-transformation by sliding vertice(s):");
-        fprintf(myout,"\n{%s}",*Temp9);
-        fprintf(myout,"\nalong a path represented by: ");
-        for(j = 0; j < NumReps; j++) fprintf(myout,"%s",*Temp8);
-        fprintf(myout,"\nto obtain the presentation:\n");
-        }
-    HUnlock((char **) Temp8);
-    HUnlock((char **) Temp9);
-    Print_Relators(Relators,NumRelators,stdout);
-    if(Micro_Print_F)
-        Print_Relators(Relators,NumRelators,myout);
+    Print_Relators(Relators,NumRelators); 
 }
 
 void Micro_Print_Do_Aut(unsigned int Source, unsigned int NumReps)
 {
-    unsigned char    A,
+    char   			A,
                     a,
                     x;
                     
-    int                i,
-                    j,
-                    k;
+    int             i;
+                    
+    /********************************************************************************************
+    	Specifying how a Whitehead automorphism acts on a set of generators is not well-defined
+    until the location of a base-point has been specified. Here we adopt the convention that the
+    base-point lies on the same side of a partition of vertices defining a Whitehead 
+    transformation of the Whitehead Graph as the Sink vertex.
+    ********************************************************************************************/
                                     
-    A = ((Source >> 1) + 65);
+    A = ((Source/2) + 65);
     a = A + 32;
     
     if(Micro_Print)
-        {
-        fprintf(stdout,"\nDo Aut %u time(s): ",NumReps);
-        if(Micro_Print_F)
-            fprintf(myout,"\nDo Aut %u time(s): ",NumReps);
-        }
+        printf("\nDo Aut %u time(s): ",NumReps);
     else
-        {
-        fprintf(stdout,"\n%6lu) ",Num_Level_Transformations + 1);
-        fprintf(myout,"\n%6lu) ",Num_Level_Transformations + 1);
-        }    
-        
-    for(i = j = k = 0; i < Vertices; i+= 2)
-        {
-        if(VA[i >> 1] == 0) continue;
-        if(!ZZ[i] && !ZZ[i+1])
-            j++;
+        printf("\n%6lu) ",Num_Level_Transformations + 1);
+
+	for(i = 0; i < Vertices; i += 2)
+		{
+		if(i == Source)  continue;
+		if(VA[i/2] == 0) continue;
+        x = (i/2) + 65;
+        if(ZZ[i])
+        	{
+        	if(!ZZ[i+1]) printf("%c->%c%c  ",x,x,a);
+        	}
         else
-        if(ZZ[i] && ZZ[i+1])
-            k++;
-        }
-    if(j <= k) for(i = j = 0; i < Vertices; i += 2)
-        {
-        if(i == Source) continue;
-        if(VA[i >> 1] == 0) continue;
-        x = (i >> 1) + 65;
-        if(!ZZ[i])
-            {
-            if(ZZ[i+1])
-                {
-                if(++j > 12)
-                    {
-                    j = 1;
-                    fprintf(stdout,"\n        ");
-                    if(Compute_Stabilizers || Micro_Print_F)                    
-                        fprintf(myout,"\n        ");
-                    }
-                fprintf(stdout,"%c->%c%c  ",x,A,x);
-                if(Compute_Stabilizers || Micro_Print_F)
-                    fprintf(myout,"%c->%c%c  ",x,A,x);
-                }
-            else
-                {
-                if(++j > 12)
-                    {
-                    j = 1;
-                    fprintf(stdout,"\n        ");
-                    if(Compute_Stabilizers || Micro_Print_F)
-                    fprintf(myout,"\n        ");
-                    }
-                fprintf(stdout,"%c->%c%c%c ",x,A,x,a);
-                if(Compute_Stabilizers || Micro_Print_F)
-                    fprintf(myout,"%c->%c%c%c ",x,A,x,a);
-                }
-            }
-        else
-        if(!ZZ[i+1])
-            {
-            if(++j > 12)
-                {
-                j = 1;
-                fprintf(stdout,"\n        ");
-                if(Compute_Stabilizers || Micro_Print_F)
-                    fprintf(myout,"\n        ");
-                }
-            fprintf(stdout,"%c->%c%c  ",x,x,a);
-            if(Compute_Stabilizers || Micro_Print_F)
-                fprintf(myout,"%c->%c%c  ",x,x,a);
-            }
-        }
-    else  for(i = j = 0; i < Vertices; i += 2)
-        {
-        if(i == Source) continue;
-        if(VA[i >> 1] == 0) continue;
-        x = (i >> 1) + 65;
-        if(!ZZ[i])
-            {
-            if(ZZ[i+1])
-                {
-                if(++j > 12)
-                    {
-                    j = 1;
-                    fprintf(stdout,"\n        ");
-                    if(Compute_Stabilizers || Micro_Print_F)
-                        fprintf(myout,"\n        ");
-                    }
-                fprintf(stdout,"%c->%c%c  ",x,x,A);
-                if(Compute_Stabilizers || Micro_Print_F)
-                    fprintf(myout,"%c->%c%c  ",x,x,A);
-                }
-            }
-        else
-            {
-            if(!ZZ[i+1])
-                {
-                if(++j > 12)
-                    {
-                    j = 1;
-                    fprintf(stdout,"\n        ");
-                    if(Compute_Stabilizers || Micro_Print_F)
-                        fprintf(myout,"\n        ");
-                    }
-                fprintf(stdout,"%c->%c%c  ",x,a,x);
-                if(Compute_Stabilizers || Micro_Print_F)
-                    fprintf(myout,"%c->%c%c  ",x,a,x);
-                }
-            else
-                {
-                if(++j > 12)
-                    {
-                    j = 1;
-                    fprintf(stdout,"\n        ");
-                    if(Compute_Stabilizers || Micro_Print_F)
-                        fprintf(myout,"\n        ");
-                    }
-                fprintf(stdout,"%c->%c%c%c ",x,a,x,A);
-                if(Compute_Stabilizers || Micro_Print_F)
-                    fprintf(myout,"%c->%c%c%c ",x,a,x,A);
-                }    
-            }    
-        }                
+        	{
+        	if(ZZ[i+1]) 
+        		printf("%c->%c%c  ",x,A,x);
+        	else
+        		printf("%c->%c%c%c  ",x,A,x,a);
+        	}
+		}
 }
 
-        
-#ifdef PRINT
 void Print_DelRelators(void)
 {
     int i;
         
-    fprintf(stdout,"\n");    
-    for(i = 1; i <= NumRelators; i++)
-        {
-        HLock((char **) DelRelators[i]);
-        fprintf(stdout,"\nR %2u:    %s",i,*DelRelators[i]);
-        HUnlock((char **) DelRelators[i]);
-        }
+    printf("\n");    
+    for(i = 1; i <= NumRelators; i++) printf("\n    %s",*DelRelators[i]);
+
 }
 
-void Print_DualRelators(int F1)
+void Print_DualRelators(int F1,int F2,int Pres, int HS)
 {
-    register int             i,
-                            j;
-        
-    register unsigned char *p;
+    register int            i;
     
-    FILE                    *fptr;
-    
-    fptr = stdout;
-    
-    RERUN_AND_SAVE:
-    
-    fprintf(fptr,"\n\nThe 'Dual' Relators of Diagram %d are:\n",WhichInput + 1);
-    
-    for(i = 1; i <= NumGenerators; i++)    
-        {
-        HLock((char **) DualRelators[i]);        
-        fprintf(fptr,"\n R%3u:   ",i);
-            p = *DualRelators[i];
-            j = 9;
-            while(*p)
-                {
-		fputc(*p++,fptr);
-                if(j++ >= 90 && *p)
-                    {
-                    fprintf(fptr,"\n         ");
-                    j = 9;
-                    }
-                }
-        HUnlock((char **) DualRelators[i]);                                                        
-        }        
-    fprintf(fptr,"\n");
-    
-    if(fptr == stdout)
-        {
-        printf("\n    SAVE A COPY OF THIS DATA IN 'Heegaard_Results' ?  HIT 'y' OR 'n'.");
-        GET_RESPONSE1:
-        switch(WaitkbHit())
-            {
-            case 'y':
-                fptr = myout;
-                goto RERUN_AND_SAVE;
-            case 'n':
-                break;
-            default:
-                SysBeep(5);
-                goto GET_RESPONSE1;    
-            }
-        }
-        
-    printf("\n\nHIT 'P' TO PRINT THE DIAGRAM.");
-    printf("\n   HIT 'm' TO RETURN TO DIAGRAM %d.",WhichInput + 1);
-    printf("\n      HIT 'v' TO REVIEW PRESENTATION %d.",WhichInput + 1);
-    if(F1)
-        {
-        printf("\n         HIT 'n' TO SEE THE NEXT PRESENTATION.");
-        printf("\n            HIT 'p' TO SEE THE PREVIOUS PRESENTATION.");
-        printf("\n               HIT 'b' FOR INFO ABOUT THE BDRY OF THIS MANIFOLD.");
-        printf("\n                  HIT 'D' TO SEE THE 'DUAL' RELATORS FOR THIS DIAGRAM.");
-        printf("\n                     HIT 'O' TO SEE THE 'OUT' RELATORS FOR THIS DIAGRAM.");                                            
-        }
+    if(F2)
+    	printf("\n\nThe 'Dual' Relators of the Diagram of Pres %d of HS %d are:\n",Pres,HS);    
     else
-        {    
-        printf("\n         HIT 'n' TO SEE THE NEXT DIAGRAM.");
-        printf("\n            HIT 'p' TO SEE THE PREVIOUS DIAGRAM.");
-        printf("\n               HIT 'q' TO QUIT VIEWING DIAGRAMS.");
-        printf("\n                  HIT 'b' FOR INFO ABOUT THE BDRY OF THIS MANIFOLD.");
-        printf("\n                     HIT 'D' TO SEE THE 'DUAL' RELATORS FOR THIS DIAGRAM.");
-        printf("\n                        HIT 'O' TO SEE THE 'OUT' RELATORS FOR THIS DIAGRAM.");        
-        }                
+    	printf("\n\nThe 'Dual' Relators of Diagram %d are:\n",WhichInput + 1);
+    
+    for(i = 1; i <= NumGenerators; i++)  printf("\n    %s",*DualRelators[i]); 
+        
+    printf("\n\nNote: Dual Relators are read counter-clockwise about vertices A,B ... Z starting at edge 0.");  
 }
 
-void Print_OutRelators(F1)
+void Print_OutRelators(int F1,int F2,int Pres,int HS)
 {
-    register int             i,
-                            j;
-        
-    register unsigned char *p;
+    register int            i;
     
-    FILE                    *fptr;
-    
-    fptr = stdout;
-    
-    RERUN_AND_SAVE:
-    
-    fprintf(fptr,"\n\nThe 'Out' Relators of Diagram %d are:\n",WhichInput + 1);
-    
-    for(i = 1; i <= NumRelators; i++)    
-        {
-        HLock((char **) OutRelators[i]);        
-        fprintf(fptr,"\n R%3u:   ",i);
-            p = *OutRelators[i];
-            j = 9;
-            while(*p)
-                {
-		fputc(*p++,fptr);
-                if(j++ >= 90 && *p)
-                    {
-                    fprintf(fptr,"\n         ");
-                    j = 9;
-                    }
-                }
-        HUnlock((char **) OutRelators[i]);                                                        
-        }        
-    fprintf(fptr,"\n");
-    
-    if(fptr == stdout)
-        {
-        printf("\n    SAVE A COPY OF THIS DATA IN 'Heegaard_Results' ?  HIT 'y' OR 'n'.");
-        GET_RESPONSE1:
-        switch(WaitkbHit())
-            {
-            case 'y':
-                fptr = myout;
-                goto RERUN_AND_SAVE;
-            case 'n':
-                break;
-            default:
-                SysBeep(5);
-                goto GET_RESPONSE1;    
-            }
-        }
-        
-    printf("\n\nHIT 'P' TO PRINT THE DIAGRAM.");
-    printf("\n   HIT 'm' TO RETURN TO DIAGRAM %d.",WhichInput + 1);
-    printf("\n      HIT 'v' TO REVIEW PRESENTATION %d.",WhichInput + 1);
-    if(F1)
-        {
-        printf("\n         HIT 'n' TO SEE THE NEXT PRESENTATION.");
-        printf("\n            HIT 'p' TO SEE THE PREVIOUS PRESENTATION.");
-        printf("\n               HIT 'b' FOR INFO ABOUT THE BDRY OF THIS MANIFOLD.");                                    
-        printf("\n                  HIT 'D' TO SEE THE 'DUAL' RELATORS FOR THIS DIAGRAM.");
-        printf("\n                     HIT 'O' TO SEE THE 'OUT' RELATORS FOR THIS DIAGRAM.");        
-        }
+    if(F2)
+    	printf("\n\nThe 'Out' Relators of the Diagram of Pres %d of HS %d are:\n",Pres,HS);    
     else
-        {    
-        printf("\n         HIT 'n' TO SEE THE NEXT DIAGRAM.");
-        printf("\n            HIT 'p' TO SEE THE PREVIOUS DIAGRAM.");
-        printf("\n               HIT 'q' TO QUIT VIEWING DIAGRAMS.");
-        printf("\n                  HIT 'b' FOR INFO ABOUT THE BDRY OF THIS MANIFOLD.");
-        printf("\n                     HIT 'D' TO SEE THE 'DUAL' RELATORS FOR THIS DIAGRAM.");
-        printf("\n                        HIT 'O' TO SEE THE 'OUT' RELATORS FOR THIS DIAGRAM.");        
-        }        
+    	printf("\n\nThe 'Out' Relators of Diagram %d are:\n",WhichInput + 1);
+    
+    for(i = 1; i <= NumRelators; i++)  printf("\n    %s",*OutRelators[i]);  
+       
+    printf("\n");       
 }
 
-void Print_SLR(int i)
+void Print_SLR(int i,int Found_L_Annulus)
 {
     int j;
     
-    fprintf(stdout,"\n");    
-    for(j = 1; j <= NumRelators; j++)
-        {
-        HLock((char **) SLR[i][j]);
-        fprintf(stdout,"\nSLR [%2u][%2u]:    %s",i,j,*SLR[i][j]);
-        HUnlock((char **) SLR[i][j]);
-        }
-}
-#endif        
+    if(Found_L_Annulus) return;
+    CouldNotRemove ++;
+    
+    printf("\n\nCould not remove all separating pairs of vertices from the following presentation.\n");
+    printf("And Level_Transformations() did not locate an annulus.");
+    
+    for(j = 1; j <= NumRelators; j++) printf("\n    %s",*SLR[i][j]);
+    printf("\n");
 
-Display_A_Diagram()
+}
+        
+int Display_A_Diagram(F1,Pres,HS)
 {    
-    int                Reply;
+    int             Reply;
     
     unsigned int    SaveUDV;            
     
-    unsigned long    SLSP,
+    unsigned long   SLSP,
                     SLSQ;
 
     DrawingDiagrams = TRUE;
-    CycleDiagrams     = FALSE;
 
-    if(Get_Relators_From_SUR(WhichInput))
+    if((WhichInput != (MAX_SAVED_PRES - 1)) && Get_Relators_From_SUR(WhichInput))
         {
         printf("\n\n    Memory Error. Sorry!");
         goto _ERROR;        
         }
                 
-    if(Length == 0L)
+    if(Length == 0)
         {
         printf("\n\nThis is an empty presentation. There is nothing to display.");
         goto _ERROR;
@@ -2114,16 +1119,19 @@ Display_A_Diagram()
             case 1:
                 break;
             case TOO_LONG:
-                SysBeep(5);
-                printf("\n\n     Unable to display diagram %d. Sorry!",WhichInput + 1);
+                if(Batch == FALSE) SysBeep(5);
+                if(F1)
+                	printf("\n\n     Unable to display the diagram of Pres %d of HS %d. Sorry!",Pres,HS);                
+                else
+                	printf("\n\n     Unable to display diagram %d. Sorry!",WhichInput + 1);
                 goto _ERROR;
             }
         if(Automorphisms)
             {
-            SysBeep(5);
+            if(Batch == FALSE) SysBeep(5);
             printf("\n\n                    NOTE!");
             printf("\n\n    Presentation 1 does not have minimal length.");
-            printf("\n    The program will only display diagrams of minimal length presentations.");
+            printf("\n    Heegaard will only display diagrams of minimal length presentations.");
             printf("\n    Presentation 2 should give a diagram of a minimal length version of presentation 1.");
             goto _ERROR;
             }    
@@ -2132,17 +1140,23 @@ Display_A_Diagram()
     Fill_A(NumRelators);
     if(ComputeValences_A())
         {
-        SysBeep(5);
-        printf("\n\n     Unable to display diagram %d. Sorry!",WhichInput + 1);
+        if(Batch == FALSE) SysBeep(5);
+        if(F1)
+            printf("\n\n     Unable to display the diagram of Pres %d of HS %d. Sorry!",Pres,HS);     
+        else
+        	printf("\n\n     Unable to display diagram %d. Sorry!",WhichInput + 1);
         goto _ERROR;    
         }    
     Get_Matrix();
     Check_Connected();
-    SepPairs = Sep_Pairs(0,0);
+    SepPairs = Sep_Pairs(0,0,1);
     if(SepPairs == TOO_LONG)
         {
-        SysBeep(5);
-        printf("\n\n     Unable to display diagram %d. Sorry!",WhichInput + 1);
+        if(Batch == FALSE) SysBeep(5);
+        if(F1)
+        	printf("\n\n     Unable to display the diagram of Pres %d of HS %d. Sorry!",Pres,HS);
+        else
+       		printf("\n\n     Unable to display diagram %d. Sorry!",WhichInput + 1);
         goto _ERROR;
         }
     SaveUDV = UDV[WhichInput];
@@ -2160,45 +1174,46 @@ Display_A_Diagram()
         else
             LSQ[WhichInput] = V2/2 + 65;        
         }
-    NonPlanar = Planar(FALSE,FALSE);
-    Reply = Print_Graph(TRUE);
+    NonPlanar = Planar(FALSE,TRUE);
+    Reply = Print_Graph(TRUE,F1,Pres,HS);
     if(UDV[WhichInput] != ANNULUS_EXISTS && UDV[WhichInput] != V2_ANNULUS_EXISTS)
         UDV[WhichInput] = SaveUDV;
     LSP[WhichInput] = SLSP;
     LSQ[WhichInput] = SLSQ;    
-    DrawingDiagrams = FALSE;            
-    printf("\f");
+    DrawingDiagrams = FALSE;
     return(Reply);
 
 _ERROR:
     printf("\n\n         HIT 'n' TO SEE THE NEXT PRESENTATION.");
-    printf("\n            HIT 'p' TO SEE THE PREVIOUS PRESENTATION.");
-    GET_RESPONSE:
+    if(!F1) printf("\n            HIT 'p' TO SEE THE PREVIOUS PRESENTATION.");
+    GET_RESPONSE:    
     switch(WaitkbHit())
         {
         case 'n':
             Reply = 0;
             break;
         case 'p':
+        	if(F1)
+        		{
+            	if(Batch == FALSE) SysBeep(5);
+            	goto GET_RESPONSE;        		
+        		}
             Reply = 1;
             break;
         default:
-            SysBeep(5);
+            if(Batch == FALSE) SysBeep(5);
             goto GET_RESPONSE;
         }
-    DrawingDiagrams = FALSE;            
-    printf("\f");
+    DrawingDiagrams = FALSE;
     return(Reply);                        
 }
 
 void Display_Diagrams(void)
 {
-    unsigned char   DispList[MAX_SAVED_PRES],
-                    *r;                    
+    unsigned char   *ptr = NULL;                    
                             
     int             NoSepPairs,
                     NumConnected,
-                    PP,
                     Response,
                     SWhichInput;
     
@@ -2208,22 +1223,22 @@ void Display_Diagrams(void)
                     k,
                     SaveUDV;
                     
-    unsigned long    SLSP,
+    unsigned long   SLSP,
                     SLSQ;                                
 
-    printf("\n\n                    Displaying Diagrams. . .");
-REDRAW:
+    printf("\n\n                    Displaying Diagram Data. . .");
+
     if(NumFilled > 1)
         {
         printf("\n\n    REVIEW ALL PRESENTATIONS AVAILABLE ?  HIT 'y' OR 'n'.");
-        GET_RESPONSE1:
+        GET_RESPONSE1:        
         switch(WaitkbHit())
             {
             case 'y':
                 REVIEW:
-                Report(Band_Sums,NumDiagrams,OnStack,0,0,0,0,0,1,0);
+                Report(Band_Sums,NumDiagrams,OnStack,0,0,0,0,0,1,NULL);
                 printf("\n\n    CONTINUE TO REVIEW PRESENTATIONS ?  HIT 'y' OR 'n'.");
-                GET_RESPONSE5:
+                GET_RESPONSE5:                
                 switch(WaitkbHit())
                     {
                     case 'y':
@@ -2231,40 +1246,41 @@ REDRAW:
                     case 'n':
                         break;
                     default:
-                        SysBeep(5);
+                        if(Batch == FALSE) SysBeep(5);
                         goto GET_RESPONSE5;
                     }
                 break;    
             case 'n':
                 break;
             default:
-                SysBeep(5);
+                if(Batch == FALSE) SysBeep(5);
                 goto GET_RESPONSE1;
             }
         }        
     DrawingDiagrams = TRUE;
-    
-    printf("\n\n    a) SHOW ALL DIAGRAMS,");
-    printf("\n    b) SHOW ALL DIAGRAMS THAT ARE CONNECTED AND HAVE NO PAIRS OF SEPARATING VERTICES,");
-    printf("\n    c) OR SHOW YOUR CHOICE OF A PARTICULAR DIAGRAM ?");
+REDRAW:    
+    printf("\n\n    a) SHOW DATA FOR ALL DIAGRAMS,");
+    printf("\n    b) SHOW DATA FOR ALL DIAGRAMS THAT ARE CONNECTED AND HAVE NO SEPARATING PAIRS OF VERTICES,");
+    printf("\n    c) OR SHOW YOUR CHOICE OF DATA FOR A PARTICULAR DIAGRAM ?");
     printf("\n\n    HIT 'a','b', OR 'c'");
     GET_RESPONSE2:
-    switch(Response = WaitkbHit())
+    Response = WaitkbHit();   
+    switch(Response)
         {
         case 'a':
         case 'b':
         case 'c':
             break;
         default:
-            SysBeep(5);
+            if(Batch == FALSE) SysBeep(5);
             goto GET_RESPONSE2;
         }
     if(Response == 'c')
         {
-        CycleDiagrams = FALSE;
-        r = (unsigned char *) NewPtr(100L);
-        printf("\n\nENTER A DIAGRAM FROM 1 TO %u THAT YOU WANT TO SEE AND HIT 'return'.      ",NumFilled);
-        for(i = j = 0; j < NumFilled; j++) if(SURL[j] == 0L) i ++;
+        ptr = (unsigned char *) NewPtr(100);
+        if(ptr == NULL) Mem_Error();
+        printf("\n\nENTER A DIAGRAM FROM 1 TO %u WHOSE DATA YOU WISH TO SEE AND HIT 'return'.      ",NumFilled);
+        for(i = j = 0; j < NumFilled; j++) if(SURL[j] == 0) i ++;
         if(i)
             {
             if(i == 1)
@@ -2277,13 +1293,13 @@ REDRAW:
                 {
                 j = 0;
                 j += printf("\n\nExcept for diagrams: ");
-                for(h = 0,k = 1; h < NumFilled; h++) if(SURL[h] == 0L)
+                for(h = 0,k = 1; h < NumFilled; h++) if(SURL[h] == 0)
                     {
                     h++;
                     j += printf("{%d,",h);    
                     break;
                     }
-                for( ; h < NumFilled; h++) if(SURL[h] == 0L)
+                for( ; h < NumFilled; h++) if(SURL[h] == 0)
                     {
                     if(++k < i)
                         j += printf("%d,",h+1);
@@ -2300,14 +1316,14 @@ REDRAW:
             }
         GET_RESPONSE3:
         WhichInput = 0;                
-        ReadString((char *)r, GetPtrSize(r));
-        sscanf((char *) r,"%d",&WhichInput);        
-        if(WhichInput < 1 || WhichInput > NumFilled || SURL[WhichInput-1] == 0L)
+        ReadString((char *)ptr, GetPtrSize(ptr));
+        sscanf((char *) ptr,"%d",&WhichInput);        
+        if(WhichInput < 1 || WhichInput > NumFilled || SURL[WhichInput-1] == 0)
             {
-            SysBeep(5);
+            if(Batch == FALSE) SysBeep(5);
             goto GET_RESPONSE3;
             }    
-        DisposePtr((char *) r);    
+        DisposePtr((char *) ptr);
         WhichInput --;
                 
         if(Get_Relators_From_SUR(WhichInput))
@@ -2316,7 +1332,7 @@ REDRAW:
             goto REDRAW;        
             }
                 
-        if(Length == 0L)
+        if(Length == 0)
             {
             printf("\n\nThis is an empty presentation. There is nothing to display.");
             goto REDRAW;
@@ -2329,19 +1345,19 @@ REDRAW:
                 case 1:
                     break;
                 case TOO_LONG:
-                    SysBeep(5);
-                    printf("\n\n     Unable to display diagram %d. Sorry!",WhichInput + 1);
+                    if(Batch == FALSE) SysBeep(5);
+                    printf("\n\n     Unable to display data for diagram %d. Sorry!",WhichInput + 1);
                     goto REDRAW;
                 }
             if(Automorphisms)
                 {
-                SysBeep(5);
+                if(Batch == FALSE) SysBeep(5);
                 printf("\n\n                    NOTE!");
                 printf("\n\n    Presentation 1 does not have minimal length.");
-                printf("\n    The program will only display diagrams of minimal length presentations.");
+                printf("\n    Heegaard will only display data for diagrams of minimal length presentations.");
                 printf("\n    Presentation 2 should give a diagram of a minimal length version of presentation 1.");
                 printf("\n\n    HIT ANY KEY TO CONTINUE.");
-                WaitkbHit();
+	            WaitkbHit();   
                 goto REDRAW;
                 }    
             }
@@ -2349,23 +1365,23 @@ REDRAW:
         Fill_A(NumRelators);
         if(ComputeValences_A())
             {
-            SysBeep(5);
-            printf("\n\n     Unable to display diagram %d. Sorry!",WhichInput + 1);
+            if(Batch == FALSE) SysBeep(5);
+            printf("\n\n     Unable to display data for diagram %d. Sorry!",WhichInput + 1);
             goto REDRAW;
             }    
         Get_Matrix();
         Check_Connected();
-        SepPairs = Sep_Pairs(0,0);
+        SepPairs = Sep_Pairs(0,0,1);
         if(SepPairs == TOO_LONG)
             {
-            SysBeep(5);
-            printf("\n\n     Unable to display diagram %d. Sorry!",WhichInput + 1);
+            if(Batch == FALSE) SysBeep(5);
+            printf("\n\n     Unable to display data for diagram %d. Sorry!",WhichInput + 1);
             goto REDRAW;
             }
         SaveUDV = UDV[WhichInput];
         SLSP = LSP[WhichInput];
         SLSQ = LSQ[WhichInput];
-        SWhichInput = WhichInput;        
+        SWhichInput = WhichInput;    
         if(SepPairs)
             {
             if(UDV[WhichInput] == 0) UDV[WhichInput] = SEP_PAIRS;
@@ -2378,8 +1394,8 @@ REDRAW:
             else
                 LSQ[WhichInput] = V2/2 + 65;
             }
-        NonPlanar = Planar(FALSE,FALSE);
-        Print_Graph(FALSE);
+        NonPlanar = Planar(FALSE,TRUE);
+        Print_Graph(FALSE,0,0,0);
         if(UDV[SWhichInput] != ANNULUS_EXISTS && UDV[SWhichInput] != V2_ANNULUS_EXISTS)
             UDV[SWhichInput] = SaveUDV;
         LSP[SWhichInput] = SLSP;
@@ -2387,12 +1403,10 @@ REDRAW:
         }
     if(Response == 'a' || Response == 'b')
         {
-        CycleDiagrams = TRUE;
         NoSepPairs = FALSE;
         NumConnected = 0;
-        for(i = 0; i < NumFilled; i++) DispList[i] = EOS;
         for(WhichInput = 0; WhichInput < NumFilled; WhichInput ++)
-        if(SURL[WhichInput] != 0L)
+        if(SURL[WhichInput] != 0)
             {
             h = UDV[WhichInput];
             if(Response == 'b' && (h == SEP_PAIRS || h == ANNULUS_EXISTS)) continue;        
@@ -2410,19 +1424,19 @@ REDRAW:
                     case 1:
                         break;
                     case TOO_LONG:
-                        SysBeep(5);
-                        printf("\n\n     Unable to display diagram %d. Sorry!",WhichInput + 1);
+                        if(Batch == FALSE) SysBeep(5);
+                        printf("\n\n     Unable to display data for diagram %d. Sorry!",WhichInput + 1);
                         continue;
                     }
                 if(Automorphisms)
                     {
-                    SysBeep(5);
+                    if(Batch == FALSE) SysBeep(5);
                     printf("\n\n                    NOTE!");
                     printf("\n\n    Presentation 1 does not have minimal length.");
-                    printf("\n    The program will only display diagrams of minimal length presentations.");
+                    printf("\n    Heegaard will only display data for diagrams of minimal length presentations.");
                     printf("\n    Presentation 2 should give a diagram of a minimal length version of presentation 1.");
-                    printf("\n\nHIT ANY KEY TO SEE THE NEXT DIAGRAM.");
-                    WaitkbHit();
+                    printf("\n\nHIT ANY KEY TO SEE DATA FOR THE NEXT DIAGRAM.");
+	    			WaitkbHit();
                     continue;
                     }    
                 }
@@ -2430,19 +1444,19 @@ REDRAW:
             Fill_A(NumRelators);
             if(ComputeValences_A())
                 {
-                SysBeep(5);
-                printf("\n\n     Unable to display diagram %d. Sorry!",WhichInput + 1);
+                if(Batch == FALSE) SysBeep(5);
+                printf("\n\n     Unable to display data for diagram %d. Sorry!",WhichInput + 1);
                 continue;
                 }            
             Get_Matrix();
             Check_Connected();
             if(!Connected && Response == 'b') continue;
             NumConnected ++;
-            SepPairs = Sep_Pairs(0,0);
+            SepPairs = Sep_Pairs(0,0,1);
             if(SepPairs == TOO_LONG)
                 {
-                SysBeep(5);
-                printf("\n\n     Unable to display diagram %d. Sorry!",WhichInput + 1);
+                if(Batch == FALSE) SysBeep(5);
+                printf("\n\n     Unable to display data for diagram %d. Sorry!",WhichInput + 1);
                 continue;
                 }    
             SaveUDV = UDV[WhichInput];
@@ -2462,26 +1476,15 @@ REDRAW:
                     LSQ[WhichInput] = V2/2 + 65;        
                 }
             NoSepPairs = TRUE;    
-            NonPlanar = Planar(FALSE,FALSE);
-            DispList[WhichInput] = TRUE;
+            NonPlanar = Planar(FALSE,TRUE);
             SWhichInput = WhichInput;
-            if(Print_Graph(FALSE))
+            if(Print_Graph(TRUE,0,0,0))
                 {
-                if(Response == 'a')
-                    {
-                    if(WhichInput) WhichInput -= 2;
-                    else WhichInput --;    
-                    }
-                if(Response == 'b')
-                    {
-                    for(PP = WhichInput - 1; PP >= 0; PP--)
-                    if(DispList[PP])
-                        {
-                        WhichInput = PP - 1;
-                        break;
-                        }
-                    if(PP < 0) WhichInput --;                            
-                    }
+                if(WhichInput > NumFilled) 
+                	{
+                	DrawingDiagrams = FALSE;
+                	return;
+                	}
                 }
             if(UDV[SWhichInput] != ANNULUS_EXISTS && UDV[SWhichInput] != V2_ANNULUS_EXISTS)
                 UDV[SWhichInput] = SaveUDV;
@@ -2492,117 +1495,798 @@ REDRAW:
 
     if(Response == 'b' && (!NoSepPairs || !NumConnected))
         {
-        SysBeep(5);
-        printf("\n\n    There are no diagrams which are connected and without pairs of separating vertices!");
+        if(Batch == FALSE) SysBeep(5);
+        printf("\n\n    There are no diagrams which are connected and without separating pairs of vertices!");
         }
-    if(Response == 'c' || WhichInput <= NumFilled)
-        {
-        printf("\n\n    CONTINUE DISPLAYING DIAGRAMS  ?  HIT 'y' OR 'n'.");    
-        GET_RESPONSE4:
-        switch(WaitkbHit())
-            {
-            case 'y':
-                goto REDRAW;
-            case 'n':
-                break;
-            default:
-                SysBeep(5);
-                goto GET_RESPONSE4;
-            }
-        }    
-    DrawingDiagrams = FALSE;            
-    printf("\f");                    
+
+    DrawingDiagrams = FALSE;                   
 }
 
-int Save_Pres_To_Input_Presentations(WhichPres)
+int Batch_Report(int * Table)
+{	
+    unsigned char   Finite,
+    				*p,
+    				PrintPres,
+    				PrintedS3,
+                    x,
+                    y;
+    
+    int             *CompType1 = NULL,
+    				*CompType2 = NULL,
+    				MyTotalCompFound,
+    				MyTotalFiniteComp,
+    				NumRelators,
+    				NumSFFound,
+    				Start;
+                     
+    unsigned int    i,
+                    j,
+                    k,
+                    m,
+                    n;                                
+    
+    unsigned long   Length;
+
+	CompType1 = (int *)NewPtr(sizeof(int)*(TotalComp + 1));
+	if(CompType1 == NULL) Mem_Error();
+	CompType2 = (int *)NewPtr(sizeof(int)*(TotalComp + 1));
+	if(CompType2 == NULL) Mem_Error();	
+	for(k = 1; k <= TotalComp; k++) CompType1[k] = CompType2[k] = 0;
+			    
+	for(n = 0; n < NumFilled; n++)
+        {
+        i = Table[n];
+        PrintPres = FALSE;
+		switch(PRIM[i])
+			{
+			case 3:
+			case 103:
+				/* printf("LS"): */
+				PrintPres = TRUE;
+				break;
+			case 4:
+			case 104:
+				/* printf("1G"): */
+				PrintPres = TRUE;
+				break;
+			case 5:
+			case 105:
+				/* printf("S3"): */
+				PrintPres = TRUE;
+				break;
+			case 12:
+			case 112:
+				/* printf("ER"): A presentation corresponding to the union of empty summands and or S1 X S2s. */
+				PrintPres = TRUE;
+				break;
+			case 13:
+			case 113:
+				/* printf("Er"): A bandsum created an empty relator. */
+				PrintPres = TRUE;
+				break;                
+			case 20:
+			case 120:
+				/* printf("NC"): */
+				if((Batch == 10 || Batch == 11) && BPrintNotConnectedData == TRUE) PrintPres = TRUE;
+				PrintPres = TRUE;
+				break;
+			case 30:
+			case 130:
+			case 40:
+			case 140:
+				/* printf("MG"): */
+				PrintPres = TRUE;
+				break;
+			case 60:
+			case 160:
+				/* printf("PP"): */
+				PrintPres = TRUE;
+				break;
+			case 80:
+			case 180:
+				/* printf("A2"): */
+				if((Batch == 10 || Batch == 11) && BPrintAnnulusData == TRUE) PrintPres = TRUE;
+				break;    
+			default:
+				break;
+			}
+		
+		if(PrintPres == FALSE) switch(UDV[i])
+			{
+			case SPLIT:
+				PrintPres = TRUE;
+				break;
+			case GENERIC_LENS_SPACE:
+				PrintPres = TRUE;
+				break;	
+			case THREE_SPHERE:
+				PrintPres = TRUE;
+				break;
+			case NOT_CONNECTED:
+				if((Batch == 10 || Batch == 11) && BPrintNotConnectedData == TRUE) PrintPres = TRUE;
+				break;			
+			case S1_X_S2:
+				PrintPres = TRUE;
+				break;	
+			case S1_X_D2:
+				PrintPres = TRUE;
+				break;	
+			case S1_X_X2:
+				PrintPres = TRUE;
+				break;	
+			case MISSING_GEN_DONE2:
+				PrintPres = TRUE;
+				break;		
+			case MISSING_GEN_DONE1:
+				PrintPres = TRUE;
+				break;						
+			case KNOWN_LENS_SPACE:
+				PrintPres = TRUE;
+				break;	
+			case ANNULUS_EXISTS:
+				if((Batch == 10 || Batch == 11) && BPrintAnnulusData == TRUE) PrintPres = TRUE;
+				break;	
+			case V2_ANNULUS_EXISTS:
+				if((Batch == 10 || Batch == 11) && BPrintAnnulusData == TRUE) PrintPres = TRUE;
+				break;	
+			case NON_UNIQUE_4:
+				PrintPres = TRUE;
+				break;	
+			case NON_UNIQUE_3:
+				PrintPres = TRUE;
+				break;	
+			case NON_UNIQUE_2:
+				PrintPres = TRUE;
+				break;	
+			case NON_UNIQUE_1:
+				PrintPres = TRUE;
+				break;		
+			default:
+				break;                                                                                      
+			}
+
+		if(PrintPres)
+			{
+			NumRelators = NR[i];
+			Length 		= SURL[i];
+			printf("\n\nPresentation %d  of Summand %u:  Gen  %d  Rel %d  Length  %lu  From Pres %u ",i+1,ComponentNum[i],NG[i],NR[i],Length,FR[i]+1);	
+			switch(PRIM[i])
+				{
+				case 3:
+				case 103:
+					printf("LS");
+					break;
+				case 4:
+				case 104:
+					printf("1G");
+					break;
+				case 5:
+				case 105:
+					printf("S3");
+					break;
+				case 12:
+				case 112:
+					printf("ER"); /* A presentation corresponding to the union of empty summands and or S1 X S2s. */
+					break;
+				case 13:
+				case 113:
+					printf("Er"); /* A bandsum created an empty relator. */
+					break;                
+				case 20:
+				case 120:
+					printf("NC");
+					break;
+				case 30:
+				case 130:
+				case 40:
+				case 140:
+					printf("MG");
+					break;
+				case 60:
+				case 160:
+					printf("PP");
+					break;
+				case 80:
+				case 180:
+					printf("A2");
+					break;    
+				default:
+					break;
+				}
+								
+			switch(UDV[i])
+				{
+				case SPLIT:
+					CompType1[ComponentNum[i]] = SPLIT;
+					CompType2[ComponentNum[i]] = i + 1;
+					j = Daughters[i];
+					m = j + NCS[i] - 1;
+					switch(PRIM[j])
+						{
+						case 40:
+						case 140:
+							printf("\nThe presentation dual to presentation %d 'split' into presentations %u and %u of M",i + 1,j + 1,m + 1);
+							printf("\nwhich correspond to summands %u and %u of M.",ComponentNum[j],ComponentNum[m]);                    
+							break;
+						default:
+							printf("\n'split' into presentations %u and %u corresponding to summands %u and %u of M.",j + 1,m + 1,ComponentNum[j],ComponentNum[m]);
+							break;                    
+						}
+					if(BdryData) for(k = 0; k < NCS[i]; k++) Print_Bdry_Data(j + k);						
+					if(B10B11ConSumPres && (Batch == 10 || Batch == 11) && H_Results != NULL)
+						{
+						fprintf(H_Results,"\n\nPresentation %d of Summand %u of %s:  Gen  %d  Rel %d  Length  %lu  From Pres %u",i+1,ComponentNum[i],PresName,NG[i],NR[i],SURL[i],FR[i]+1);						
+						switch(PRIM[j])
+							{
+							case 40:
+							case 140:
+								fprintf(H_Results," MG");
+								fprintf(H_Results,"\nThe presentation dual to presentation %d 'split' into presentations %u and %u of M",i + 1,j + 1,m + 1);
+								fprintf(H_Results,"\nwhich correspond to summands %u and %u of M.",ComponentNum[j],ComponentNum[m]);                    
+								break;
+							default:
+								fprintf(H_Results,"\n'split' into presentations %u and %u corresponding to summands %u and %u of M.",j + 1,m + 1,ComponentNum[j],ComponentNum[m]);
+								break;                    
+							}
+						if(BdryData) for(k = 0; k < NCS[i]; k++) Print_Bdry_Data2(j + k);	
+						for(k = 1; k <= NR[i]; k++) fprintf(H_Results,"\n    %s",*SUR[i][k]);
+						fprintf(H_Results,"\n\nPresentation %d  of Summand %u:  Gen  %d  Rel %d  Length  %lu  From Pres %u",j+1,ComponentNum[j],NG[j],NR[j],SURL[j],FR[j]+1);						
+						for(k = 1; k <= NR[j]; k++) fprintf(H_Results,"\n    %s",*SUR[j][k]);						
+						fprintf(H_Results,"\n\nPresentation %d  of Summand %u:  Gen  %d  Rel %d  Length  %lu  From Pres %u",m+1,ComponentNum[m],NG[m],NR[m],SURL[m],FR[m]+1);						
+						for(k = 1; k <= NR[m]; k++) fprintf(H_Results,"\n    %s",*SUR[m][k]);						
+						}
+					break;
+			
+				case GENERIC_LENS_SPACE:
+					if(CompType1[ComponentNum[i]] == 0)
+						{
+						CompType1[ComponentNum[i]] = GENERIC_LENS_SPACE;
+						CompType2[ComponentNum[i]] = i + 1;
+						}
+					if(LSP[i] > 4L)
+						printf("\npresents a Lens space of the form L(%lu,Q).",LSP[i]);
+					else
+						{
+						if(LSP[i] == 1L) printf("\npresents the 3-Sphere.");
+						else printf("\npresents a Lens space of the form L(%lu,1).",LSP[i]);
+						}
+					break;        
+			
+				case THREE_SPHERE:
+					CompType1[ComponentNum[i]] = THREE_SPHERE;
+					CompType2[ComponentNum[i]] = i + 1;
+					printf("\npresents the 3-Sphere.");
+					break;
+
+				case NOT_CONNECTED:
+					CompType1[ComponentNum[i]] = NOT_CONNECTED;
+					CompType2[ComponentNum[i]] = i + 1;
+					printf("\nthe diagram is not connected.");
+					if(B10B11ConSumPres && (Batch == 10 || Batch == 11) && H_Results != NULL)
+						{
+						fprintf(H_Results,"\n\nPresentation %d of Summand %u of %s:  Gen  %d  Rel %d  Length  %lu  From Pres %u",i+1,ComponentNum[i],PresName,NG[i],NR[i],SURL[i],FR[i]+1);						
+						if(BdryData) Print_Bdry_Data2(i);
+						for(k = 1; k <= NR[i]; k++) fprintf(H_Results,"\n    %s",*SUR[i][k]);
+						}
+					break;
+					
+				case S1_X_S2:
+					CompType1[ComponentNum[i]] = S1_X_S2;
+					CompType2[ComponentNum[i]] = i + 1;
+					if(NG[i] == 1)
+						printf("\npresents S1 X S2.");
+					else
+						printf("\npresents %d copies of S1 X S2.",NG[i]);
+					break;
+
+				case S1_X_D2:
+					CompType1[ComponentNum[i]] = S1_X_D2;
+					CompType2[ComponentNum[i]] = i + 1;
+					if(NG[i] == 1)
+						printf("\npresents S1 X D2.");
+					else
+						printf("\npresents %d copies of S1 X D2.",NG[i]);
+					break;
+			
+				case S1_X_X2:
+					CompType1[ComponentNum[i]] = S1_X_X2;
+					CompType2[ComponentNum[i]] = i + 1;
+					if(NG[i] == 1)
+						printf("\npresents S1 X ?2.");
+					else
+						printf("\npresents %d copies of S1 X ?2.",NG[i]);
+					break;
+			
+				case MISSING_GEN_DONE2:
+					CompType1[ComponentNum[i]] = MISSING_GEN_DONE2;
+					CompType2[ComponentNum[i]] = i + 1;
+					printf("\npresents: ");
+					if(N1H[ComponentNum[i]] == 1)
+						printf("1 copy of I X D2, ");
+					else
+						printf("%d copies of I X D2, ",N1H[ComponentNum[i]]);
+					if(NS1XS2[ComponentNum[i]] == 1)
+						printf("1 copy of S1 X S2, ");
+					else
+						printf("%d copies of S1 X S2, ",NS1XS2[ComponentNum[i]]);
+					if(NS1XD2[ComponentNum[i]] == 1)
+						printf("and 1 copy of S1 X D2.");
+					else
+						printf("and %d copies of S1 X D2.",NS1XD2[ComponentNum[i]]);                                        
+					printf("\nHeegaard was not able to unambiguously determine the boundary components.");
+					break;
+				
+				case MISSING_GEN_DONE1:
+					CompType1[ComponentNum[i]] = MISSING_GEN_DONE1;
+					CompType2[ComponentNum[i]] = i + 1;
+					printf("\npresents: ");
+					if(N1H[ComponentNum[i]] == 1)
+						printf("1 copy of I X D2, ");
+					else
+						printf("%d copies of I X D2, ",N1H[ComponentNum[i]]);
+					if(NS1XS2[ComponentNum[i]] == 1)
+						printf("1 copy of S1 X S2, ");
+					else
+						printf("%d copies of S1 X S2, ",NS1XS2[ComponentNum[i]]);
+					if(NS1XD2[ComponentNum[i]] == 1)
+						printf("and 1 copy of S1 X D2.");
+					else
+						printf("and %d copies of S1 X D2.",NS1XD2[ComponentNum[i]]);                            
+					break;
+				
+				case KNOWN_LENS_SPACE:
+					CompType1[ComponentNum[i]] = KNOWN_LENS_SPACE;
+					CompType2[ComponentNum[i]] = i + 1;
+					switch(LSP[i])
+						{
+						case 0L:
+							printf("\npresents S1 X S2.");
+							break; 
+						case 1L:
+							printf("\npresents the 3-Sphere.");
+							break;
+						default:
+							printf("\npresents the Lens space L(%lu,%lu).",LSP[i],LSQ[i]);
+							break;
+						}
+					break;
+		
+				case ANNULUS_EXISTS:
+					p = *SUR[i][0];
+					x = *p++;
+					y = *p++;                
+					printf("\nThe pair of vertices (%c,%c) separate the diagram.",x,y);
+					printf("\nThe component consisting of vertice(s) {%c",*p);
+					p++;
+					while((x = *p) != '@')
+						{
+						printf(",%c",x);
+						p++;
+						}
+					printf("}");
+					p++;        
+					printf("\nlies in an annulus which swallows the component and otherwise follows the curve:\n");
+					while(*p)
+						fputc(*p++,stdout);
+					break;
+	
+				case V2_ANNULUS_EXISTS:
+					p = *SUR[i][0];
+					printf("\nThere exists an annulus which swallows vertice(s) {%c",*p);
+					p++;
+					while((x = *p) != '@')
+						{
+						printf(",%c",x);
+						p++;
+						}
+					printf("}"); 
+					p++;        
+					printf("\nand otherwise follows the curve:\n");
+					while(*p) fputc(*p++,stdout);
+					break;
+			
+				case NON_UNIQUE_4:
+					printf("\nthe diagram is not unique because there is a generator which appears");
+					printf("\nwith only one exponent and that exponent is greater than 6.");
+					break;
+			
+				case NON_UNIQUE_3:
+					printf("\nthe diagram is not unique because there is a generator which appears");
+					printf("\nonly with exponent 5.");
+					break;
+			
+				case NON_UNIQUE_2:
+					printf("\nthe diagram is not unique because there is a generator which appears");
+					printf("\nonly with exponent 3 or only with exponent 4 and this exponent occurs more than once.");
+					break;
+			
+				case NON_UNIQUE_1:
+					printf("\nthe diagram is not unique because there is a generator which appears");
+					printf("\nwith only one exponent, either 3,4 or 6, and a needed symmetry does not exist.");
+					break; 
+					
+				case DUPLICATE:					
+					if(CompType1[ComponentNum[i]] == 0 && ComponentNum[Daughters[i]] < ComponentNum[i])
+						{
+						CompType1[ComponentNum[i]] = CompType1[ComponentNum[Daughters[i]]];
+						CompType2[ComponentNum[i]] = Daughters[i] + 1;
+						}		
+					printf("\nis a duplicate of presentation %d of summand %u.",
+					Daughters[i] + 1,ComponentNum[Daughters[i]]);
+					break;					                                                                                      	
+				}
+		    printf("\n");
+        	for(j = 1; j <= NumRelators; j++) printf("\n    %s",*SUR[i][j]);
+        	}						
+		}
+	
+	if(B10B11Finite && (Batch == 10 || Batch == 11) && H_Results != NULL)
+		{	
+		for(k = 1,Start = NumFilled - 1,MyTotalFiniteComp = 0,Finite = TRUE; k <= TotalComp; k++)
+			{
+			switch(CompType1[k])
+				{
+				case 0:
+					if(SFSols[k] != NULL) 
+						{
+						DisposePtr((unsigned int*) SFSols[k]);
+						SFSols[k] = NULL;
+						}
+					FoundFiniteSF = FALSE;	
+					Start = Init_Genus_Two_Seifert_Fibered(Table,Start,k);
+					if(FoundFiniteSF == TRUE) switch(SFSols[k][0])
+						{
+						case 2:
+						case 4:
+							if(SFSols[k][5] > 1) MyTotalFiniteComp ++;
+							break;
+						case 8:
+						case 9:
+						case 10:
+						case 11:
+							if(SFSols[k][5] > 1) MyTotalFiniteComp ++;
+							if(SFSols[k][7] > 1) MyTotalFiniteComp ++;
+							break;
+						case 14:
+							if(SFSols[k][18] > 1) MyTotalFiniteComp ++;
+							break;
+						case 16:
+						case 18:
+							MyTotalFiniteComp ++;	
+						}
+					else Finite = FALSE;
+					break;
+				case GENERIC_LENS_SPACE:
+					i = CompType2[k] - 1;
+					if(LSP[i] == 0) Finite = FALSE;
+					if(LSP[i] > 1) MyTotalFiniteComp ++;
+					break;        
+		
+				case THREE_SPHERE:
+					break;	
+				
+				case S1_X_S2:
+				case S1_X_D2:	
+				case S1_X_X2:
+				case MISSING_GEN_DONE2:			
+				case MISSING_GEN_DONE1:
+					Finite = FALSE;
+					break;
+			
+				case KNOWN_LENS_SPACE:
+					i = CompType2[k] - 1;
+					if(LSP[i] == 0) Finite = FALSE;
+					if(LSP[i] > 1) MyTotalFiniteComp ++;
+					break;										
+				}
+			if(MyTotalFiniteComp > 1) Finite = FALSE;
+			if(Finite == FALSE) break;	
+			}
+			
+		if(Finite)  
+			{
+			fprintf(H_Results,"\n\n%-20s ",PresName);
+			for(k = 1,Start = NumFilled - 1,PrintedS3 = FALSE; k <= TotalComp; k++)
+				{
+				i = CompType2[k] - 1;
+				switch(CompType1[k])
+					{
+					case 0: 
+						if(SFSols[k] != NULL)
+							Print_SFComp(k);
+						else
+							fprintf(H_Results,"? ");		
+						break;
+					case GENERIC_LENS_SPACE:
+						if(LSP[i] == 0) 	fprintf(H_Results,"S1 X S2 ");
+						if(LSP[i] == 1 && MyTotalFiniteComp == 0 && PrintedS3 == FALSE) 	
+							{
+							fprintf(H_Results,"S^3 ");
+							PrintedS3 = TRUE;
+							break;
+							}
+						if(1 < LSP[i] && LSP[i] < 5) 	fprintf(H_Results,"L(%lu,1) ",LSP[i]);
+						if(LSP[i] > 4) 		fprintf(H_Results,"L(%lu,Q) ",LSP[i]);
+						break;			
+					case THREE_SPHERE: 
+						if(MyTotalFiniteComp == 0 && PrintedS3 == FALSE) 
+							{
+							fprintf(H_Results,"S^3 ");
+							PrintedS3 = TRUE;
+							}
+						break;
+					case KNOWN_LENS_SPACE:
+						if(LSP[i] == 0) fprintf(H_Results,"S1 X S2 ");
+						if(LSP[i] == 1 && MyTotalFiniteComp == 0 && PrintedS3 == FALSE) 
+							{
+							fprintf(H_Results,"S^3 ");
+							PrintedS3 = TRUE;
+							}
+						if(LSP[i] > 1)	fprintf(H_Results,"L(%lu,%lu) ",LSP[i],LSQ[i]);
+						break;				
+					case S1_X_S2:
+						if(NG[i] == 1) 	fprintf(H_Results,"S1 X S2 ");
+						if(NG[i] > 1) 	fprintf(H_Results,"%d S1 X S2s ",NG[i]);
+						break;			
+					case S1_X_D2:
+						if(NG[i] == 1) 	fprintf(H_Results,"S1 X D2 ");
+						if(NG[i] > 1) 	fprintf(H_Results,"%d S1 X D2s ",NG[i]);
+						break;							
+					case S1_X_X2:
+						if(NG[i] == 1) 	fprintf(H_Results,"S1 X X2 ");
+						if(NG[i] > 1) 	fprintf(H_Results,"%d S1 X X2s ",NG[i]);
+						break;							
+					case MISSING_GEN_DONE2:
+						if(N1H[k] == 1)		fprintf(H_Results,"I X D2 ");
+						if(N1H[k] > 1)		fprintf(H_Results,"%d I X D2s ",N1H[k]);
+						if(NS1XS2[k] == 1) 	fprintf(H_Results,"S1 X S2 ");
+						if(NS1XS2[k] > 1) 	fprintf(H_Results,"%d S1 X S2s ",NS1XS2[k]);
+						if(NS1XD2[k] == 1)	fprintf(H_Results,"S1 X D2 ");
+						if(NS1XD2[k] > 1) 	fprintf(H_Results,"%d S1 X D2s ",NS1XD2[k]);                                        
+						fprintf(H_Results,"(Heegaard was not able to unambiguously determine the boundary components.) ");
+						break;			
+					case MISSING_GEN_DONE1:
+						if(N1H[k] == 1)		fprintf(H_Results,"I X D2 ");
+						if(N1H[k] > 1)		fprintf(H_Results,"%d I X D2s ",N1H[k]);
+						if(NS1XS2[k] == 1) 	fprintf(H_Results,"S1 X S2 ");
+						if(NS1XS2[k] > 1) 	fprintf(H_Results,"%d S1 X S2s ",NS1XS2[k]);
+						if(NS1XD2[k] == 1)	fprintf(H_Results,"S1 X D2 ");
+						if(NS1XD2[k] > 1) 	fprintf(H_Results,"%d S1 X D2s ",NS1XD2[k]);
+						break;
+					case SPLIT:
+						break;
+					case NOT_CONNECTED:
+						break;	
+					default:
+						break;										
+					}	
+				}	
+			}
+		}
+		
+	if(B10B11Recognized && (Batch == 10 || Batch == 11) && H_Results != NULL)
+		{
+		for(k = 1,Start = NumFilled - 1,NumSFFound = 0,MyTotalCompFound = 0; k <= TotalComp; k++) 
+			switch(CompType1[k])
+				{
+				case 0:
+					if(SFSols[k] != NULL) 
+						{
+						DisposePtr((unsigned int*) SFSols[k]);
+						SFSols[k] = NULL;
+						}
+					FoundSF = FALSE;	
+					Start = Init_Genus_Two_Seifert_Fibered(Table,Start,k);
+					if(FoundSF) NumSFFound ++;
+					MyTotalCompFound ++;
+					break;
+				case GENERIC_LENS_SPACE:
+				case THREE_SPHERE:
+				case KNOWN_LENS_SPACE:
+				case S1_X_S2:
+				case S1_X_D2:
+				case S1_X_X2:
+				case MISSING_GEN_DONE2:
+				case MISSING_GEN_DONE1:
+					MyTotalCompFound ++;
+					break;
+				}	
+		}
+		
+		
+	if(B10B11Recognized && (Batch == 10 || Batch == 11) && H_Results != NULL)  
+		{
+		fprintf(H_Results,"\n\n%-20s ",PresName);
+		if(MyTotalCompFound == 0) fprintf(H_Results,"?");
+		else for(k = 1,Start = NumFilled - 1,m = n = 0; k <= TotalComp; k++)
+			{
+			i = CompType2[k] - 1;
+			switch(CompType1[k])
+				{
+				case 0: 
+					if(SFSols[k] != NULL)
+						Print_SFComp(k);
+					else
+						fprintf(H_Results,"? ");
+					m++;		
+					break;
+				case GENERIC_LENS_SPACE:
+					if(LSP[i] == 0) 	fprintf(H_Results,"S1 X S2 ");
+					if(LSP[i] == 1) 	fprintf(H_Results,"S^3 ");
+					if(1 < LSP[i] && LSP[i] < 5) 	fprintf(H_Results,"L(%lu,1) ",LSP[i]);
+					if(LSP[i] > 4) 		fprintf(H_Results,"L(%lu,Q) ",LSP[i]);
+					m++;
+					break;			
+				case THREE_SPHERE: fprintf(H_Results,"S^3 ");
+					m++;
+					break;
+				case KNOWN_LENS_SPACE:
+					if(LSP[i] == 0) fprintf(H_Results,"S1 X S2 ");
+					if(LSP[i] == 1) fprintf(H_Results,"S^3 ");
+					if(LSP[i] > 1)	fprintf(H_Results,"L(%lu,%lu) ",LSP[i],LSQ[i]);
+					m++;
+					break;				
+				case S1_X_S2:
+					if(NG[i] == 1) 	fprintf(H_Results,"S1 X S2 ");
+					if(NG[i] > 1) 	fprintf(H_Results,"%d S1 X S2s ",NG[i]);
+					m++;
+					break;			
+				case S1_X_D2:
+					if(NG[i] == 1) 	fprintf(H_Results,"S1 X D2 ");
+					if(NG[i] > 1) 	fprintf(H_Results,"%d S1 X D2s ",NG[i]);
+					m++;
+					break;							
+				case S1_X_X2:
+					if(NG[i] == 1) 	fprintf(H_Results,"S1 X X2 ");
+					if(NG[i] > 1) 	fprintf(H_Results,"%d S1 X X2s ",NG[i]);
+					m++;
+					break;							
+				case MISSING_GEN_DONE2:
+					if(N1H[k] == 1)		fprintf(H_Results,"I X D2 ");
+					if(N1H[k] > 1)		fprintf(H_Results,"%d I X D2s ",N1H[k]);
+					if(NS1XS2[k] == 1) 	fprintf(H_Results,"S1 X S2 ");
+					if(NS1XS2[k] > 1) 	fprintf(H_Results,"%d S1 X S2s ",NS1XS2[k]);
+					if(NS1XD2[k] == 1)	fprintf(H_Results,"S1 X D2 ");
+					if(NS1XD2[k] > 1) 	fprintf(H_Results,"%d S1 X D2s ",NS1XD2[k]);                                        
+					fprintf(H_Results,"(Heegaard was not able to unambiguously determine the boundary components.) ");
+					m++;
+					break;			
+				case MISSING_GEN_DONE1:
+					if(N1H[k] == 1)		fprintf(H_Results,"I X D2 ");
+					if(N1H[k] > 1)		fprintf(H_Results,"%d I X D2s ",N1H[k]);
+					if(NS1XS2[k] == 1) 	fprintf(H_Results,"S1 X S2 ");
+					if(NS1XS2[k] > 1) 	fprintf(H_Results,"%d S1 X S2s ",NS1XS2[k]);
+					if(NS1XD2[k] == 1)	fprintf(H_Results,"S1 X D2 ");
+					if(NS1XD2[k] > 1) 	fprintf(H_Results,"%d S1 X D2s ",NS1XD2[k]);
+					m++;
+					break;
+				case SPLIT:
+					fprintf(H_Results,"Split: ");
+					break;
+				case NOT_CONNECTED:
+					fprintf(H_Results,"NC: ");
+					break;	
+				default:
+					break;										
+				}
+			if(m > n && m < MyTotalCompFound) 
+				{
+				fprintf(H_Results,"# ");
+				n = m;
+				}	
+			}	
+		}
+					
+	printf("\n");
+	
+	if(CompType1 != NULL) DisposePtr((int *) CompType1);
+	if(CompType2 != NULL) DisposePtr((int *) CompType2);	
+	return(0);		
+}
+
+int Print_SFComp(int MyComp)
 {
-    register unsigned char    *p,
-                            *q,
-                            *r;
-    
-    unsigned char            *NewPresName;
-    
-    int                     i,
-                            NumRelators;                                    
-    
-    if((input_relators = fopen("Input_Presentations","r+")) == NULL)
-        {
-        SysBeep(5);
-        printf("\nUnable to open the file 'Input_Presentations'.\n");
-        return(1);
-        }
-    
-    if((r = (unsigned char *) NewPtr((Size)(MAXLENGTH + 1))) == NULL)
-        {
-        SysBeep(5);
-        printf("\nMemory error. Sorry!\n");
-        fclose(input_relators);        
-        return(1);        
-        }
-    if((NewPresName = (unsigned char *) NewPtr(1000L)) == NULL)
-        {
-        SysBeep(5);
-        printf("\nMemory error. Sorry!\n");
-        DisposePtr((char *) r);
-        fclose(input_relators);        
-        return(1);        
-        }
-
-    GET_ID:
-    printf("\n\nPlease enter a name by which the program can refer to this presentation,");
-    printf("\nand then hit 'return'. Or just hit 'return' to skip saving this presentation.");
-    printf("\n\nSAVE THIS PRESENTATION AS: ");        
-    ReadString((char *)NewPresName, GetPtrSize(NewPresName));
-    
-    if(*NewPresName == EOS || *NewPresName == '\n')
-        {
-        DisposePtr((char *) r);
-        DisposePtr((char *) NewPresName);
-        fclose(input_relators);
-        printf("\n\n      Hit 'return' to stop reviewing this report.");
-        printf("\n      Hit the 'space-bar' to alternately stop and start scrolling.");
-        printf("\n      Use the 'd','i','n','p' and 's' keys to: view diagrams, save a presentation in");
-        printf("\n      Input_Presentations, see the next presentation, see the previous presentation,");
-        printf("\n      or save a presentation in Heegaard_Results.");        
-        return(1);
-        }
-        
-    rewind(input_relators);
-    do
-        {
-        if(fgets((char *) r,MAXLENGTH,input_relators) == NULL) goto ID_IS_UNIQUE;
-        p = r;
-        q = NewPresName;
-        while(*p && *q && *p == *q)
-            {
-            p++;
-            q++;
-            }
-        if(*p == '\n' || *p == ' ' || *p == '\t') *p = EOS;        
-        }
-    while(*p != *q);    
-
-    SysBeep(5);
-    printf("\nInput_Presentations already contains a presentation with this identifier!");
-    goto GET_ID;
-        
-    ID_IS_UNIQUE:
-    DisposePtr((char *) r);
-    fseek(input_relators,0L,2);        
-    fprintf(input_relators,"\n\n%s",NewPresName);
-    NumRelators = NR[WhichPres];
-    for(i = 1; i <= NumRelators; i++)    
-        {
-        HLock((char **) SUR[WhichPres][i]);        
-        fprintf(input_relators,"\n    %s",*SUR[WhichPres][i]);
-        HUnlock((char **) SUR[WhichPres][i]);                                                        
-        }        
-    fprintf(input_relators,"\n");
-
-    fflush(input_relators);
-    fclose(input_relators);
-    printf("\n    Saved Presentation %d in 'Input_Presentations' as: %s",
-        WhichPres + 1,NewPresName);
-    DisposePtr((char *) NewPresName);
-    return(0);
+	int	A1,
+		A2,
+		A3,
+		a1,
+		a2,
+		a3,
+		B1,
+		B2,
+		B3,
+		b1,
+		b2,
+		b3,
+		H1,
+		n,
+		m,
+		Q;
+	
+	B1 = SFSols[MyComp][4];		
+	A1 = SFSols[MyComp][5];
+	B2 = SFSols[MyComp][6];
+	A2 = SFSols[MyComp][7];
+	B3 = SFSols[MyComp][8];
+	A3 = SFSols[MyComp][9];
+	n  = SFSols[MyComp][10];
+	b1 = SFSols[MyComp][11];
+	a1 = SFSols[MyComp][12];
+	b2 = SFSols[MyComp][13];
+	a2 = SFSols[MyComp][14];
+	b3 = SFSols[MyComp][15];
+	a3 = SFSols[MyComp][16];
+	m  = SFSols[MyComp][17];
+	H1 = SFSols[MyComp][18];
+	Q =  SFSols[MyComp][19];
+	
+	switch(SFSols[MyComp][0])
+		{
+		case 1: 
+			fprintf(H_Results,"S^1 X S^2 ");
+			break;
+		case 2: 
+			fprintf(H_Results,"L(%d,%d) ",A1,B1);
+			break;
+		case 3: 
+			fprintf(H_Results,"S^1 X S^2 ");
+			break;
+		case 4: 
+			fprintf(H_Results,"L(%d,%d) ",A1,B1);
+			break;
+		case 5: 
+			fprintf(H_Results,"SF over the Mobius band ");
+			break;
+		case 6: 
+			fprintf(H_Results,"SF over RP^2 ");
+			break;
+		case 7: 
+			fprintf(H_Results,"SF(0;m/%d,n/%d), 0 < m < %d, 0 < n < %d, gcd(m,%d) = gcd(n,%d) = 1 ",A1,A2,A1,A2,A1,A2);	
+			break;
+		case 8: 
+			fprintf(H_Results,"L(%d,Q1), L(%d,Q2) ",A1,A2);
+			break;
+		case 9: 
+			fprintf(H_Results,"L(%d,Q), L(%d,%d) ",A1,A2,B2);
+			break;
+		case 10: 
+			fprintf(H_Results,"L(%d,%d), L(%d,Q) ",A1,B1,A2);
+			break;
+		case 11: 
+			fprintf(H_Results,"L(%d,%d), L(%d,%d) ",A1,B1,A2,B2);
+			break;
+		case 12: 
+			fprintf(H_Results,"S^1 X S^2 ");
+			break;
+		case 13: 
+			fprintf(H_Results,"S^1 X S^2 ");
+			break;
+		case 14: 
+			fprintf(H_Results,"L(%d,%d) ",H1,Q);
+			break;
+		case 15: 
+			fprintf(H_Results,"SF(0;%d;%d/%d,%d/%d,%d/%d) or OR",n,B1,A1,B2,A2,B3,A3);
+			fprintf(H_Results," SF(0;%d;%d/%d,%d/%d,%d/%d) ",3-n,A1-B1,A1,A2-B2,A2,A3-B3,A3);
+			break;
+		case 16: 
+			fprintf(H_Results,"SF(0;%d;%d/%d,%d/%d,%d/%d) or OR" ,n,B1,A1,B2,A2,B3,A3);
+			fprintf(H_Results," SF(0;%d;%d/%d,%d/%d,%d/%d) ",3-n,A1-B1,A1,A2-B2,A2,A3-B3,A3);
+			break;
+		case 17: 
+			fprintf(H_Results,"SF(0;%d;%d/%d,%d/%d,%d/%d) or OR",n,B1,A1,B2,A2,B3,A3);
+			fprintf(H_Results," SF(0;%d;%d/%d,%d/%d,%d/%d) ",3-n,A1-B1,A1,A2-B2,A2,A3-B3,A3); 
+			fprintf(H_Results,"or perhaps:");			
+			fprintf(H_Results,"\n                     SF(0;%d;%d/%d,%d/%d,%d/%d) or OR",m,b1,a1,b2,a2,b3,a3);
+			fprintf(H_Results," SF(0;%d;%d/%d,%d/%d,%d/%d) ",3-m,a1-b1,a1,a2-b2,a2,a3-b3,a3);
+			break;	
+		case 18:
+			fprintf(H_Results,"SF(0;%d;%d/%d,%d/%d,%d/%d) or OR",n,B1,A1,B2,A2,B3,A3);
+			fprintf(H_Results," SF(0;%d;%d/%d,%d/%d,%d/%d) ",3-n,A1-B1,A1,A2-B2,A2,A3-B3,A3); 
+			fprintf(H_Results,"or perhaps:");			
+			fprintf(H_Results,"\n                     SF(0;%d;%d/%d,%d/%d,%d/%d) or OR",m,b1,a1,b2,a2,b3,a3);
+			fprintf(H_Results," SF(0;%d;%d/%d,%d/%d,%d/%d) ",3-m,a1-b1,a1,a2-b2,a2,a3-b3,a3);
+			break;	
+		}
+		
+	return(0);	
 }

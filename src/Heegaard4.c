@@ -1,11 +1,35 @@
 #include "Heegaard.h"
 #include "Heegaard_Dec.h"                                                                                                                                                                             
 
+/****************************** function prototypes *****************************************
+L   28 Diagram_Main(void)
+L   85 Diagram_1(void)
+L  189 Diagram_2(void)
+L  280 Diagram_3(void)
+L  485 Diagram_4(void)
+L  733 Diagram_5(void)
+L  758 Offset(void)
+L 1208 OffsetSub(unsigned int i,unsigned int p,unsigned int q,unsigned int a,unsigned int b,unsigned int c)
+L 1248 Diagram_6(void)
+L 1287 Diagram_7(void)
+L 1462 Compare(unsigned char *p)
+L 1487 Compare_Str(unsigned char *S1,unsigned char *S2,unsigned long length)
+L 1537 Get_Bdry_Comps(int Print,int Where,unsigned int WhichPres)
+L 1664 Delete_Redundant_Relators(void)
+L 1798 MG_Bdry_Comp_Data(unsigned int WhichPres)
+L 1986 Sep_Surface(void)
+L 2040 Fill_DRA(void)
+L 2092 GCD(unsigned int p,unsigned int q)
+L 2141 Inverse(register unsigned char *p)
+L 2169 Non_Unique(void)
+L 2221 Debug(void)		
+********************************************************************************************/
+
 unsigned int Diagram_Main()
 {
     /******************************************************************************************
         Given a presentation which has been reduced to minimal length and whose reduced
-        Whitehead graph does not have any pairs of separating vertices, the routines in this
+        Whitehead graph does not have any separating pairs of vertices, the routines in this
         file are used to determine how the edges of the Heegaard diagram meeting each pair of
         inverse vertices must by identified.
     ******************************************************************************************/
@@ -22,13 +46,13 @@ unsigned int Diagram_Main()
     Diagram_4();            
     switch(Offset())
         {
-        case NO_ERROR: break;
-        case NON_UNIQUE_1: return(NON_UNIQUE_1);
-        case NON_UNIQUE_2: return(NON_UNIQUE_2);
-        case NON_UNIQUE_3: return(NON_UNIQUE_3);
-        case NON_UNIQUE_4: return(NON_UNIQUE_4);
-        case FATAL_ERROR:  return(FATAL_ERROR);
-        case TOO_LONG:       return(TOO_LONG);    
+        case NO_ERROR: 		break;
+        case NON_UNIQUE_1: 	return(NON_UNIQUE_1);
+        case NON_UNIQUE_2: 	return(NON_UNIQUE_2);
+        case NON_UNIQUE_3: 	return(NON_UNIQUE_3);
+        case NON_UNIQUE_4: 	return(NON_UNIQUE_4);
+        case FATAL_ERROR:  	return(FATAL_ERROR);
+        case TOO_LONG:      return(TOO_LONG);    
         }
     Diagram_6();
     
@@ -53,11 +77,12 @@ unsigned int Diagram_Main()
                 break;
             else
                 return(V2_ANNULUS_EXISTS);                
-        }        
+        }  
+                 
     return(Diagram_7());                                    
 }
 
-Diagram_1()
+int Diagram_1()
 {
     /******************************************************************************************
         This routine does two things. First, it determines the absolute value of the
@@ -72,18 +97,18 @@ Diagram_1()
     these counts in the array NEX[][].
     ******************************************************************************************/    
     
-    register unsigned char     i,
+    register unsigned char  i,
                             *p,
                             x,
                             y;
                             
-    register unsigned int    ex,
+    register unsigned int   ex,
                             sex,
                             *q;
                             
-    unsigned char            j;                        
+    unsigned char           j;                        
                             
-    unsigned long            length1,
+    unsigned long           length1,
                             length2;                            
                             
     for(i = NumGenerators; i > 0; )
@@ -103,7 +128,7 @@ Diagram_1()
         sex = ex;
         ex = 0;
         if(*p) x = *p;
-        while(y = *p++)
+        while( (y = *p++) )
             {
             if(x == y)
                 ex++;
@@ -154,21 +179,18 @@ Diagram_1()
         if(length1 != length2)
             {
             if(DrawingDiagrams == FALSE)
-                {
                 printf("\n\nThere is a generator which appears with more than three distinct exponents!");
-                fprintf(myout,"\n\nThere is a generator which appears with more than three distinct exponents!");
-                }
             return(1);
             }
         }
     return(0);            
 }                                
 
-Diagram_2()
+int Diagram_2()
 {        
     /******************************************************************************************
         This routine takes the array EXP[][] as determined by Diagram_1() and permutes the 
-        entries    of the three columns of each row so that the exponents with which each
+        entries of the three columns of each row so that the exponents with which each
         generator appears are in ascending numerical order. It also applies the same 
         permutation to the corresponding columns of NEX[][] so that if an exponent appears in 
         column j then the number of times that exponent appears in the relators is found in 
@@ -176,9 +198,9 @@ Diagram_2()
         routines that use EXP[][] and NEX[][]. 
     ******************************************************************************************/                 
     
-    register char             i;
+    register int            i;
     
-    register unsigned int     *p,
+    register unsigned int   *p,
                             *q,
                             temp;
     
@@ -228,7 +250,6 @@ Diagram_2()
                     {
                     i += 'A';
                     printf("\n\nGenerator '%c' appears with exponents which are not relatively prime!",i);
-                    fprintf(myout,"\n\nGenerator '%c' appears with exponents which are not relatively prime!",i);
                     }
                 return(1);
                 }
@@ -238,8 +259,6 @@ Diagram_2()
                     {
                     printf("\n\nGenerator '%c' appears with exponents %u, %u, and %u, but %u != %u + %u.",
                         i + 'A',p[0],p[1],p[2],p[2],p[0],p[1]);
-                    fprintf(myout,"\n\nGenerator '%c' appears with exponents %u, %u, and %u, but %u != %u + %u.",
-                        i + 'A',p[0],p[1],p[2],p[2],p[0],p[1]);    
                     }
                 return(1);
                 }
@@ -251,7 +270,6 @@ Diagram_2()
                     {
                     i += 'A';
                     printf("\n\nGenerator '%c' appears with exponents which are not relatively prime!",i);
-                    fprintf(myout,"\n\nGenerator '%c' appears with exponents which are not relatively prime!",i);
                     }
                 return(1);
                 }
@@ -266,13 +284,13 @@ void Diagram_3(void)
         sets up a table T[][] of subwords of the relators.
     ******************************************************************************************/
         
-    register int         i,
+    register int        i,
                         j,
                         k,
                         sj,
                         sk;
                         
-    unsigned int         max,
+    unsigned int        max,
                         smax;
     
     /******************************************************************************************
@@ -388,13 +406,13 @@ void Diagram_3(void)
                 appears are of the form {p,q,p+q}. What we need to determine is whether they
                 appear in the order (p,p+q,q) or in the order (q,p+q,p) as one proceeds around
                 vertex 2i.) 
-                    Note that: There is an edge joining vertex 2i and vertex 2i+1 in the
-                reduced graph. Suppose that vertex 2i has valence greater than two. Then we
-                want to determine which exponents appear in words corresponding to paths
-                that come from the first vertex following vertex 2i+1 in counter-clockwise
-                cyclic order about vertex 2i and to also determine which exponents appear in
-                words corresponding to paths that come from the vertex preceeding vertex
-                2i+1 in counter-clockwise cyclic order about vertex 2i. This gives us the
+                    Note: There is an edge joining vertex 2i and vertex 2i+1 in the reduced 
+                graph. Suppose that vertex 2i has valence greater than two. Then we want to
+                determine which exponents appear in words corresponding to paths that come
+                from the first vertex following vertex 2i+1 in counter-clockwise cyclic order
+                about vertex 2i and to also determine which exponents appear in words
+                corresponding to paths that come from the vertex preceeding vertex 2i+1
+                in counter-clockwise cyclic order about vertex 2i. This gives us the
                 information we need.
             **********************************************************************************/     
             
@@ -472,17 +490,17 @@ void Diagram_4(void)
         are determined by the entries in the character table T[][].
     ******************************************************************************************/
     
-    register unsigned char     i,
+    register unsigned char  i,
                             *p,
                             *q,
                             x,
                             y,
                             z;
                             
-    register unsigned int     e,
+    register unsigned int   e,
                             *r;
     
-    unsigned char            *Rk;
+    unsigned char           *Rk;
                             
     unsigned int            k;
     
@@ -715,18 +733,18 @@ void Diagram_4(void)
 unsigned int Diagram_5()
 {
     /******************************************************************************************
-         This routine computes the valences of the vertices of the Heegaard diagram and enters
-          the valence of vertex i in the array V at V[i]. It also checks for a possible overflow
-          condition. An entry in the array B[] can be as large as the sum of the lengths of two
-          dual relators. Since B[] holds unsigned ints which must be no larger than 2^16, an
-          entry in B[] could overflow if there are dual relators longer than 2^15 characters.
+        This routine computes the valences of the vertices of the Heegaard diagram and enters
+    	the valence of vertex i in the array V at V[i]. It also checks for a possible overflow
+    	condition. An entry in the array B[] can be as large as the sum of the lengths of two
+    	dual relators. Since B[] holds unsigned ints which must be no larger than 2^16, an
+    	entry in B[] could overflow if there are dual relators longer than 2^15 characters.
     ******************************************************************************************/
     
-    register unsigned char             h,
-                                    i,
-                                    j;
+    register unsigned char	h,
+                            i,
+                            j;
                             
-    register unsigned long            t;
+    register unsigned long  t;
 
     for(i = Vertices; i > 0; )
         {                                    
@@ -744,7 +762,7 @@ unsigned int Offset()
         identified in the Heegaard diagram, for i in the range: 0 <= i < Numgenerators. 
             If v is a vertex of the diagram, the first vertex in the link of vertex v -- found
         in FV[v] -- is that vertex in the link of vertex v which appears first in the ordering
-        A,a,B,b,C,c etc. Then the edges that meet vertex v in the diagram are numbered 0,1,2 ..
+        A,a,B,b,C,c etc. Then the edges that meet vertex v in the diagram are numbered 0,1,2 ...
         in counter-clockwise order about v, with edge number 0 the first edge in the band of
         edges joining v and FV[v].
             Offset() computes an integer, which we call the offset, with the property that if
@@ -760,17 +778,17 @@ unsigned int Offset()
         ambiguous offset.     
     ******************************************************************************************/
         
-    register unsigned int     a,
+    register unsigned int   a,
                             b,
                             c,
                             p,
                             q;
                             
-    unsigned int             d,
+    unsigned int            d,
                             i,
                             Nexp346;
     
-    unsigned int             OffsetSub();
+    unsigned int            OffsetSub();
     
     NGV2 = 0;
     Nexp346 = 0;            
@@ -785,7 +803,7 @@ unsigned int Offset()
             
             /**********************************************************************************
                 The following check determines whether a special case holds in genus two which
-                allows the program to find a Heegaard diagram even though a maximal band
+                allows Heegaard to find a Heegaard diagram even though a maximal band
                 contains more than half of the edges meeting a vertex.
             **********************************************************************************/
             
@@ -873,7 +891,8 @@ unsigned int Offset()
                     }    
                 b = CO[c][b];
                 }
-            while(a != b);            
+            while(a != b); 
+            
             d = d % V[c] + V[c] - 1;
             OSA[i << 1] = OSA[(i << 1) + 1] = d;
             GV2[i] = FALSE;        
@@ -1186,14 +1205,8 @@ unsigned int Offset()
     return(NO_ERROR);                
 }
 
-unsigned int OffsetSub(i,p,q,a,b,c)
-unsigned int             i,
-                        p,
-                        q;
-                        
-register unsigned int     a,
-                        b,
-                        c;
+unsigned int OffsetSub(unsigned int i,unsigned int p,unsigned int q,unsigned int a,unsigned int b,
+	unsigned int c)
 {
     /******************************************************************************************
         OffsetSub() is a routine called by Offset() in those cases where a generator appears
@@ -1201,9 +1214,9 @@ register unsigned int     a,
         p+q and these exponents appear respectively a,b and c times in the relators.
     ******************************************************************************************/
         
-    register long     d;
+    register long   d;
     
-    unsigned int GCD();
+    unsigned int 	GCD();
     
     GCD(p,q);
     d = (Recip_Q - 1)*(a + c) - (Recip_P + 1)*(b + c) + c;        
@@ -1242,9 +1255,9 @@ void Diagram_6(void)
         B[i][j] - e. It happens that B[][] is symmetric, so B[i][j] = B[j][i].    
     ******************************************************************************************/            
     
-    register int             h;
+    register int            h;
     
-    register unsigned int     a,
+    register unsigned int   a,
                             b,
                             i,
                             j;
@@ -1286,24 +1299,24 @@ unsigned int Diagram_7()
         Otherwise the presentation is not realizable.    
     ******************************************************************************************/
             
-    register unsigned char     i,
+    register unsigned char  i,
                             *p,
                             *q,
                             *r,
                             v,
                             w;
                             
-    register unsigned int     d,
+    register unsigned int   d,
                             e;
     
-    unsigned char             *DR[VERTICES];
+    unsigned char           *DR[VERTICES];
                             
     int                     j;
                             
-    unsigned int             length,
+    unsigned int            length,
                             max;
     
-    unsigned long            TotLength1,
+    unsigned long           TotLength1,
                             TotLength2;
     
     for(i = 1,TotLength1 = 0L; i <= NumGenerators; i++)
@@ -1311,17 +1324,18 @@ unsigned int Diagram_7()
         max = V[(i-1) << 1];
         TotLength1 += max;
         max ++;
-        ReallocateHandle((char **) DualRelators[i],max);
-        if((p = *DualRelators[i]) == NULL) return(TOO_LONG);
+        if(DualRelators[i] != NULL) DisposeHandle((char **) DualRelators[i]);
+        DualRelators[i] = (unsigned char **) NewHandle(max);
+        if(DualRelators[i] == NULL) Mem_Error();
+        p = *DualRelators[i];
         for(e = V[(i-1) << 1]; e > 0; e--) *p++ = '@';
         *p = EOS;
         }    
     for(i = 1,max = 0; i <= NumRelators; i++) if(LR[i] > max) max = LR[i];
-    for(i = 1; i <= NumRelators; i++)
-        {
-        ReallocateHandle((char **) OutRelators[i],max + 2);
-        if(*OutRelators[i] == NULL) return(TOO_LONG);
-        }
+    if(Temp16 != NULL) DisposeHandle((char **) Temp16);
+    Temp16 = (unsigned char **) NewHandle(max + 2);
+    if(Temp16 == NULL) Mem_Error();    
+        
     for(i = 0; i < Vertices; i++) DR[i] = *DualRelators[(i >> 1) + 1];
     
     SRError = 3;        /* This tells other routines that OutRelators[] is dirty. */
@@ -1334,7 +1348,7 @@ unsigned int Diagram_7()
             if(*p == '@')
                 {
                 if(i >= NumRelators) return(FATAL_ERROR);
-                r = *OutRelators[i+1];
+                r = *Temp16;
                 length = 0;
                 v = (j - 1) << 1;
                 e = p - *DualRelators[j];
@@ -1375,7 +1389,13 @@ unsigned int Diagram_7()
                     e = B[w][v] - e;
                     }        
                 *r = EOS;
-                SetHandleSize((char **) OutRelators[i+1],length + 1);
+                
+                if(OutRelators[i+1] != NULL) DisposeHandle((char **) OutRelators[i+1]);
+        		OutRelators[i+1] = (unsigned char **) NewHandle(length + 1);
+        		if(OutRelators[i+1] == NULL) Mem_Error();
+        		q = *OutRelators[i+1];
+        		r = *Temp16;
+        		while( (*q++ = *r++) ) {}
                 TotLength2 += length;
                 i++;
                 if(TotLength2 >= TotLength1) goto END;
@@ -1386,18 +1406,32 @@ unsigned int Diagram_7()
 
     END:
     
+    if(Batch == 51)
+    	{
+    	printf("\n The Dual Relators are:");
+    	Print_Relators(DualRelators,NumGenerators);
+    	if(H_Results != NULL)
+    		{
+    		fprintf(H_Results,"\n\n%s",PresName);
+    		Print_Relators2(DualRelators,NumGenerators);
+    		}
+    	return(NO_ERROR);
+    	}
+    
     /******************************************************************************************
         Make sure that, in all cases, the number of OutRelators allocated equals NumRelators.
     ******************************************************************************************/
             
     for(j = i + 1; j <= NumRelators; j++)
         {
-        ReallocateHandle((char **) OutRelators[j],1L);
-        if((r = *OutRelators[j]) == NULL) return(TOO_LONG);
+        if(OutRelators[j] != NULL) DisposeHandle((char **) OutRelators[j]);
+        OutRelators[j] = (unsigned char **) NewHandle(sizeof(char));
+        if(OutRelators[j] == NULL) Mem_Error();
+        r = *OutRelators[j];
         *r = EOS;        
         }
             
-    if(TestRealizability1)
+    if(TestRealizability1 || TestRealizability4)
         {
         for(i = 1; i <= NumRelators; i++)
             {
@@ -1425,8 +1459,7 @@ unsigned int Diagram_7()
     return(NO_ERROR);    
 }
 
-Compare(p)
-register unsigned char *p;
+int Compare(unsigned char *p)
 {    
     /******************************************************************************************
             This routine returns i if the string p is a cyclic conjugate of the 
@@ -1451,11 +1484,7 @@ register unsigned char *p;
 #define PRIME_P         65521
 #define PRIME_P_X_128     8386688
 
-Compare_Str(S1,S2,length)
-unsigned char     *S1,
-                *S2;
-                
-unsigned long    length;                
+int Compare_Str(unsigned char *S1,unsigned char *S2,unsigned long length)      
 {    
     /******************************************************************************************
         Given strings S1 and S2 of equal length, this routine returns TRUE if string S2 is a
@@ -1470,16 +1499,16 @@ unsigned long    length;
         of the routine should be on the order of 3 times the length of the strings.
     ******************************************************************************************/    
     
-    register unsigned char     C,
+    register unsigned char  C,
                             *p,
                             *q,
                             *r;
     
-    register unsigned long    D,
+    register unsigned long  D,
                             HP,
                             HT;                        
 
-    if(length == 0L) return(TRUE);
+    if(length == 0) return(TRUE);
     length --;
     for(HT = D = 1L; D < length; HT++) D = (D << 1);
     for(D = 1L; HT > 0; )
@@ -1489,10 +1518,10 @@ unsigned long    length;
         if(length & (1L << HT)) D = (D << 7) % PRIME_P;
         }
     
-    for(p = S1,HT = 0L; C = *p; p++) HT = ((HT << 7) + C) % PRIME_P;
-    for(q = S2,HP = 0L; C = *q; q++) HP = ((HP << 7) + C) % PRIME_P;
+    for(p = S1,HT = 0L; (C = *p); p++) HT = ((HT << 7) + C) % PRIME_P;
+    for(q = S2,HP = 0L; (C = *q); q++) HP = ((HP << 7) + C) % PRIME_P;
 
-    for(p = S1; C = *p; p++)
+    for(p = S1; (C = *p); p++)
         {
         if(HT == HP) for(q = p,r = S2;  ;q++,r++)
             {
@@ -1505,14 +1534,12 @@ unsigned long    length;
     return(FALSE);    
 }
 
-void Get_Bdry_Comps(Print,Where,WhichPres)
-     int Print, Where;
-     unsigned int WhichPres;
+void Get_Bdry_Comps(int Print,int Where,unsigned int WhichPres)
 {
-    unsigned char    *p,
+    unsigned char   *p,
                     x;
     
-    int                CompNum,
+    int             CompNum,
                     Genus;
     
     unsigned int    Edge,
@@ -1520,7 +1547,6 @@ void Get_Bdry_Comps(Print,Where,WhichPres)
                     j,
                     TheBdryComp,
                     v,
-                    V1,
                     V2,
                     V3;
 
@@ -1535,7 +1561,6 @@ void Get_Bdry_Comps(Print,Where,WhichPres)
     
     for(i = 1; i <= NumFaces; i++)
         {
-        V1 = Face[i][0];
         V2 = Face[i][1];
         V3 = Face[i][2];
         for(Edge = 0, v = FV[V2]; v != V3; v = CO[V2][v]) Edge += A[V2][v];
@@ -1583,30 +1608,26 @@ void Get_Bdry_Comps(Print,Where,WhichPres)
         break;
         }
         
-    if(Print)
+    if(Print && Batch == FALSE)
         {
-        if(Where)
-            fptr = myout;
-        else
-            fptr = stdout;
         CompNum = ComponentNum[WhichPres];        
         j = NumBdryComps - BCWG[0];
         switch(j)
             {
             case 0:
                 if(TotalComp == 1)
-                    fprintf(fptr,"\n\n                    This manifold is closed.\n");                
+                    printf("\n\n                    This manifold is closed.\n");                
                 else
-                    fprintf(fptr,"\n\n                    'Summand' %d of M is closed.\n",CompNum);
+                    printf("\n\n                    'Summand' %d of M is closed.\n",CompNum);
                 break;
             case 1:
                 for(i = 1; i <= NumGenerators; i++) if(BCWG[i])
                     {
                     if(TotalComp == 1)
-                        fprintf(fptr,"\n\n                    This manifold has one boundary component of genus %u.\n",
+                        printf("\n\n                    This manifold has one boundary component of genus %u.\n",
                             i);                    
                     else
-                        fprintf(fptr,"\n\n                    'Summand' %d of M has one boundary component of genus %u.\n",
+                        printf("\n\n                    'Summand' %d of M has one boundary component of genus %u.\n",
                             CompNum,i);
                     break;
                     }
@@ -1615,37 +1636,46 @@ void Get_Bdry_Comps(Print,Where,WhichPres)
                 for(i = 1; BCWG[i] < BDRY_UNKNOWN; i++) if(BCWG[i] == j)
                     {
                     if(TotalComp == 1)
-                        fprintf(fptr,"\n\n                    This manifold has %u boundary components of genus %u.\n",
+                        printf("\n\n                    This manifold has %u boundary components of genus %u.\n",
                             j,i);                    
                     else
-                        fprintf(fptr,"\n\n                    'Summand' %d of M has %u boundary components of genus %u.\n",
+                        printf("\n\n                    'Summand' %d of M has %u boundary components of genus %u.\n",
                             CompNum,j,i);
                     return;
                     }
                 if(TotalComp == 1)
-                    fprintf(fptr,"\n\n                    This manifold has the following boundary components:\n");                
+                    printf("\n\n                    This manifold has the following boundary components:\n");                
                 else    
-                    fprintf(fptr,"\n\n                    'Summand' %d of M has the following boundary components:\n",
+                    printf("\n\n                    'Summand' %d of M has the following boundary components:\n",
                         CompNum);
                 for(i = 1; (j = BCWG[i]) < BDRY_UNKNOWN; i++) if(j)
                     {
                     if(j == 1)
-                        fprintf(fptr,"\n                         %2u component  of genus %2u.",j,i);
+                        printf("\n                         %2u component  of genus %2u.",j,i);
                     else
-                        fprintf(fptr,"\n                         %2u components of genus %2u.",j,i);
+                        printf("\n                         %2u components of genus %2u.",j,i);
                     }
-                fprintf(fptr,"\n");    
+                printf("\n");    
                 break;    
             }
         }        
 }
 
-Delete_Redundant_Relators()
+int Delete_Redundant_Relators()
 {
-    unsigned char            DRL[MAXNUMRELATORS + 1],
+    /******************************************************************************************
+        This routine is called by Heegaard to delete redundant relators from the Heegaard
+        diagram. It looks for relators which separate a 2-sphere boundary component of the
+        manifold from another boundary component of the manifold. Such relators can be
+        deleted. There may be several possible ways in which this can be done. Topologically,
+        this is irrelevant, but which relator is deleted can have an influence on which
+        presentations Heegaard finds.
+    ******************************************************************************************/    
+    
+    unsigned char           DRL[MAXNUMRELATORS + 1],
                             **Temp;
     
-    int                        NumS2BC,
+    int                     NumS2BC,
                             OrigNumRelators;
     
     unsigned int            i,
@@ -1655,16 +1685,7 @@ Delete_Redundant_Relators()
                             N2,
                             RL[MAXNUMRELATORS];
     
-    unsigned long            TempLR;
-
-    /******************************************************************************************
-        This routine is called by the program to delete redundant relators from the Heegaard
-        diagram. It looks for relators which separate a 2-sphere boundary component of the
-        manifold from another boundary component of the manifold. Such relators can be
-        deleted. There may be several possible ways in which this can be done. Topologically,
-        this is irrelevant, but which relator is deleted can have an influence on which
-        presentations the program finds.
-    ******************************************************************************************/    
+    unsigned long           TempLR;
                                     
     for(i = 1; i <= NumRelators; i++) DRL[i] = EOS;
     for(i = 0; i < NumRelators; i++) RL[i] = i;
@@ -1719,9 +1740,7 @@ Delete_Redundant_Relators()
     for(i = 1; i <= OrigNumRelators; i++) if(DRL[i])
         {    
         LR[0] = GetHandleSize((char **) OutRelators[i]) - 1;
-        HLock((char **) OutRelators[i]);
         j = abs(Compare(*OutRelators[i]));
-        HUnlock((char **) OutRelators[i]);
         if(j == 0) return(TOO_LONG);
         Temp = Relators[NumRelators];
         Relators[NumRelators] = Relators[j];
@@ -1741,13 +1760,7 @@ Delete_Redundant_Relators()
         {
         printf("\n\nDeleted %d redundant relator(s) from presentation %d to get:\n",
             j,ReadPres + 1);
-        Print_Relators(Relators,NumRelators,stdout);
-        if(Micro_Print_F)
-            {
-            fprintf(myout,"\n\nDeleted %d redundant relator(s) from presentation %d to get:\n",
-                j,ReadPres + 1);
-            Print_Relators(Relators,NumRelators,myout);
-            }
+        Print_Relators(Relators,NumRelators);
         }
                     
     if(Find_Flow_A(NORMAL,FALSE) == TOO_LONG) return(TOO_LONG);
@@ -1756,15 +1769,15 @@ Delete_Redundant_Relators()
         {
         if(NumFilled >= MAX_SAVED_PRES - 3) return(TOO_LONG);    
         if(Dup_On_File < INFINITE)
-            {
-             if(Save_Pres(ReadPres,Dup_On_File,Length,1,1,1,j,0)) return(TOO_LONG);
-             ER[NumFilled - 1] = 0;                                
+        	{
+            if(Save_Pres(ReadPres,Dup_On_File,Length,1,1,1,0,0)) return(TOO_LONG);
+            ER[NumFilled - 1] = 0;                                
             Mark_As_Duplicate(Dup_On_File);             
-             }
+            }
          else
-             {
-            if(Save_Pres(ReadPres,0,Length,1,1,1,j,0)) return(TOO_LONG);             
-             if(BCWG[1] == BDRY_UNKNOWN)    
+            {
+            if(Save_Pres(ReadPres,0,Length,1,1,1,0,0)) return(TOO_LONG);             
+            if(BCWG[1] == BDRY_UNKNOWN)    
                 BDY[NumFilled - 1] = FALSE;
             else
                 BDY[NumFilled - 1] = TRUE;    
@@ -1774,17 +1787,20 @@ Delete_Redundant_Relators()
         }
     
     if(ER[ReadPres] == 0) ER[ReadPres] = -1;
+    
+    /* Try setting UDV[ReadPres] = DONE so we won't process it more than once. */
+    
+    UDV[ReadPres] = DONE;
         
     return(TRUE);            
 }
 
-int MG_Bdry_Comp_Data(WhichPres)
-     unsigned int WhichPres;
+int MG_Bdry_Comp_Data(unsigned int WhichPres)
 {
-    unsigned char    PS1[MAXNUMGENERATORS + 1],
+    unsigned char   PS1[MAXNUMGENERATORS + 1],
                     PS2[MAXNUMGENERATORS + 2];
                     
-    int                Ambiguity,
+    int             Ambiguity = FALSE,
                     BdryComps1,
                     BdryComps2,
                     CNumPres1,
@@ -1796,7 +1812,6 @@ int MG_Bdry_Comp_Data(WhichPres)
                     NumEmtyHand,
                     Num1H,
                     NumS1XD2,
-                    NumS1XS2,
                     Pres1,
                     Pres2,
                     Pres3,
@@ -1889,10 +1904,10 @@ int MG_Bdry_Comp_Data(WhichPres)
         if(Ambiguity)
             {    
             CBC[CNumPres3][0]      = Num1H;
-            CBC[CNumPres3][1]    = NumS1XD2;
+            CBC[CNumPres3][1]      = NumS1XD2;
             CBC[CNumPres3][2]      = BDRY_UNKNOWN;
             UDV[Pres3]             = MISSING_GEN_DONE2;
-            CS[CNumPres3]         = 2;
+            CS[CNumPres3]          = 2;
             return(TRUE);            
             }
         
@@ -1918,7 +1933,7 @@ int MG_Bdry_Comp_Data(WhichPres)
         }
         
     /******************************************************************************************
-        Check whether the program is done processing all of the presentations associated with
+        Check whether Heegaard is done processing all of the presentations associated with
         the summand that "SPLIT". If it is, then we will make an attempt to determine the
         number and types of "handles" associated with this manifold.
     ******************************************************************************************/
@@ -1968,7 +1983,7 @@ int MG_Bdry_Comp_Data(WhichPres)
     return(FALSE);            
 }
 
-Sep_Surface()
+int Sep_Surface()
 {
     /******************************************************************************************
         This routine determines the components which arise when the curves representing the
@@ -1981,7 +1996,7 @@ Sep_Surface()
         have equal values in zz[].
     ******************************************************************************************/    
     
-    register unsigned int     h,
+    register unsigned int   h,
                             i,
                             j,
                             k,
@@ -2032,7 +2047,7 @@ void Fill_DRA(void)
         case where NumRelators != NumGenerators, we must redefine Vertices to be 2*NumRelators.
     ******************************************************************************************/
     
-    register unsigned char     i,
+    register unsigned char  i,
                             j,
                             *p,
                             Vertices,
@@ -2050,7 +2065,7 @@ void Fill_DRA(void)
         else x -= 194;
         i = x;
         p++;
-        while(x = *p)
+        while( (x = *p) )
             {
             x = x << 1;
             if(x < 194) x -= 130;
@@ -2074,9 +2089,7 @@ void Fill_DRA(void)
         }        
 }
 
-unsigned int GCD(p,q)
-unsigned int     p,
-                q;
+unsigned int GCD(unsigned int p,unsigned int q)
 {
     /******************************************************************************************
         Given a pair of nonnegative integers p and q, this routine computes the GCD
@@ -2085,13 +2098,13 @@ unsigned int     p,
                     GCD(p,q) = p*Recip_P + q*Recip_Q  holds.
     ******************************************************************************************/    
     
-    register long     d,
+    register long   d,
                     t,
                     u2,
                     v1,
                     v2;
                     
-    long             u1;
+    long            u1;
         
     u1 = 0L;
     u2 = p;
@@ -2110,7 +2123,7 @@ unsigned int     p,
     if(p)
         {
         t = u2 - q*u1;
-        if(t < 0L)
+        if(t < 0)
             {
             t = - t;
             Recip_P = t/p;
@@ -2132,7 +2145,7 @@ void Inverse(register unsigned char *p)
         each char in the string by its inverse and then writing the string backwards.
     ******************************************************************************************/
     
-    register unsigned char     *q,
+    register unsigned char  *q,
                             x;
                             
     q = p;
@@ -2153,7 +2166,7 @@ void Inverse(register unsigned char *p)
         }                    
 }
 
-Non_Unique()
+int Non_Unique()
 {
     /******************************************************************************************
         Generally, if a generator appears in the relators with only one exponent, the Heegaard
@@ -2161,13 +2174,13 @@ Non_Unique()
         when the "reduced" Whitehead graph is homeomorphic to a circle and there are not too
         many edges in the Heegaard diagram. Non_Unique() is called to check whether we have
         uniqueness in this special set of circumstances. For example, without this special
-        check, the program would declare that the diagram corresponding to the relator AAABB
+        check, Heegaard would declare that the diagram corresponding to the relator AAABB
         was not unique because generator A appears only with exponent 3. However this diagram
         is unique because there is an involution of the diagram which exchanges the two major
         faces of the diagram.
     ******************************************************************************************/
         
-    unsigned int     i,
+    unsigned int    i,
                     j,
                     k;
     
@@ -2208,35 +2221,35 @@ Non_Unique()
 void Debug(void)
 {
 
-    register int     i,
+    register int    i,
                     j;
     
     /******************************************************************************************
                                 Print the array CO[i][j]
            CO[i][j] is the vertex following vertex j in counterclockwise order about vertex i.                            
     ******************************************************************************************/                            
-                    fprintf(fptr,"\n\nThis is the array CO[i][j].\n");         
+                    printf("\n\nThis is the array CO[i][j].\n");         
                     for(i = 0; i < Vertices; i++)
                         {
-                        fprintf(fptr,"\n");
+                        printf("\n");
                         for(j = 0; j < Vertices; j++)
                             {
                             if(i == j)
-                                fprintf(fptr,"   *");
+                                printf("   *");
                             else
-                                fprintf(fptr,"%4u",CO[i][j]);
+                                printf("%4u",CO[i][j]);
                             }     
                         }
-                    fprintf(fptr,"\n");        
+                    printf("\n");        
                                                         
     /******************************************************************************************
                                     Print the array LR[i].
                             LR[i] gives the length of the ith relator.
     ******************************************************************************************/
     
-                    fprintf(fptr,"\n\nThis is the array LR[i].\n\n");    
-                    for(i = 1; i <= NumRelators; i++) fprintf(fptr,"%4lu",LR[i]);
-                    fprintf(fptr,"\n");
+                    printf("\n\nThis is the array LR[i].\n\n");    
+                    for(i = 1; i <= NumRelators; i++) printf("%4lu",LR[i]);
+                    printf("\n");
                             
     /******************************************************************************************
                                     Print the array EXP[i][j].
@@ -2244,26 +2257,26 @@ void Debug(void)
         generator i appears in the set of relators.
     ******************************************************************************************/
     
-                    fprintf(fptr,"\n\nThis is the array EXP[i][j].\n");    
+                    printf("\n\nThis is the array EXP[i][j].\n");    
                     for(i = 0; i < NumGenerators; i++)
                         {
-                        fprintf(fptr,"\n");
-                        for(j = 0; j < 3; j++) fprintf(fptr,"%4u",EXP[i][j]);
+                        printf("\n");
+                        for(j = 0; j < 3; j++) printf("%4u",EXP[i][j]);
                         }
-                    fprintf(fptr,"\n");
+                    printf("\n");
                     
     /******************************************************************************************
                                     Print the array NEX[i][j].
         NEX[i][j] gives the number of times that the exponent EXP[i][j] occurs in the relators.
     ******************************************************************************************/
     
-                    fprintf(fptr,"\n\nThis is the array NEX[i][j].\n");    
+                    printf("\n\nThis is the array NEX[i][j].\n");    
                     for(i = 0; i < NumGenerators; i++)
                         {
-                        fprintf(fptr,"\n");
-                        for(j = 0; j < 3; j++) fprintf(fptr,"%4u",NEX[i][j]);
+                        printf("\n");
+                        for(j = 0; j < 3; j++) printf("%4u",NEX[i][j]);
                         }
-                    fprintf(fptr,"\n");
+                    printf("\n");
                             
     /******************************************************************************************
                                     Print the array DF[i].
@@ -2274,9 +2287,9 @@ void Debug(void)
         valence 2, in which case, DF[i] is 3.                                    
     ******************************************************************************************/
     
-                    fprintf(fptr,"\n\nThis is the array DF[i].\n\n");    
-                    for(i = 0; i < NumGenerators; i++) fprintf(fptr,"%4u",DF[i]);
-                    fprintf(fptr,"\n");
+                    printf("\n\nThis is the array DF[i].\n\n");    
+                    for(i = 0; i < NumGenerators; i++) printf("%4u",DF[i]);
+                    printf("\n");
     
     /******************************************************************************************
                                     Print the array PG[i].                        
@@ -2290,62 +2303,62 @@ void Debug(void)
                                     Print the array T[i][j].
     ******************************************************************************************/    
     
-                    fprintf(fptr,"\n\nThis is the array T[i][j].\n");
+                    printf("\n\nThis is the array T[i][j].\n");
                     for(i = 0; i < NumGenerators; i++)
                         {
-                        fprintf(fptr,"\n");
-                        for(j = 0; j < 8; j++) fprintf(fptr,"%c ",T[i][j]);
+                        printf("\n");
+                        for(j = 0; j < 8; j++) printf("%c ",T[i][j]);
                         }
-                    fprintf(fptr,"\n");
+                    printf("\n");
                     
     /******************************************************************************************                                        
                                     Print the array ED[i][j].
     ******************************************************************************************/    
                                                         
-                    fprintf(fptr,"\n\nThis is the array ED[i][j].\n");
+                    printf("\n\nThis is the array ED[i][j].\n");
                     for(i = 0; i < NumGenerators; i++)
                         {
-                        fprintf(fptr,"\n");
+                        printf("\n");
                         for(j = 0; j < Vertices; j++)
-                            fprintf(fptr,"%4u",ED[i][j]);
+                            printf("%4u",ED[i][j]);
                         }
-                    fprintf(fptr,"\n");
+                    printf("\n");
                                                         
     /******************************************************************************************
                                     Print the array A[i][j].
     ******************************************************************************************/
         
-                    fprintf(fptr,"\n\nThis is the array A[i][j].\n");
+                    printf("\n\nThis is the array A[i][j].\n");
                     for(i = 0; i < Vertices; i++)
                         {
-                        fprintf(fptr,"\n");
-                        for(j = 0; j < Vertices; j++) fprintf(fptr,"%4u",A[i][j]);
+                        printf("\n");
+                        for(j = 0; j < Vertices; j++) printf("%4u",A[i][j]);
                         }
-                    fprintf(fptr,"\n");
+                    printf("\n");
                     
     /******************************************************************************************
                                     Print the array AJ1[i][j].
     ******************************************************************************************/    
     
-                    fprintf(fptr,"\n\nThis is the array AJ1[i][j].\n");
+                    printf("\n\nThis is the array AJ1[i][j].\n");
                     for(i = 0; i < Vertices; i++)
                         {
-                        fprintf(fptr,"\n");
-                        for(j = 0; AJ1[i][j] < VERTICES; j++) fprintf(fptr,"%4u",AJ1[i][j]);
+                        printf("\n");
+                        for(j = 0; AJ1[i][j] < VERTICES; j++) printf("%4u",AJ1[i][j]);
                         }
-                    fprintf(fptr,"\n");                    
+                    printf("\n");                    
     
     /******************************************************************************************
                                     Print the array AJ2[i][j].
     ******************************************************************************************/    
     
-                    fprintf(fptr,"\n\nThis is the array AJ2[i][j].\n");
+                    printf("\n\nThis is the array AJ2[i][j].\n");
                     for(i = 0; i < Vertices; i++)
                         {
-                        fprintf(fptr,"\n");
-                        for(j = 0; AJ2[i][j] < VERTICES; j++) fprintf(fptr,"%4u",AJ2[i][j]);
+                        printf("\n");
+                        for(j = 0; AJ2[i][j] < VERTICES; j++) printf("%4u",AJ2[i][j]);
                         }
-                    fprintf(fptr,"\n");                    
+                    printf("\n");                    
                                     
     /******************************************************************************************
                                     Print the array FV[i].
@@ -2354,41 +2367,41 @@ void Debug(void)
         ordering of the generators, that is joined to vertex i by an edge. 
     ******************************************************************************************/
     
-                    fprintf(fptr,"\n\nThis is the array FV[i].\n\n");
+                    printf("\n\nThis is the array FV[i].\n\n");
                     for(i = 0; i < Vertices; i++)
-                        fprintf(fptr,"%4u",FV[i]);
-                    fprintf(fptr,"\n");                
+                        printf("%4u",FV[i]);
+                    printf("\n");                
     
     /******************************************************************************************                        
                                     Print the array OSA[i].
     ******************************************************************************************/
         
-                    fprintf(fptr,"\n\nThis is the array OSA[i].\n\n");    
-                    for(i = 0; i < Vertices; i++) fprintf(fptr,"%4u",OSA[i]);
-                    fprintf(fptr,"\n");
+                    printf("\n\nThis is the array OSA[i].\n\n");    
+                    for(i = 0; i < Vertices; i++) printf("%4u",OSA[i]);
+                    printf("\n");
                     
     /******************************************************************************************                        
                                     Print the array OSB[i].
     ******************************************************************************************/
         
-                    fprintf(fptr,"\n\nThis is the array OSB[i].\n\n");    
-                    for(i = 0; i < Vertices; i++) fprintf(fptr,"%4u",OSB[i]);
-                    fprintf(fptr,"\n");
+                    printf("\n\nThis is the array OSB[i].\n\n");    
+                    for(i = 0; i < Vertices; i++) printf("%4u",OSB[i]);
+                    printf("\n");
                             
     /******************************************************************************************
                                     Print the array B[i][j].
     ******************************************************************************************/
-                    fprintf(fptr,"\n\nThis is the array B[i][j].\n");
+                    printf("\n\nThis is the array B[i][j].\n");
                     for(i = 0; i < Vertices; i++)
                         {
-                        fprintf(fptr,"\n");
+                        printf("\n");
                         for(j = 0; j < Vertices; j++)
                             {
                             if(i == j)
-                                fprintf(fptr,"   *");
+                                printf("   *");
                             else
-                                fprintf(fptr,"%4u",B[i][j]);
+                                printf("%4u",B[i][j]);
                             }    
                         }
-                    fprintf(fptr,"\n");            
+                    printf("\n");            
 }

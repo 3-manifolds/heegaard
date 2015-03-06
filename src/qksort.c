@@ -3,10 +3,10 @@
  
 /*  sort elements "first" through "last"-1 */
 
-static qksort1(first, last)
+static void qksort1(first, last)
 {
-	static 		short i;		/*  "static" to save stack space  */
-	register 	short j;
+	static 		int i;		/*  "static" to save stack space  */
+	register 	int j;
  
 	while (last - first > 1) 
 		{

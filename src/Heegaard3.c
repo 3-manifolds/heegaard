@@ -1,9 +1,28 @@
 #include "Heegaard.h"
 #include "Heegaard_Dec.h"
 
-/*  #define MANUALLY_RENUMBER_PRESENTATIONS    */
-/*  #define PRINT_CYCLES    */
-/*  #define PRINT_TRIAL_CYCLES    */
+/****************************** function prototypes *****************************************
+L   27 Whitehead_Graph(void)
+L   84 Get_Matrix(void)
+L  138 Check_Connected(void)
+L  552 Connected_(unsigned int i,unsigned int k)
+L  586 Split_Relators(register unsigned char x)
+L  628 Sep_Pairs(int VI,int VJ, int FirstCall)
+L  783 Sep_Pairs_Sub(v1,v2)
+L  892 Planar(int Flag,int SaveFaces)
+L 1210 Find_Minimal_Path(void)
+L 1321 Planar_Connected_(unsigned int length)
+L 1395 Check_Bridge_Interlacing(unsigned int NumComps, unsigned int length)
+L 1601 Find_Cut_Vertices(void)
+L 1675 Print_Graph(int F1,int F2,int Pres,int HS)
+L 1912 Diagram_Data(int PrintOut,int F1,int F2,Pres,HS)
+L 2158 Diagram_Data_for_Graphviz(int F2,int Pres,int HS)
+L 2329 Gauss_Seidel(void)
+L 2621 Print_Bdry_Comp_Info(int F2,int Pres, int HS)
+********************************************************************************************/
+
+/*  #define PRINT_CYCLES    					*/				
+/*  #define PRINT_TRIAL_CYCLES    				*/					
                             
 unsigned int Whitehead_Graph()
 {
@@ -36,7 +55,7 @@ unsigned int Whitehead_Graph()
             gives a non-trivial separation of the "reduced" Whitehead graph.
         **************************************************************************************/
         
-        SepPairs = Sep_Pairs(0,0);
+        SepPairs = Sep_Pairs(0,0,1);
         switch(SepPairs)
             {
             case 0:
@@ -51,24 +70,24 @@ unsigned int Whitehead_Graph()
             We now have a graph which is 3-connected. Call Planar(TRUE,FALSE) to determine
             whether this graph is planar.
         **************************************************************************************/    
-                         
-        if(NonPlanar = Planar(TRUE,FALSE)) return(NON_PLANAR);
+        NonPlanar = Planar(TRUE,FALSE);                
+        if(NonPlanar) return(NON_PLANAR);
         }
-        else
-        {
-        if(SepPairs)     return(SEP_PAIRS);
-        if(NonPlanar)     return(NON_PLANAR);
-        }                     
+	else
+		{
+		if(SepPairs)     return(SEP_PAIRS);
+		if(NonPlanar)    return(NON_PLANAR);
+		}                     
     return(Diagram_Main());                                                            
 }    
 
-Get_Matrix()
+int Get_Matrix()
 {
-    register int     i,
+    register int    i,
                     j,
                     k;
                     
-    unsigned int     *Temp;
+    unsigned int    *Temp;
     
     /****************************************************************************************** 
             Set VWG[i] equal to the valence of vertex i in the "reduced" Whitehead graph. 
@@ -116,22 +135,23 @@ Get_Matrix()
     return(TRUE);        
 }    
         
-Check_Connected()
+int Check_Connected()
 {    
-    register unsigned char     *p,
-                            *q;
+    register unsigned char  *p,
+                            *q,
+                            *r;
                             
-    register int             i,
+    register int            i,
                             j;
                             
-    unsigned char             **Temp,
+    unsigned char           **Temp,
                             x;                        
     
-    int                        h,
-                            SaveCS,
-                            SaveNumRelators;
+    int                     h;
     
     unsigned int            SaveUDV;
+    
+    unsigned long			HS;
         
     /****************************************************************************************** 
                     Check whether the "reduced" Whitehead graph is connected. 
@@ -240,13 +260,7 @@ Check_Connected()
             {
             printf("\n\nThe diagram of the following presentation from Presentation %d is not connected.\n",
                 ReadPres + 1);
-            Print_Relators(Relators,NumRelators,stdout);
-            if(Micro_Print_F)
-                {
-                fprintf(myout,"\n\nThe diagram of the following presentation from Presentation %d is not connected.\n",
-                    ReadPres + 1);
-                Print_Relators(Relators,NumRelators,myout);
-                }
+            Print_Relators(Relators,NumRelators);
             }
             
         if(i == NumFilled)
@@ -258,22 +272,18 @@ Check_Connected()
             /**********************************************************************************
                 If Whitehead_Graph() was called by Lens_Space(), we want to check whether the
                 presentation of the "lens-space" is the standard presentation of the 3-Sphere
-                at this point. If we don't do this, the program will eventually discover that
+                at this point. If we don't do this, Heegaard will eventually discover that
                 it has the 3-Sphere, but only after producing some redundant presentations and
                 diagrams.
             **********************************************************************************/
             
             if(Length == NumGenerators && NumRelators == NumGenerators && !Boundary)
                 {
-                for(i = 1; i <= NumRelators; i++) if(GetHandleSize((char **) Relators[i]) != 2L) break;
+                for(i = 1; i <= NumRelators; i++) if(GetHandleSize((char **) Relators[i]) != 2) break;
                 if(i > NumRelators && Delete_Dups() == NumRelators)
                     {
                     if(Micro_Print)
-                        {
                         printf("\n\nThe current presentation presents the 3-Sphere.");
-                        if(Micro_Print_F)
-                            fprintf(myout,"\n\nThe current presentation presents the 3-Sphere.");
-                        }
                     if((NumFilled >= MAX_SAVED_PRES - 3) || 
                         Save_Pres(ReadPres,0,Length,1,5,0,0,0))
                         {
@@ -304,7 +314,7 @@ Check_Connected()
             }
             
         /**************************************************************************************
-             If the program already has as many summands as it can handle, flag any other
+             If Heegaard already has as many summands as it can handle, flag any other
              presentations corresponding to this summand so that we will quit processing them.
          **************************************************************************************/    
          
@@ -312,9 +322,15 @@ Check_Connected()
              {
             Mark_As_Found_Elsewhere(CurrentComp);    
             NotConnectedError = TOO_MANY_COMPONENTS;
-            SysBeep(5);
-            printf("\n\nStopping because the program cannot deal with any more summands. Sorry!");    
-             return(FALSE);
+            if(Batch == FALSE) SysBeep(5);
+            printf("\n\nStopping because Heegaard cannot deal with any more summands. Sorry!"); 
+            printf("\n\nRerunning using Depth-First Search may help.");
+            if(NumErrors == 1)
+				printf("\nOne error was detected. Scroll back for details.");
+			if(NumErrors > 1)
+				printf("\n%lu errors were detected. Scroll back for details.",NumErrors); 
+			Too_Many_Components_ALert(); 
+            return(FALSE);
             }
                          
         /**************************************************************************************
@@ -342,45 +358,52 @@ Check_Connected()
             Length += GetHandleSize((char **) Relators[i]);
         Length -= NumRelators;
         
-        SaveCS = CS[CurrentComp];
         if(!CS[CurrentComp]) CS[CurrentComp] = TRUE;
         
-        TotalComp                         ++;
-        UDV[ReadPres]                     = SPLIT;
-        NCS[ReadPres]                    = 2;                
-        Daughters[ReadPres]             = NumFilled;
+        TotalComp                       ++;
+        UDV[ReadPres]                   = SPLIT;
+        NCS[ReadPres]                   = 2;                
+        Daughters[ReadPres]            	= NumFilled;
         ComponentNum[NumFilled]         = TotalComp;        
-        ER[NumFilled]                    = -3;
-        FR[NumFilled]                    = ReadPres;        
-        MLC[TotalComp][NumGenerators]     = Length;
-        NG[NumFilled]                     = NumGenerators;
-        NR[NumFilled]                     = NumRelators;
-        PRIM[NumFilled]                    = 20;
+        ER[NumFilled]                   = -3;
+        FR[NumFilled]                   = ReadPres;        
+        MLC[TotalComp][NumGenerators]   = Length;
+        NG[NumFilled]                   = NumGenerators;
+        NR[NumFilled]                   = NumRelators;
+        PRIM[NumFilled]                 = 20;
         SURL[NumFilled]                 = Length;
-        UDV[NumFilled]                     = 0;
-        TP[NumFilled]                    = NumRelators;
-        BDY[NumFilled]                     = BDY[ReadPres];
-        OnStack                            += 2*NumGenerators;
+        UDV[NumFilled]                  = 0;
+        TP[NumFilled]                   = NumRelators;
+        BDY[NumFilled]                  = BDY[ReadPres];
+        OnStack                         += 2*NumGenerators;
         
+		/***************************************************************************************** 
+		The line below sets UDV[] == DONE for each presentation in the component that just split
+		so it won't be run again. Comment out the line below here and in Heegaard6.c and 
+		Heegaard8.c to let Heegaard rerun presentations that have split.
+		******************************************************************************************/ 
+	
+ 		for(i = 0; i < NumFilled; i++) 
+ 			if(ComponentNum[i] == ComponentNum[ReadPres] && UDV[i] < DONE) UDV[i] = DONE;
+ 	           
         Canonical_Rewrite(Relators,FALSE,FALSE);
         
         for(i = 1; i <= NumRelators; i++)
             {
-            SUR[NumFilled][i] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[i]));            
-            if((q = *SUR[NumFilled][i]) == NULL)
-                {
-                for(j = 1; j < i; j++) DisposeHandle((char **) SUR[NumFilled][j]);
-                MLC[TotalComp][NumGenerators]     = BIG_NUMBER;
-                UDV[ReadPres]                     = SaveUDV;
-                CS[CurrentComp]                 = SaveCS;
-                OnStack                         -= 2*NumGenerators;
-                TotalComp                         --;
-                NotConnectedError                 = TOO_LONG;
-                return(FALSE);
-                }
-            p = *Relators[i];
-            while(*q++ = *p++) ;                                    
-            }
+            HS = GetHandleSize((char **) Relators[i]);
+            if(SUR[NumFilled][i] != NULL) DisposeHandle((char **) SUR[NumFilled][i]);
+            SUR[NumFilled][i] = (unsigned char **) NewHandle(HS);            
+            if(SUR[NumFilled][i] == NULL) Mem_Error();
+            p = *Relators[i];           
+            q = *SUR[NumFilled][i];    
+	    	r = q;
+	   	 	while( (*q++ = *p++) ) ;
+	    	if (q-r != HS)
+	      		{
+		  		NumErrors ++;
+		  		printf("\n\n2) Error in Presentation %u! |Relator[%d]| = %lu, HS = %lu.",NumFilled + 1,i,q-r-1,HS);
+	      		}
+	    	}
             
         BytesUsed += Length;        
 
@@ -410,21 +433,14 @@ Check_Connected()
         if(Micro_Print)
             {
             printf("\nThe presentation of the first summand is:\n");
-            Print_Relators(Relators,NumRelators,stdout);
+            Print_Relators(Relators,NumRelators);
             printf("\n\nSaved this presentation as: Presentation %u\n",NumFilled);
-            if(Micro_Print_F)
-                {
-                fprintf(myout,"\nThe presentation of the first summand is:\n");
-                Print_Relators(Relators,NumRelators,myout);
-                fprintf(myout,"\n\nSaved this presentation as: Presentation %u\n",NumFilled);
-                }
             }
                 
         printf("\nPres%6u  ToDo%6u  Summand%3d  ",NumFilled,OnStack,TotalComp);
         printf("Gen%3d  Rel%3d  Length%6lu  From%6d  NC",
             NumGenerators,NumRelators,Length,ReadPres + 1);
         
-        SaveNumRelators = NumRelators;
         NumRelators = NumDelRelators;
         
         for(i = 1; i <= NumRelators; i++)
@@ -440,40 +456,37 @@ Check_Connected()
             Length += GetHandleSize((char **) Relators[i]);
         Length -= NumRelators;
         
-        TotalComp                         ++;
+        TotalComp                       ++;
         ComponentNum[NumFilled]         = TotalComp;    
-        ER[NumFilled]                    = -3;
-        FR[NumFilled]                    = ReadPres;    
-        MLC[TotalComp][NumGenerators]     = Length;
-        NG[NumFilled]                     = NumGenerators;
-        NR[NumFilled]                     = NumRelators;
-        PRIM[NumFilled]                    = 20;    
+        ER[NumFilled]                   = -3;
+        FR[NumFilled]                   = ReadPres;    
+        MLC[TotalComp][NumGenerators]   = Length;
+        NG[NumFilled]                   = NumGenerators;
+        NR[NumFilled]                   = NumRelators;
+        PRIM[NumFilled]                 = 20;    
         SURL[NumFilled]                 = Length;
-        UDV[NumFilled]                     = 0;
-        TP[NumFilled]                    = NumRelators;
-        BDY[NumFilled]                    = BDY[ReadPres];
-        OnStack                            += 2*NumGenerators;
+        UDV[NumFilled]                  = 0;
+        TP[NumFilled]                   = NumRelators;
+        BDY[NumFilled]                  = BDY[ReadPres];
+        OnStack                         += 2*NumGenerators;
         
         Canonical_Rewrite(Relators,FALSE,FALSE);
         
         for(i = 1; i <= NumRelators; i++)
             {
-            SUR[NumFilled][i] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[i]));            
-            if((q = *SUR[NumFilled][i]) == NULL)
-                {
-                for(j = 1; j < i; j++) DisposeHandle((char **) SUR[NumFilled][j]);
-                NumFilled --;
-                for(j = 1; j <= SaveNumRelators; j++) DisposeHandle((char **) SUR[NumFilled][j]);
-                MLC[TotalComp][NumGenerators]     = BIG_NUMBER;
-                UDV[ReadPres]                     = SaveUDV;
-                CS[CurrentComp]                 = SaveCS;
-                OnStack                         -= 2*NumGenerators;
-                TotalComp                         --;
-                NotConnectedError                 = TOO_LONG;
-                return(FALSE);
-                }
-            p = *Relators[i];
-            while(*q++ = *p++) ;                                    
+            HS = GetHandleSize((char **) Relators[i]);
+            if(SUR[NumFilled][i] != NULL) DisposeHandle((char **) SUR[NumFilled][i]);
+            SUR[NumFilled][i] = (unsigned char **) NewHandle(HS);            
+            if(SUR[NumFilled][i] == NULL) Mem_Error();
+            p = *Relators[i];            
+            q = *SUR[NumFilled][i]; 
+            r = q;   
+            while( (*q++ = *p++) ) ;   
+            if((q-r) != HS) 
+            	{
+            	NumErrors ++;
+            	printf("\n\n3) Error in Presentation %u! |Relator[%d]| = %lu, HS = %lu.",NumFilled + 1,i,q-r-1,HS);
+            	}             
             }
         
         BytesUsed += Length;
@@ -504,31 +517,29 @@ Check_Connected()
         if(Micro_Print)
             {
             printf("\nThe presentation of the second summand is:\n");
-            Print_Relators(Relators,NumRelators,stdout);
+            Print_Relators(Relators,NumRelators);
             printf("\n\nSaved this presentation as: Presentation %u\n",NumFilled);
-            if(Micro_Print_F)
-                {
-                fprintf(myout,"\nThe presentation of the second summand is:\n");
-                Print_Relators(Relators,NumRelators,myout);
-                fprintf(myout,"\n\nSaved this presentation as: Presentation %u\n",NumFilled);
-                }
             }        
         
         if(BDY[ReadPres] == FALSE)
             {
             if(CBC[TotalComp - 1][0] == BDRY_UNKNOWN)
                 {
-                CBC[TotalComp - 1][0] == 1;
-                CBC[TotalComp - 1][1] == BDRY_UNKNOWN;
+                CBC[TotalComp - 1][0] = 1;
+                CBC[TotalComp - 1][1] = BDRY_UNKNOWN;
                 }
             if(CBC[TotalComp][0] == BDRY_UNKNOWN)
                 {
-                CBC[TotalComp][0] == 1;
-                CBC[TotalComp][1] == BDRY_UNKNOWN;
+                CBC[TotalComp][0] = 1;
+                CBC[TotalComp][1] = BDRY_UNKNOWN;
                 }    
             }
             
-        for(i = 1; i <= NumDelRelators; i++) EmptyHandle((char **) DelRelators[i]);
+        for(i = 1; i <= NumDelRelators; i++) if(DelRelators[i] != NULL) 
+        	{
+        	DisposeHandle((char **) DelRelators[i]);
+        	DelRelators[i] = NULL;
+        	}
         NumDelRelators = 0;
                         
         printf("\nPres%6u  ToDo%6u  Summand%3d  ",NumFilled,OnStack,TotalComp);
@@ -538,9 +549,7 @@ Check_Connected()
     return(Connected);                
 }    
 
-Connected_(i,k)
-register unsigned int     i,
-                        k;
+int Connected_(unsigned int i,unsigned int k)
 {    
     /******************************************************************************************
         This routine finds those vertices in the component of vertex i in the graph specified
@@ -550,23 +559,21 @@ register unsigned int     i,
         The routine returns FALSE if the graph is not connected and TRUE if it is connected.
     ******************************************************************************************/    
      
-    register unsigned int     h,
-                            j,
-                            *p,
-                            *r,
-                            *zz;
-                            
-    zz = ZZ;                         
-    zz[i] = 1;
+    register unsigned int   h,
+    						j,
+    						*p,
+    						*r;
+                                                     
+    ZZ[i] = 1;
     k ++;
     for(r = UpDate,*r = i,p = r + 1; r < p; r++)
         {
         i = *r;
         for(h = 0; (j = AJ1[i][h]) < VERTICES; h++)
             {
-            if(zz[j] == 0)
+            if(ZZ[j] == 0)
                 {
-                zz[j] = 1;
+                ZZ[j] = 1;
                 *p++ = j;
                 if(++k == Vertices) return(TRUE);
                 }
@@ -584,28 +591,30 @@ void Split_Relators(register unsigned char x)
         inverse is removed from the set of relators and saved in the array DelRelators[].
     ******************************************************************************************/
         
-    register unsigned char     *p,
-                            y,
-                            z;
+    register unsigned char   *p,
+                              y,
+                              z;
                             
-    register int             i;
+    register int              i;
     
     unsigned char             **Temp;
     
     y = x + 32;
     for(i = 1; i <= NumRelators; i++)
         { 
-        if(GetHandleSize((char **) Relators[i]) > 1L)
+        if(GetHandleSize((char **) Relators[i]) > 1)
             {
             p = *Relators[i];
-            while(z = *p++)
+            while( (z = *p++) )
                 {
                 if((z == x) || (z == y))
                     {
                     Temp = DelRelators[NumDelRelators + 1];
                     DelRelators[NumDelRelators + 1] = Relators[i];
                     Relators[i] = Temp;
-                    ReallocateHandle((char **) Relators[i],1L);
+                    if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+                    Relators[i] = (unsigned char **) NewHandle(sizeof(char));
+                    if(Relators[i] == NULL) Mem_Error();
                     p = *Relators[i];
                     *p = EOS;        
                     NumDelRelators++;
@@ -616,23 +625,21 @@ void Split_Relators(register unsigned char x)
         }    
 }
 
-Sep_Pairs(VI,VJ)
-int     VI,
-        VJ;
+int Sep_Pairs(int VI,int VJ, int FirstCall)
 {    
     /******************************************************************************************
         This routine determines whether the graph specified by the adjacency lists in AJ1[],
-        has a pair of separating vertices. It deletes, in turn, each vertex, of valence greater
+        has a separating pair of vertices. It deletes, in turn, each vertex, of valence greater
         than two, from the graph and then uses a stack-based version of depth-first-search to
         determine if the resulting graph has a separating vertex. The routine returns TRUE if
         it finds a pair of vertices which "essentially" separates the graph and otherwise
         returns FALSE. If the original graph has more than two major vertices, the routine
-        calls Sep_Pairs_Sub() which returns the first pair of separating vertices (V1,V2),
-        which follows the ordered pair (VI,VJ) in lexicographic order. Otherwise, it returns
-        the ordered pair of major vertices.
+        calls Sep_Pairs_Sub() which sets the globals V1 and V2 to the first separating pair of 
+        vertices (V1,V2), which follow the ordered pair (VI,VJ) in lexicographic order. 
+        Otherwise, it sets the globals V1 and V2 to the ordered pair of major vertices. 
     ******************************************************************************************/
     
-    register unsigned int     i,
+    register unsigned int   i,
                             j,
                             k,
                             K,
@@ -641,47 +648,50 @@ int     VI,
     
     unsigned int            VG[VERTICES],
                             root;                
-    
-    /******************************************************************************************
-        First, count the number of vertices of the graph which have valence greater than two,
-        and deal with the special case where there are exactly two of these.
-    ******************************************************************************************/
-    
-    for(m = MajorVert = 0; m < Vertices; m++)
-        if(VWG[m] > 2)
-            {
-            MajorVert++;
-            if(MajorVert == 1)
-                i = m;
-            else
-                {    
-                if(MajorVert == 2)
-                    j = m;
-                else
-                    break;
-                }
-            }    
-    if(MajorVert == 2)
-        {
-        /**************************************************************************************    
-                The graph has exactly two major vertices given by the values of i and j.
-                If the valence of vertex i is greater than 3 or there is more than one edge 
-                joining vertex i and j then the graph does not have a unique planar embedding.
-        **************************************************************************************/    
-                        
-        if((VWG[i] > 3) || (A[i][j] > 1))
-            { 
-            V1 = i;
-            V2 = j;
-            NumComps = VWG[i];
-            return(TRUE);
-            }
-        else
-            {
-            V1 = i;
-            V2 = j;
-            return(FALSE);                                                    
-            }                
+    if(FirstCall)
+    	{
+		/**************************************************************************************
+			Count the number of vertices of the graph which have valence greater than two,
+			and deal with the special case where there are exactly two of these.
+		**************************************************************************************/
+		
+		for(m = MajorVert = 0; m < Vertices; m++)
+			if(VWG[m] > 2)
+				{
+				MajorVert++;
+				if(MajorVert == 1)
+					i = m;
+				else
+					{    
+					if(MajorVert == 2)
+						j = m;
+					else
+						break;
+					}
+				} 
+				
+		if(MajorVert == 2)
+			{
+			/**********************************************************************************    
+				The graph has exactly two major vertices given by the values of i and j.
+				If the valence of vertex i is greater than 3 or there is more than one edge 
+				joining vertex i and j then the graph does not have a unique planar embedding.
+			**********************************************************************************/    
+							
+			if((VWG[i] > 3) || (A[i][j] > 1))
+				{ 
+				V1 = i;
+				V2 = j;
+				NumComps = VWG[i];
+				return(TRUE);
+				}
+			else
+				{
+				V1 = i;
+				V2 = j;
+				return(FALSE);                                                    
+				}                
+			}
         }
         
     /******************************************************************************************
@@ -698,13 +708,13 @@ int     VI,
             root = 1;
         else
             root = 0;
-        Lowpt[i]          = 0;        
-        Father[i]         = i;
-        NumVert         = 1;
+        Lowpt[i]         = 0;        
+        Father[i]        = i;
+        NumVert          = 1;
         Number[root]     = 1;
         Lowpt[root]      = 1;
         Father[root]     = root;
-        VG[root]        = 0;
+        VG[root]         = 0;
         for(p = UpDate,*p = root; p >= UpDate; p--)
             {
             NEW_VERT:
@@ -714,14 +724,14 @@ int     VI,
                 if(j == i) continue;
                 if(Number[j] == 0)
                     {
-                    NumVert     ++;
+                    NumVert       ++;
                     Number[j]     = NumVert;
                     Lowpt[j]      = NumVert;
                     Father[j]     = m;
-                    VG[j]          = 0;
-                    VG[m]          = k + 1;
+                    VG[j]         = 0;
+                    VG[m]         = k + 1;
                     p             ++;
-                    *p             = j;
+                    *p            = j;
                     goto         NEW_VERT;        
                     }
                 if(j != Father[m] && Number[j] < Lowpt[m])
@@ -772,31 +782,32 @@ int     VI,
 
 int Sep_Pairs_Sub(v1,v2)
 {
+    /******************************************************************************************
+        We have found a pair of distinct vertices v1 and v2 which separate the graph and both
+        v1 and v2 have valence greater than two. Determine how many components arise when v1
+        and v2 are deleted from the graph, and also determine if the componets are such that
+        the graph is not 3-connected. (See below for details.)
+    ******************************************************************************************/
+    
     register int            i,
                             j,
                             k,
                             m,
                             n;
 
-    register unsigned int    *p,
+    register unsigned int   *p,
                             *r,
                             *zz;
-    
-    /******************************************************************************************
-        We have found a pair of distinct vertices v1 and v2 which separate the graph and both
-        v1 and v2 have valence greater than two. Determine how many components arise when v1
-        and v2 are deleted from the graph.
-    ******************************************************************************************/
     
     zz = ZZ;
     for(k = 0; k < Vertices; k++) zz[k] = 0;
     zz[v1] = zz[v2] = VERTICES;
     for(k = 0; (k < Vertices) && zz[k]; k++) ;
     
-    p             = UpDate;
+    p            = UpDate;
     *p++         = k;
-    zz[k]         = 1;
-    k             = 3;
+    zz[k]        = 1;
+    k            = 3;
     NumComps     = 1;
     while(1)
         {                
@@ -824,7 +835,7 @@ int Sep_Pairs_Sub(v1,v2)
             }    
         }
         
-    FOUND_COMPS:
+FOUND_COMPS:
     
     i = v1;
     j = v2;
@@ -878,9 +889,7 @@ int Sep_Pairs_Sub(v1,v2)
     return(FALSE);            
 }
 
-Planar(Flag,SaveFaces)
-int     Flag,
-        SaveFaces;
+int Planar(int Flag,int SaveFaces)
 {
     /******************************************************************************************
         This routine determines whether the graph specified by the set of adjacency lists
@@ -888,7 +897,7 @@ int     Flag,
         the "infinite" face of the graph. It returns FALSE if the graph is planar and TRUE if
         the graph is nonplanar.
     ******************************************************************************************/
-    
+	    
     register int            h,
                             i,
                             j,
@@ -899,6 +908,8 @@ int     Flag,
                             length;
                     
     int                     Bdry_Major_Vert,
+    						ii,
+    						jj,
                             Max_Bdry_Major_Vert,
                             MaxNumFaces,
                             NumInPS,
@@ -923,20 +934,24 @@ int     Flag,
         return(FALSE);
         }        
     if(NumEdges > 3*(Vertices - 2)) return(TRUE);
-                                                                                                                                    
-    MaxLength             = VERTICES + 1;
-    NumFaces             = 0;
+
+	ii = 0;
+	jj = 0;
+NEW_INITIAL_EDGE:                                                                                                                                    
+    MaxLength           = VERTICES + 1;
+    NumFaces            = 0;
     Max_Bdry_Major_Vert = -1;
     MaxNumFaces         = NumEdges - Vertices + 2;
-    for(i = 0; i < Vertices; i++)
+    for(i = 0,h = 0; i < Vertices; i++)
     for(q = AJ1[i]; (j = *q) < VERTICES; q++) GB[i][j] = TRUE;
+    	
     for(i = 0; i < Vertices; i++)
         {
         InDisk[i]     = 0;
-        InPS[i]     = FALSE;
+        InPS[i]       = FALSE;
         ZZ[i]         = 0;
         }
-        
+         
     /******************************************************************************************
         Find an oriented edge of the graph to serve as the first edge of the boundary of the
         initial face of the graph. Then delete the oppositely oriented edge from the array
@@ -944,23 +959,22 @@ int     Flag,
         minimal path which yields a degenerate cycle. Planar() now works essentially by 
         adjoining faces one-by-one to a planar surface yielding a new planar surface which
         eventually contains all of the faces of the graph -- provided the graph is planar.
-        Note that Planar() works whether or not the graph has pairs of separating vertices.
+        Note that Planar() works whether or not the graph has separating pairs of vertices.
     ******************************************************************************************/
-            
-    for(i = 0; (i < Vertices) && (VWG[i] < 3); i++) ;
-    if(i == Vertices) for(i = 0; (i < Vertices) && !VWG[i]; i++) ;
-    j                     = AJ1[i][0];
+
+	i 					  = ii;  
+    j                     = AJ1[i][jj];
     MyBdry                = Bdry;
     MyBdry[0]             = i;
     MyBdry[1]             = j;
-    GB[j][i]            = FALSE;
-    DeletedEdgePtr         = DeletedEdges;
+    GB[j][i]              = FALSE;
+    DeletedEdgePtr        = DeletedEdges;
     *DeletedEdgePtr++     = j;
-    *DeletedEdgePtr++    = i;
-    InPS[i]                = 1;
-    InPS[j]                = 1;
-    NumInPS                = 2;
-    s1                     = 0;
+    *DeletedEdgePtr++     = i;    
+    InPS[i]               = 1;
+    InPS[j]               = 1;
+    NumInPS               = 2;    
+    s1                    = 0;
     s2                    = 0;
     
 FIND_BDRY:
@@ -968,23 +982,37 @@ FIND_BDRY:
     length = Find_Minimal_Path();
     
     if(length == 0)
-        {
+        {   
+        if(NumFaces == 0)
+        	{
+        	jj++;
+        	if(jj < VWG[MyBdry[0]]) 
+        		goto NEW_INITIAL_EDGE;
+        	else
+        		{
+        		if(++ii < Vertices) 
+        			{
+        			jj = 0;
+        			goto NEW_INITIAL_EDGE;
+        			}
+        		}       	
+        	}
+               
         /**************************************************************************************
             There is no directed path joining Bdry[1] to Bdry[0]. This can only occur when the
             graph is not planar. So set NumFaces = MaxNumFaces + 1, as a flag, and goto OUTPUT.
-        **************************************************************************************/    
-        
+        **************************************************************************************/            
         NumFaces = MaxNumFaces + 1;
         goto OUTPUT;
         }
 
     /******************************************************************************************
-        The program has found a cycle of length at least three. See if removing the vertices
+        Heegaard has found a cycle of length at least three. See if removing the vertices
         of this cycle disconnects the graph.
     ******************************************************************************************/    
     
     #ifdef PRINT_TRIAL_CYCLES
-        printf("\n");
+		printf("\n\n Trial_Cycle = ");        
         for(k = 0; k <= length; k++)
             {
             h = MyBdry[k];
@@ -997,8 +1025,8 @@ FIND_BDRY:
     #endif
         
     if(NumInPS < Vertices && (length + 1 < Vertices))
-        {
-        for(h = 0; h <= length; h++) ZZ[MyBdry[h]] = VERTICES;
+        {        	
+        for(h = 0; h <= length; h++) ZZ[MyBdry[h]] = VERTICES;       
         k = Planar_Connected_(length + 1);
         }    
     else
@@ -1015,13 +1043,13 @@ FIND_BDRY:
         while(DeletedEdgePtr > DeletedEdges)
             {
             DeletedEdgePtr --;
-            j = *DeletedEdgePtr--;
+            j = *DeletedEdgePtr --;
             GB[*DeletedEdgePtr][j] = TRUE;
             }
-                    
-        length      ++;                            
+                  
+        length   ++;                            
         NumFaces ++;
-        
+       
         /**************************************************************************************
             If Flag is FALSE, we intend to draw the graph. In this case,if the number of major
             vertices in this cycle is greater than the maximal number of major vertices in any
@@ -1172,16 +1200,24 @@ OUTPUT:
                     k = CO[i][k];
                     }
                 }
-        #endif
+        #endif                
         return(FALSE);
         }            
-    else
-        return(TRUE);                                                                
+    else      
+        return(TRUE);                                                                  
 }                
 
 unsigned int Find_Minimal_Path(void)        
 {
-    register unsigned int    h,
+    /******************************************************************************************
+        Find_Minimal_Path() is called by Planar(). Find_Minimal_Path() finds a minimal length
+        directed path, in the graph specified by GB[][], which joins the vertices Bdry[1] and
+        Bdry[0]. The path is returned in the array Bdry[], while the value returned by the
+        routine is equal to the length of this path. If no path can be found, the routine
+        returns 0.
+    ******************************************************************************************/
+    
+    register unsigned int   h,
                             i,
                             j,
                             *p,
@@ -1200,32 +1236,15 @@ unsigned int Find_Minimal_Path(void)
                             Radius1,
                             Radius2;
     
-    /******************************************************************************************
-        Find_Minimal_Path() is called by Planar(). Find_Minimal_Path() finds a minimal length
-        directed path, in the graph specified by GB[][], which joins the vertices Bdry[1] and
-        Bdry[0]. The path is returned in the array Bdry[], while the value returned by the
-        routine is equal to the length of this path. If no path can be found, the routine
-        returns 0. This routine is called frequently, and it uses a couple of ideas which
-        attempt to to make it efficient. First, the routine uses breadth-first-search
-        starting from both vertices which are terminal vertices of the path, instead of
-        searching from just one of these vertices. Secondly, the routine keeps track of the
-        total number of edges it would have to search in order to increase the "radius" of
-        each "disk" by one unit, and then the routine always chooses to increase the radius
-        of the disk whose radius can be increased by searching the fewest edges. Finally,
-        before it returns, the routine clears any entries of the array InDisk[] which it set.
-        This allows the routine to find subsequent paths, in a graph with V vertices, without
-        having to do V work at each call. 
-    ******************************************************************************************/
-
     End1 = Beg1         = Disk1;
     End2 = Beg2         = Disk2;
     *End1++             = Bdry[0];
     *End2++             = Bdry[1];
     InDisk[Bdry[0]]     = 1;
     InDisk[Bdry[1]]     = 2;
-    FreeEdges1             = VWG[Bdry[0]];
-    FreeEdges2             = VWG[Bdry[1]];
-    Radius1 = Radius2     = 0;
+    FreeEdges1          = VWG[Bdry[0]];
+    FreeEdges2          = VWG[Bdry[1]];
+    Radius1 = Radius2   = 0;
     
     while(1)
         {
@@ -1251,9 +1270,9 @@ unsigned int Find_Minimal_Path(void)
                     if(InDisk[j] == 0 && GB[j][i])
                         {
                         From[j]     = i;
-                        InDisk[j]     = 1;
+                        InDisk[j]   = 1;
                         *End1++     = j;
-                        FreeEdges1     += VWG[j];
+                        FreeEdges1  += VWG[j];
                         }
                     }
                 }
@@ -1282,9 +1301,9 @@ unsigned int Find_Minimal_Path(void)
                     if(InDisk[j] == 0 && GB[i][j])
                         {
                         From[j]     = i;
-                        InDisk[j]     = 2;
+                        InDisk[j]   = 2;
                         *End2++     = j;
-                        FreeEdges2     += VWG[j];
+                        FreeEdges2  += VWG[j];
                         }
                     }
                 }
@@ -1310,7 +1329,7 @@ int Planar_Connected_(unsigned int length)
         have their entries in ZZ[] set to 1.
     ******************************************************************************************/    
      
-    register unsigned int     h,
+    register unsigned int   h,
                             i,
                             j,
                             k,
@@ -1321,11 +1340,11 @@ int Planar_Connected_(unsigned int length)
     unsigned int            NumComps,
                             *q,
                             V,
-                            W;                                            
-                            
+                            W;
+                                                                           
     NumComps = 1;
-    p          = UpDate;                        
-    zz          = ZZ;
+    p        = UpDate;                        
+    zz       = ZZ;
     
     for(V = 0; V < length; V++)
     for(W = 0; (j = AJ1[Bdry[V]][W]) < VERTICES; W++) if(zz[j] == 0)
@@ -1333,7 +1352,7 @@ int Planar_Connected_(unsigned int length)
         h         = NumComps + 1;
         q         = p;
         zz[j]     = h;
-        *p++     = j;
+        *p++      = j;
         for(r = q; r < p; r++)
             {
             for(k = 0; (j = AJ1[*r][k]) < VERTICES; k++) if((i = zz[j]) < h)
@@ -1375,7 +1394,7 @@ int Planar_Connected_(unsigned int length)
 
 int Check_Bridge_Interlacing(unsigned int NumComps, unsigned int length)            
 {
-    register unsigned int    h,
+    register unsigned int   h,
                             i,
                             j,
                             k,
@@ -1386,7 +1405,7 @@ int Check_Bridge_Interlacing(unsigned int NumComps, unsigned int length)
     
     char                    SideC[VERTICES];
     
-    unsigned char            Comp[VERTICES],
+    unsigned char           Comp[VERTICES],
                             MaxC[VERTICES],
                             MinC[VERTICES];
                             
@@ -1457,10 +1476,10 @@ int Check_Bridge_Interlacing(unsigned int NumComps, unsigned int length)
             {
             h         = Comp[V];
             i         = Comp[W];
-            MinC_h     = MinC[h];
-            MaxC_h     = MaxC[h];
-            MinC_i     = MinC[i];
-            MaxC_i     = MaxC[i];
+            MinC_h    = MinC[h];
+            MaxC_h    = MaxC[h];
+            MinC_i    = MinC[i];
+            MaxC_i    = MaxC[i];
             if(MaxC_h <= MinC_i || MaxC_i <= MinC_h)
                 continue;
             if(MinC_h < MinC_i && MinC_i < MaxC_h && MaxC_h < MaxC_i)
@@ -1519,10 +1538,10 @@ int Check_Bridge_Interlacing(unsigned int NumComps, unsigned int length)
                 continue;
                 }
             FOUND_COMP:
-            SideC[i]             = -SideC[h];
-            CompsFound             ++;
+            SideC[i]            = -SideC[h];
+            CompsFound          ++;
             Comp[W]             = Comp[CompsFound];
-            Comp[CompsFound]     = i;                        
+            Comp[CompsFound]    = i;                        
             }
         }
     while(CompsFound < NumComps);
@@ -1532,7 +1551,7 @@ int Check_Bridge_Interlacing(unsigned int NumComps, unsigned int length)
         cycle.    If it was, return TRUE.
     ******************************************************************************************/
 
-    for(h = 2; h <= NumComps && SideC[h] == 1; h++) ;
+    for(h = 2; h <= NumComps && SideC[h] == 1; h++) {}
         if(h > NumComps) return(TRUE);
     
     /******************************************************************************************
@@ -1549,7 +1568,7 @@ int Check_Bridge_Interlacing(unsigned int NumComps, unsigned int length)
             if(SideC[j] == 1 && GB[i][k])
                 {
                 *DeletedEdgePtr++    = i;
-                *DeletedEdgePtr++     = k;
+                *DeletedEdgePtr++    = k;
                 GB[i][k]             = FALSE;    
                 }
             }
@@ -1574,34 +1593,34 @@ int Check_Bridge_Interlacing(unsigned int NumComps, unsigned int length)
     
     *DeletedEdgePtr++             = MyBdry[j-1];
     *DeletedEdgePtr++             = MyBdry[j];
-    GB[MyBdry[j-1]][MyBdry[j]]     = FALSE;
+    GB[MyBdry[j-1]][MyBdry[j]]    = FALSE;
     
     return(FALSE);        
 }
 
-Find_Cut_Vertices()
+int Find_Cut_Vertices()
 {
-    register unsigned int     i,
+    /*****************************************************************************************
+        This routine uses depth-first-search to determine whether the graph specified by the
+        adjacency-matrix AJ1[][] has a cut-vertex. The routine returns TRUE if the graph has
+        a cut-vertex, and otherwise returns FALSE.
+    *****************************************************************************************/
+   
+    register unsigned int   i,
                             j,
                             k,
                             *q;
                             
     unsigned int            VG[VERTICES],
                             root;
-    
-    /*****************************************************************************************
-        This routine uses depth-first-search to determine whether the graph specified by the
-        adjacency-matrix AJ1[][] has a cut-vertex. The routine returns TRUE if the graph has
-        a cut-vertex, and otherwise returns FALSE.
-    *****************************************************************************************/
-                        
+                         
     for(j = 0; j < Vertices; j++) Number[j] = 0;
     NumVert         = 1;
     root            = 0;
-    Number[root]     = 1;
+    Number[root]    = 1;
     Lowpt[root]     = 1;
-    Father[root]     = 0;
-    VG[root]         = 0;
+    Father[root]    = 0;
+    VG[root]        = 0;
 
     for(q = UpDate,*q = root; q >= UpDate; q--)
         {
@@ -1612,14 +1631,14 @@ Find_Cut_Vertices()
             if(Number[j] == 0)
                 {
                 NumVert     ++;
-                Number[j]     = NumVert;
-                Lowpt[j]     = NumVert;
-                Father[j]     = i;
-                VG[j]         = 0;
-                VG[i]         = k + 1;
-                q             ++;
-                *q             = j;
-                goto         NEW_VERT;        
+                Number[j]   = NumVert;
+                Lowpt[j]    = NumVert;
+                Father[j]   = i;
+                VG[j]       = 0;
+                VG[i]       = k + 1;
+                q           ++;
+                *q          = j;
+                goto NEW_VERT;        
                 }
             if(j != Father[i] && Number[j] < Lowpt[i]) Lowpt[i] = Number[j];        
             }
@@ -1652,515 +1671,255 @@ Find_Cut_Vertices()
         Otherwise, the vertex Father[j] is a "cut vertex" and we return TRUE.
     **********************************************************************************/
 }
-    
-Plot_Graph(k,m,F1)
-int     k,
-        m,
-        F1;
-{
-#ifndef MAC
-  printf("\n************ Function Plot_Graph is disabled. ************\n");
-  return 0;
-#else
-    /****************************************************************************************** 
-            This routine plots the vertices of the graph using the locations in X[] and Y[]
-                determined by Gauss-Seidel() and draws the edges using the info in A[][]. 
-    ******************************************************************************************/
-    
-    register int     i,
-                    j,
-                    x,
-                    y;
-                    
-    char             c,
-                    Legend[200];
-                    
-    Rect             *r,
-                    rect;
-    
-    r = &rect;
-    if(WhichInput == 0 && Length < SURL[WhichInput])
-        {
-        if(k == 1)
-            sprintf(Legend,"DIAGRAM OF PRESENTATION %d':",m);
-        else    
-            sprintf(Legend,"DIAGRAM OF PRESENTATION %d':",WhichInput + 1);
-        MoveTo(20,20);
-        MyDrawString(Legend);
-        if(NumGenerators == 1)
-            {
-            if(NumRelators == 1)
-                sprintf(Legend,"  %d GENERATOR  %d RELATOR",NumGenerators,NumRelators);
-            else
-                sprintf(Legend,"  %d GENERATOR  %d RELATORS",NumGenerators,NumRelators);
-            }
-        else
-            {
-            if(NumRelators == 1)
-                sprintf(Legend,"  %d GENERATORS  %d RELATOR",NumGenerators,NumRelators);
-            else
-                sprintf(Legend,"  %d GENERATORS  %d RELATORS",NumGenerators,NumRelators);
-            }
-        }
-    else
-        {
-        if(k == 1)
-            sprintf(Legend,"DIAGRAM OF PRESENTATION %d:",m);
-        else        
-            sprintf(Legend,"DIAGRAM OF PRESENTATION %d:",WhichInput + 1);
-        MoveTo(20,20);
-        MyDrawString(Legend);
-        if(NumGenerators == 1)
-            {
-            if(NumRelators == 1)
-                sprintf(Legend,"  %d GENERATOR  %d RELATOR",NumGenerators,NumRelators);
-            else
-                sprintf(Legend,"  %d GENERATOR  %d RELATORS",NumGenerators,NumRelators);
-            }
-        else
-            {
-            if(NumRelators == 1)
-                sprintf(Legend,"  %d GENERATORS  %d RELATOR",NumGenerators,NumRelators);
-            else
-                sprintf(Legend,"  %d GENERATORS  %d RELATORS",NumGenerators,NumRelators);
-            }
-        }
-    MyDrawString(Legend);
+ 
+int Print_Graph(int F1,int F2,int Pres,int HS)
+{ 
+	unsigned char 	c,
+					h,
+					i,
+					j,
+					k;
+	
+    int   			Error,
+    				FoundPaths,
+    				PrintedBdryInfo,
+    				PrintedDualRelators,
+                    PrintedRelators;
+    	  			
+    Error = Diagram_Data(1,F1,F2,Pres,HS);	
+    if(Error == 1) 
+    	{
+    	printf("\n\nCan't display the diagram of Presentation %d. Sorry!",WhichInput + 1);
+    	return(1);
+    	}    
     if(!Connected)
-        sprintf(Legend,"  LENGTH %lu: NOT CONNECTED.",Length);
-    else
-        {    
-        if(NonPlanar)
-            sprintf(Legend,"  LENGTH %lu: NONPLANAR.",Length);
-        else
-            {
-            if(SepPairs)
-                sprintf(Legend,"  LENGTH %lu: '%c' AND '%c' SEPARATE.",Length,
-                    c = LSP[WhichInput],c = LSQ[WhichInput]);
-            else
-                sprintf(Legend,"  LENGTH %lu",Length);
-            }
-        }        
-    MyDrawString(Legend);
-    if(k == 2)
-        {
-        if(F1)
-            sprintf(Legend,"HIT 'P' TO PRINT THIS DGRM, 'm' FOR MORE INFO, 'n' FOR NEXT PRES, 'p' FOR PREVIOUS PRES.");
-        else
-            sprintf(Legend,"HIT 'P' TO PRINT THIS DGRM, 'm' FOR MORE INFO, 'n' FOR NEXT, 'p' FOR PREVIOUS, 'q' TO QUIT.");                                                  
-        MoveTo(20,390);
-        MyDrawString(Legend);
-        }
-    if(k == 1)    for(i = 0; i < Vertices; i++)
-        {
-        X[i] *= 1.25;
-        Y[i] *= 1.46;
-        }    
-    for(i = 0; i < Vertices -1; i ++)
-        {
-        for(j = i + 1; j < Vertices; j ++)
-            {
-            if(A[i][j])
-                {
-                MoveTo(X[i],Y[i]);
-                LineTo(X[j],Y[j]);
-                }
-            }
-        }
-        
-    /****************************************************************************************** 
-                    Draw a circle around each vertex of the graph and put the letter 
-                        corresponding to that vertex in the center. 
-    ******************************************************************************************/
+    	{
+    	printf("\n The diagram is not connected! Heegaard will only display data for connected diagrams! ");
+    	printf("\n Rerun the offending presentation and Heegaard should divide it into connected summands.");
+    	return(0);
+    	}    
+    if(NumGenerators == 1 || Vertices == 2)
+    	{
+    	printf("\n The diagram has only one generator and two vertices!");
+    	printf("\n Heegaard will not display data for such diagrams!");
+    	return(0);
+    	}
+    if(NumEdges > 3*(Vertices - 2))
+    	{
+    	printf("\n The reduced Whitehead graph has too many edges, i.e. E > 3V - 6.");
+    	printf("\n Since the Diagram is obviously nonplanar, it will not be displayed.");
+    	return(0);
+    	}	 	
+    if(MaxLength > VERTICES)
+    	{
+    	printf("\n The Diagram is nonplanar, and will not be displayed.");
+    	return(0);
+    	}	
     
-    for(i = 0; i < Vertices; i ++)
-        {
-        if(VWG[i])
-            {
-            x = X[i];
-            y = Y[i];
-            SetRect(r,x - 8,y - 8,x + 8,y + 8);
-            EraseOval(r);
-            FrameOval(r);                                                        
-            if(i & 1)
-                {
-                c = i/2 + 97;
-                MoveTo(x-3,y+3);
-                DrawChar(c);
-                }
-            else
-                {
-                c = i/2 + 65;
-                MoveTo(x-3,y+3);
-                DrawChar(c);
-                }
-            }
-        }
-    if(k == 1)
-        for(i = 0; i < Vertices; i++)
-            {
-            X[i] *= 0.8;
-            Y[i] *= 0.6849;
-            }    
-    if(k == 2)
-        {        
-        /************************************************************************************** 
-                    Check whether any vertices have been superimposed and set a flag 
-                    in Flags[] so the top vertex in a stack of superimposed vertices
-                    will "blink" in the graph. 
-        **************************************************************************************/    
-        
-        for(i = 0; i < Vertices; i ++) Flags[i] = 0;        
-        for(i = 0; i < Vertices -1; i ++) if(VWG[i])
-            {
-            x = X[i];
-            y = Y[i];
-            for(j = Vertices - 1; j > i; j-- )
-                if(VWG[j] && (abs(x - X[j]) + abs(y - Y[j]) <= 4) && !Flags[i])
-                    {
-                    Flags[j] ++;
-                    break;
-                    }
-            }
-        }                                        
-#endif
-}
-     
-Print_Graph(F1)
-int        F1;
-{
-#ifndef MAC
-  printf("\n************ Function Print_Graph is disabled. ************\n");
-  return(0);
-#else
-    register int     x,
-                    xx,
-                    y,
-                    yy;
-                    
-    int             Error,
-                    Flag,
-                    i,
-                    j,
-                    m,
-                    MinDist,
-                    PrintGraph;
-                    
-    long             ticks;
+    if(!NonPlanar)
+		{	
+		printf("\n\nII) Vertices in the boundary of each face of the Heegaard diagram ");
+		printf("in clockwise order are:\n\n");
+		for(i = 1; i <= NumFaces; i++)
+			{
+			printf("F%d) ",i);
+			for(j = 0; (h = Face[i][j]) < VERTICES; j++)
+				{
+				if(h & 1)
+					c = h/2 + 97;
+				else
+					c = h/2 + 65;
+				printf("%c",c);	
+				}
+			if(i < NumFaces) printf(", ");	
+			}
+
+		printf("\n\nNote: Heegaard chose the cycle '");
+		for(i = 0; i < MaxLength; i++)
+			{
+			j = SaveBdry[i];
+			if(j & 1)
+				c = j/2 + 97;
+			else
+				c = j/2 + 65;
+			printf("%c",c);  	
+			}
+		printf("' to be the boundary of the 'infinite' face.");	
+		
+		printf("\n\nIII) CO[v] lists the vertices in the link of vertex v in counter-clockwise cyclic order ");
+		printf("starting with the 'first-vertex' in lexicographic order connected to v.\n\n");
+	
+		for(i = 0; i < Vertices; i++) if(VWG[i])
+			{
+			if(i & 1)
+				c = i/2 + 97;
+			else
+				c = i/2 + 65;
+			printf("CO[%c] = ",c);
+			for(j = 0; j < Vertices; j++) if(A[i][j] && i != j) break;
+			if(j & 1)
+				c = j/2 + 97;
+			else
+				c = j/2 + 65;
+			printf("%c",c);
+			k = CO[i][j];
+			while(k != j) 
+				{
+				if(k & 1)
+					c = k /2 + 97;
+				else
+					c = k/2 + 65; 
+				printf("%c",c);
+				k = CO[i][k];
+				}
+			if(i < Vertices - 1) printf(", ");	
+			}
+		}
     
-    Point             mouseLoc;
-    
-    Rect             *r,
-                    rect;
-                    
-    r = &rect;
-    Gauss_Seidel();    
-_PLOT_GRAPH:
-    printf("\f");
-    Plot_Graph(2,0,F1);
-    
-    /******************************************************************************************
-        The following code allows the user to use the mouse to redraw the graph by moving the
-        vertices around the screen. And, if one vertex is superimposed on top of another
-        vertex, then the code causes the top vertex to "blink". This serves to alert the user
-        about superimposed vertices.
-    ******************************************************************************************/
-    
-    ObscureCursor();    
-    while(1)
-        {            
-        for(i = Vertices - 1; i >= 0; i --)
-            {
-            if(Flags[i])
-                {        
-                 x = X[i];
-                y = Y[i];
-                SetRect(r,x - 8,y - 8,x + 8,y + 8);
-                FrameOval(r);
-                InvertOval(r);
-                }
-            }
-        while(Button())
-            {
-            GetMouse(&mouseLoc);
-            MinDist    = 18;
-            i        = VERTICES;
-            Flag     = FALSE;
-            
-            /**********************************************************************************
-                Find the vertex of the graph which is closest to the location of the mouse.
-            **********************************************************************************/
-            
-            for(j = 0; j < Vertices; j++) if(VWG[j])
-                {
-                x = X[j];
-                y = Y[j];
-                if(abs(x - mouseLoc.h) <= 9 && abs(y - mouseLoc.v) <= 9 
-                    && abs(x - mouseLoc.h) + abs(y - mouseLoc.v) <= MinDist)
-                    {
-                    MinDist = abs(x - mouseLoc.h) + abs(y - mouseLoc.v);
-                    i = j;
-                    }
-                }
-                
-            if(i < VERTICES)
-                {
-                /******************************************************************************
-                    If the closest vertex is within 9 pixels horizontally and 9 pixels
-                    vertically of the location of the mouse, let the user move the closest
-                    vertex.
-                ******************************************************************************/
-                
-                x = X[i];
-                y = Y[i];
-                SetRect(r,x - 8,y - 8,x + 8,y + 8);
-                EraseOval(r);
-                while(Button())
-                    {
-                    GetMouse(&mouseLoc);
-                    if((x != mouseLoc.h) || (y != mouseLoc.v))
-                        {
-                        PenPat(&qd.white);
-                        for(j = 0; j < Vertices; j ++) if(A[i][j])
-                            {
-                            MoveTo(x,y);
-                            LineTo(X[j],Y[j]);
-                            }
-                        PenPat(&qd.black);                
-                        xx = mouseLoc.h;
-                        yy = mouseLoc.v;
-                        
-                        /**********************************************************************
-                                Don't allow users to drag a vertex off screen. Otherwise
-                                they might not be able to find it to drag it back.
-                        **********************************************************************/
-                            
-                        if((30 <= xx ) && (xx <= 550) && (30 <= yy) && (yy <= 370))
-                            {
-                            x = xx;
-                            y = yy;
-                            }
-                        X[i] = x;
-                        Y[i] = y;
-                        for(j = 0; j < Vertices; j ++) if(A[i][j])    
-                            {
-                            MoveTo(x,y);
-                            LineTo(X[j],Y[j]);
-                            }                                
-                        }
-                    }        
-                X[i] = x;
-                Y[i] = y;
-                Plot_Graph(2,0,F1);
-                for(j = Vertices -1; j >= 0; j --) if(Flags[j])    
-                    {        
-                     xx = X[j];
-                    yy = Y[j];
-                    SetRect(r,xx - 8,yy - 8,xx + 8,yy + 8);
-                    FrameOval(r);
-                    InvertOval(r);
-                    }    
-                Flag = TRUE;
-                }        
-            if(Flag) break;
-            }                        
-            {
-            GET_RESPONSE1:    
-            switch(WaitkbHit())
-                {
-                case 'm':
-                    PrintGraph = FALSE;
-                    printf("\f");
-                    Error = Diagram_Data(1,F1);
-                    GET_RESPONSE2:
-                    switch(WaitkbHit())
-                        {
-                        case 'b':
-                            if(!Error && Connected && !SepPairs && NumGenerators > 1)
-                                {
-                                Print_Bdry_Comp_Info();
-                                printf("\n");
-                                printf("\nHIT 'P' TO PRINT THE DIAGRAM.");
-                                printf("\n   HIT 'm' TO RETURN TO DIAGRAM %d.",WhichInput + 1);
-                                printf("\n      HIT 'v' TO REVIEW PRESENTATION %d.",WhichInput + 1);
-                                if(F1)
-                                    {
-                                    printf("\n         HIT 'n' TO SEE THE NEXT PRESENTATION.");
-                                    printf("\n            HIT 'p' TO SEE THE PREVIOUS PRESENTATION.");
-                                    printf("\n               HIT 'b' FOR INFO ABOUT THE BDRY OF THIS MANIFOLD.");                                    
-                                    printf("\n                  HIT 'D' TO SEE THE 'DUAL' RELATORS FOR THIS DIAGRAM.");
-                                    printf("\n                     HIT 'O' TO SEE THE 'OUT' RELATORS FOR THIS DIAGRAM.");
-                                    }
-                                else
-                                    {    
-                                    printf("\n         HIT 'n' TO SEE THE NEXT DIAGRAM.");
-                                    printf("\n            HIT 'p' TO SEE THE PREVIOUS DIAGRAM.");
-                                    printf("\n               HIT 'q' TO QUIT VIEWING DIAGRAMS.");
-                                    printf("\n                  HIT 'b' FOR INFO ABOUT THE BDRY OF THIS MANIFOLD.");
-                                    printf("\n                     HIT 'D' TO SEE THE 'DUAL' RELATORS FOR THIS DIAGRAM.");
-                                    printf("\n                        HIT 'O' TO SEE THE 'OUT' RELATORS FOR THIS DIAGRAM.");
-                                    }
-                                goto GET_RESPONSE2;    
-                                }
-                            else
-                                {
-                                SysBeep(5);
-                                goto GET_RESPONSE2;
-                                }
-                        case 'D':
-                            if(!Error && Connected && !SepPairs && NumGenerators > 1)
-                                {
-                                printf("\n");                                
-                                Print_DualRelators(F1);
-                                goto GET_RESPONSE2;
-                                }                                
-                            else
-                                {
-                                SysBeep(5);
-                                goto GET_RESPONSE2;
-                                }                                                
-                        case 'm':
-                            goto _PLOT_GRAPH;
-                        case 'O':
-                            if(!Error && Connected && !SepPairs && NumGenerators > 1)
-                                {
-                                printf("\n");                                
-                                Print_OutRelators(F1);
-                                goto GET_RESPONSE2;
-                                }                                
-                            else
-                                {
-                                SysBeep(5);
-                                goto GET_RESPONSE2;
-                                }                                
-                        case 'P':
-                            PrintGraph = TRUE;
-                            break;
-                        case 'p':
-                            printf("\f");
-                            return(1);                                    
-                        case 'v':
-                            printf("\n\nPresentation %d is:\n",WhichInput + 1);
-                            Print_Relators(Relators,NumRelators,stdout);
-                            printf("\n");
-                            printf("\nHIT 'P' TO PRINT THE DIAGRAM.");
-                            printf("\n   HIT 'm' TO RETURN TO DIAGRAM %d.",WhichInput + 1);
-                            printf("\n      HIT 'v' TO REVIEW PRESENTATION %d.",WhichInput + 1);
-                            if(F1)
-                                {
-                                printf("\n         HIT 'n' TO SEE THE NEXT PRESENTATION.");
-                                printf("\n            HIT 'p' TO SEE THE PREVIOUS PRESENTATION.");
-                                if(!Error && Connected && !SepPairs && NumGenerators > 1)
-                                    {
-                                    printf("\n               HIT 'b' FOR INFO ABOUT THE BDRY OF THIS MANIFOLD.");                                
-                                    printf("\n                  HIT 'D' TO SEE THE 'DUAL' RELATORS FOR THIS DIAGRAM.");
-                                    printf("\n                     HIT 'O' TO SEE THE 'OUT' RELATORS FOR THIS DIAGRAM.");
-                                    }
-                                }
-                            else
-                                {    
-                                printf("\n         HIT 'n' TO SEE THE NEXT DIAGRAM.");
-                                printf("\n            HIT 'p' TO SEE THE PREVIOUS DIAGRAM.");
-                                printf("\n               HIT 'q' TO QUIT VIEWING DIAGRAMS.");
-                                if(!Error && Connected && !SepPairs && NumGenerators > 1)
-                                    {
-                                    printf("\n                  HIT 'b' FOR INFO ABOUT THE BDRY OF THIS MANIFOLD.");
-                                    printf("\n                     HIT 'D' TO SEE THE 'DUAL' RELATORS FOR THIS DIAGRAM.");
-                                    printf("\n                        HIT 'O' TO SEE THE 'OUT' RELATORS FOR THIS DIAGRAM.");
-                                    }
-                                }
-                            goto GET_RESPONSE2;    
-                        case 'n':
-                            printf("\f");
-                            return(0);
-                        case 'q':
-                            if(F1)
-                                {
-                                SysBeep(5);
-                                goto GET_RESPONSE2;                                
-                                }
-                            WhichInput = NumFilled + 1;
-                            printf("\f");
-                            return(0);    
-                        default:
-                            SysBeep(5);
-                            goto GET_RESPONSE2;
-                            break;
-                        }
-                    break;                    
-                case 'P':
-                    PrintGraph = TRUE;    
-                    break;
-                case 'p':
-                    printf("\f");
-                    return(1);    
-                case 'n':
-                    printf("\f");
-                    return(0);
-                case 'q':
-                    if(F1)
-                        {
-                        SysBeep(5);
-                        goto GET_RESPONSE1;                            
-                        }
-                    WhichInput = NumFilled + 1;
-                    printf("\f");
-                    return(0);        
-                default:
-                    SysBeep(5);
-                    goto GET_RESPONSE1;    
-                }
-            break;        
-            }        
-        ticks = TickCount();    
-        while((TickCount() - ticks)    < 20L) ;
-        }                                                    
-    if(PrintGraph)
-        {
-        #ifdef MANUALLY_RENUMBER_PRESENTATIONS
-            printf("\n\nPRINT AS PRESENTATION NUMBER ?");
-            scanf("%d",&m);
-        #else
-            m = WhichInput + 1;
-        #endif
-        i = Print_Picture(m);
-        printf("\f");
-        if(i)
-            {
-            SysBeep(5);
-            printf("\n                        Unable to print the diagram. Sorry!");        
-            }        
-        Diagram_Data(2,F1);
-        printf("\n\nPRINT THIS DATA ? HIT 'y' OR 'n'.");
-        if(WaitkbHit() == 'y' && Print_Diagram_Data(m))
-            {
-            SysBeep(5);
-            printf("\n                        Unable to print this data. Sorry!");            
-            }
-        printf("\n\nPRINT THE PRESENTATION ? HIT 'y' OR 'n'.");
-        if(WaitkbHit() == 'y' && Print_Presentation(m))
-            {
-            SysBeep(5);
-            printf("\n                        Unable to print this presentation. Sorry!");        
-            }
-        }    
-    printf("\f");
-    return(0);
-#endif
+    if(Connected)
+    	{
+    	for(i = 0; i < MaxLength - 1; i++)
+    		{
+    		j = SaveBdry[i];
+    		k = SaveBdry[i+1];
+    		if(!A[j][k]) return(Error);
+    		}
+    	j = SaveBdry[0];
+    	if(!A[j][k]) return(Error);   		
+    	Gauss_Seidel();
+    	Diagram_Data_for_Graphviz(F2,Pres,HS);
+    	}
+
+	
+	PrintedBdryInfo = 		FALSE;
+	PrintedDualRelators = 	FALSE;
+	FoundPaths = 			FALSE;
+	PrintedRelators = 		FALSE;
+GET_RESPONSE1: 
+	printf("\n");
+GET_RESPONSE2:	
+	if((Error == 0 || Error == 3) && Connected && NumGenerators > 1 && Batch == FALSE)
+		{
+		if(Error == 3) PrintedBdryInfo = PrintedDualRelators = FoundPaths = TRUE;
+		if(PrintedBdryInfo == FALSE && FoundPaths == FALSE)
+		printf("\nHIT 'b' FOR INFO SHOWING WHICH FACES OF THIS DIAGRAM FORM BDRY COMPONENTS.");
+		if(PrintedDualRelators == FALSE)
+		printf("\n   HIT 'd' TO SEE THE 'DUAL' RELATORS FOR THIS DIAGRAM.");
+		if(F1)
+			{
+			printf("\n      HIT 'n' TO SEE THE NEXT DIAGRAM.");
+			if(FoundPaths == FALSE)
+				{
+				printf("\n         HIT 'p' TO SEE PATHS CONNECTING FACES OF THIS DIAGRAM.");
+				printf("\n            HIT 'q' TO QUIT VIEWING DIAGRAMS.");
+				if(PrintedRelators == FALSE)
+					{
+					if(F2)
+						printf("\n               HIT 'v' TO REVIEW PRES %d OF HS %d.",Pres,HS);
+					else
+						printf("\n               HIT 'v' TO REVIEW PRESENTATION %d.",WhichInput + 1);
+					}	
+				}
+			else
+				{
+				printf("\n         HIT 'q' TO QUIT VIEWING DIAGRAMS.");	
+					if(PrintedRelators == FALSE)
+					{
+					if(F2)
+						printf("\n               HIT 'v' TO REVIEW PRES %d OF HS %d.",Pres,HS);
+					else
+						printf("\n               HIT 'v' TO REVIEW PRESENTATION %d.",WhichInput + 1);
+					}				
+				}	
+			}
+		else
+			{
+			if(FoundPaths == FALSE)
+				printf("\n         HIT 'p' TO SEE PATHS CONNECTING FACES OF THIS DIAGRAM.");
+			printf("\n            HIT 'q' TO QUIT VIEWING INFO FOR THIS DIAGRAM.");
+			if(PrintedRelators == FALSE)
+				{
+				if(F2)
+					printf("\n               HIT 'v' TO REVIEW PRES %d OF HS %d.",Pres,HS);
+				else
+					printf("\n               HIT 'v' TO REVIEW PRESENTATION %d.",WhichInput + 1);
+				}				}	
+_OPTIONS:
+		if(Batch == FALSE)
+			{
+			switch(WaitkbHit())
+				{
+				case 'b':
+					if(PrintedBdryInfo) goto GET_RESPONSE1;
+					Print_Bdry_Comp_Info(F2,Pres,HS);
+					PrintedBdryInfo = TRUE;
+					goto GET_RESPONSE1;
+				case 'd':
+					if(PrintedDualRelators) goto GET_RESPONSE1;                               
+					Print_DualRelators(F1,F2,Pres,HS);
+					PrintedDualRelators = TRUE;
+					goto GET_RESPONSE1;
+				case 'n':
+					if(F1) return(1);
+					else goto _OPTIONS;	
+				case 'p':
+					if(FoundPaths) goto GET_RESPONSE1;
+					Find_Cancellation_Paths(PrintedBdryInfo,F2,Pres);
+					FoundPaths = TRUE;
+					goto GET_RESPONSE1;						
+				case 'q':
+					if(F2) return(2);
+					if(F1)
+						{
+						WhichInput = NumFilled + 1;
+						return(0); 
+						}
+					else return(1);	
+				case 'v':
+					if(PrintedRelators) goto GET_RESPONSE1;
+					PrintedRelators = TRUE;
+					if(NumRelators == 1)
+						{
+						if(F2)
+							printf("\n\nThe Relator of Pres %d of HS %d is: \n",Pres,HS);
+						else
+							printf("\n\nThe Relator of Presentation %d is: \n",WhichInput + 1);					
+						}
+					else
+						{
+						if(F2)
+							printf("\n\nThe Relators of Pres %d of HS %d are: \n",Pres,HS);
+						else
+							printf("\n\nThe Relators of Presentation %d are: \n",WhichInput + 1);										
+						}	
+					Print_Relators(Relators, NumRelators);
+					goto GET_RESPONSE2;	       
+				default:
+					if(Batch == FALSE) SysBeep(5);
+					goto _OPTIONS;    
+				}
+			} 
+		} 
+	if(Batch == 5 && Error == 0)
+		{
+		if(B5PrintBdryComps) Print_Bdry_Comp_Info(F2,Pres,HS);			
+		if(B5PrintDualRelators) Print_DualRelators(F1,F2,Pres,HS);			
+		if(B5PrintPaths) Find_Cancellation_Paths(B5PrintBdryComps,F2,Pres);		
+		}			                                                 
+    return(1);
 }
 
-Diagram_Data(PrintOut,F1)
-int     PrintOut,
-        F1;
+int Diagram_Data(int PrintOut,int F1,int F2,int Pres, int HS)
 {
-    register int     i,
+    register int    i,
                     j;
                     
-    int                Error,
+    int             Error,
                     k,
+                    n,
                     SWhichInput;                
                     
-    unsigned char     *p,
+    unsigned char   *p,
                     x,
                     y;
 
@@ -2168,18 +1927,26 @@ int     PrintOut,
     
     Error = FALSE;
     
-if(PrintOut == 2)    
-fprintf(myout,"\n\n|******************************************************************************|");    
+if(PrintOut == 1)    
     
     for(k = 0; k < PrintOut; k++)
-        {
-        if(k == 0)
-            fptr = stdout;
-        else
-            fptr = myout;    
-        fprintf(fptr,"\n\n                            Data For Diagram %d",WhichInput + 1);
-        fprintf(fptr,"\n\nGenerators %d, Relators %d, Length %lu.",NumGenerators,NumRelators,Length);
-        fprintf(fptr,"\n\nThe following table gives the number of edges joining each pair of vertices.\n");
+        {       
+        if(Batch == FALSE)
+        	{
+			if(F2)
+				{
+				printf("\n\n*********************************************************************************");
+				printf("\n\n               Data For The Diagram of Pres %d of HS %d",Pres,HS);
+				}
+			else
+				{
+				printf("\n\n*********************************************************************************");
+				printf("\n\n               Data For Diagram %d of the Initial Presentation %s",WhichInput + 1,PresName);
+				}
+			printf("\n\nGenerators %d, Relators %d, Length %lu.",NumGenerators,NumRelators,Length);	
+        	}
+        
+        printf("\n\nI) The following table gives the number of edges joining each pair of vertices.\n\n");
         
         for(i = 0; i < Vertices - 1; i++)
             {
@@ -2189,8 +1956,10 @@ fprintf(myout,"\n\n|************************************************************
                 x = i/2 + 97;
             else
                 x = i/2 + 65;
-            fprintf(fptr,"\n%c: ",x);    
-            for(j = i + 1; j < Vertices; j++)
+            if(i) printf(", (%c --> ",x);
+            else  printf("(%c --> ",x);
+            		 
+            for(j = i + 1, n = 0; j < Vertices; j++)
                 {
                 if(A[i][j])
                     {
@@ -2198,68 +1967,74 @@ fprintf(myout,"\n\n|************************************************************
                         y = j/2 + 97;
                     else
                         y = j/2 + 65;
-                    fprintf(fptr,"%c%u ",y,A[i][j]);    
+                    n++;
+                    if(n == 1)   
+                    	printf("%c%u",y,A[i][j]);
+                    else
+                    	printf(",%c%u",y,A[i][j]);	  
                     }    
-                }    
-            }
+                }
+            printf(")");        
+            }       
 
         if(!Connected)
             {
-            Error = TRUE;
-            fprintf(fptr,"\n\nThe diagram is not connected. So complete data is unavailable.");
+            Error = 1;
+            printf("\n\nThe diagram is not connected. So complete data is unavailable.");
             goto END;
             }        
         if(NonPlanar)
             {
             Error = 2;
-            fprintf(fptr,"\n\nThe diagram is nonplanar. So complete data is unavailable.");
+            printf("\n\nThe diagram is nonplanar. So complete data is unavailable.");
             goto END;
-            }
-        else if(SepPairs)
+            }  
+   
+        if(SepPairs)
             {
-            Error = TRUE;
+            Error = 3;
             if(UDV[WhichInput] == ANNULUS_EXISTS)
                 {
                 p = *SUR[WhichInput][0];
                 x = *p++;
                 y = *p++;                
-                fprintf(fptr,"\n\nVertices '%c' and '%c' separate the diagram.",x,y);
-                fprintf(fptr,"\nThe component consisting of vertice(s) {%c",*p);
+                printf("\n\nThe pair of vertices (%c,%c) separate the diagram.",x,y);
+                printf("\nThe component consisting of vertice(s) {%c",*p);
                 p++;
                 while((x = *p) != '@')
                     {
-                    fprintf(fptr,",%c",x);
+                    printf(",%c",x);
                     p++;
                     }
-                fprintf(fptr,"}");    
+                printf("}");    
                 p++;        
-                fprintf(fptr,"\nlies in an annulus which swallows the component and otherwise follows the curve:");
-                fprintf(fptr,"\n%s.",p);
+                printf("\nlies in an annulus which swallows the component and otherwise follows the curve:");
+                printf("\n%s.",p);
                 }
             else
                 {
                 if(UDV[WhichInput] == V2_ANNULUS_EXISTS)
                     {
                     p = *SUR[WhichInput][0];
-                    fprintf(fptr,"\n\nThere exists an annulus which swallows vertice(s) {%c",*p);
+                    printf("\n\nThere exists an annulus which swallows vertice(s) {%c",*p);
                     p++;
                     while((x = *p) != '@')
                         {
-                        fprintf(fptr,",%c",x);
+                        printf(",%c",x);
                         p++;
                         }
-                    fprintf(fptr,"}");    
+                    printf("}");    
                     p++;        
-                    fprintf(fptr,"\nand otherwise follows the curve:");
-                    fprintf(fptr,"\n%s.",p);
+                    printf("\nand otherwise follows the curve:");
+                    printf("\n%s.",p);
                     }        
                 else
                 if(UDV[WhichInput] == SEP_PAIRS)
-                        fprintf(fptr,"\n\nVertices '%c' and '%c' separate the Whitehead graph. So complete data is unavailable.",
+                        printf("\n\nVertices '%c' and '%c' separate the Whitehead graph. So complete data is unavailable.",
                         x = LSP[WhichInput],y = LSQ[WhichInput]);    
                 }    
             }
-        else if( NumGenerators > 1 && Connected && !SepPairs && !NonPlanar)    
+        if(NumGenerators > 1 && Connected && !SepPairs && !NonPlanar)    
             {
             if(k == 0)
                 {
@@ -2267,12 +2042,12 @@ fprintf(myout,"\n\n|************************************************************
                 switch(Diagram_Main())
                     {
                     case TOO_LONG:
-                        fprintf(fptr,"\n\nThe presentation is too long. So complete data is unavailable.");
+                        printf("\n\nThe presentation is too long. So complete data is unavailable.");
                         TestRealizability1 = FALSE;
                         Error = TRUE;
                         goto END;
                     case FATAL_ERROR:
-                        fprintf(fptr,"\n\nThe presentation is not realizable. So complete data is unavailable.");
+                        printf("\n\nThe presentation is not realizable. So complete data is unavailable.");
                         TestRealizability1 = FALSE;
                         Error = TRUE;
                         goto END;
@@ -2289,397 +2064,266 @@ fprintf(myout,"\n\n|************************************************************
                         if(UDV[WhichInput] < DONE) UDV[WhichInput] = NON_UNIQUE_4;
                         break;
                     case V2_ANNULUS_EXISTS:
+                    	if(F2 && UDV[WhichInput] < DONE) UDV[WhichInput] = V2_ANNULUS_EXISTS;
                         Error = TRUE;
                         break;    
                     }
                 TestRealizability1 = FALSE;
                 }        
         
-            fprintf(fptr,"\n\nFor each (X,x) pair of vertices:");
-            fprintf(fptr,"\n1) Number the edges at vertex X counter-clockwise about vertex X giving the");
-            fprintf(fptr,"\n   'first-edge' at vertex X number 0.");
-            fprintf(fptr,"\n2) Number the edges at vertex x clockwise about vertex x, giving the");
-            fprintf(fptr,"\n   'first-edge' at vertex x the number shown in the following list.\n\n");    
+            printf("\n\nFor each (X,x) pair of vertices with (X,x) = (A,a), (B,b) ... ,(Z,z):");
+            printf("\n1) Number the edges at vertex X counter-clockwise about vertex X giving the ");
+            printf("'first-edge' at vertex X number 0.");
+            printf("\n2) Note the 'first-edge' at vertex V is the first edge in counter-clockwise order");
+            printf(" about V which connects V to V's 'first-vertex'. (See III below for V's 'first-vertex'.)");
+            printf("\n3) For x = a,b ... ,z, number the edges at vertex x clockwise about x, giving the ");
+            printf("'first-edge' at x the number shown in the following list:\n\n");
+            
     
-            fprintf(fptr,"(%u",OSA[0] % VA[0]);    
-            for(i = 2; i < Vertices; i += 2) fprintf(fptr,",%u",OSA[i] % VA[i/2]);
-            fprintf(fptr,")");    
+            printf("(%u",OSA[0] % VA[0]);    
+            for(i = 2; i < Vertices; i += 2) printf(",%u",OSA[i] % VA[i/2]);
+            printf(")");
 
             SWhichInput = WhichInput;
             if(UDV[WhichInput] == DUPLICATE)
                 {
                 SWhichInput = Daughters[WhichInput];
-                fprintf(fptr,"\n\nPresentation %d is a duplicate of presentation %d of summand %u.",
+                if(F2)
+                	printf("\n\nPresentation %d of HS %d is a duplicate of presentation %d of summand %u.",
+                	Pres,HS,SWhichInput + 1,ComponentNum[SWhichInput]);
+                else
+                	printf("\n\nPresentation %d is a duplicate of presentation %d of summand %u.",
                 WhichInput + 1, SWhichInput + 1,ComponentNum[SWhichInput]);
                 }
                     
             switch(UDV[SWhichInput])
                 {
                  case NON_UNIQUE_4:
-                    fprintf(fptr,"\n\n     Note,the diagram is not unique because there is a generator which appears");
-                    fprintf(fptr,"\nwith only one exponent and that exponent is greater than 6.");
+                    printf("\n\n     Note,the diagram is not unique because there is a generator which appears");
+                    printf("\nwith only one exponent and that exponent is greater than 6.");
                     break;
                 case NON_UNIQUE_3:
-                    fprintf(fptr,"\n\n     Note,the diagram is not unique because there is a generator which appears");
-                    fprintf(fptr,"\nonly with exponent 5.");
+                    printf("\n\n     Note,the diagram is not unique because there is a generator which appears");
+                    printf("\nonly with exponent 5.");
                     break;
                 case NON_UNIQUE_2:
-                    fprintf(fptr,"\n\n     Note,the diagram is not unique because there is a generator which appears");
-                    fprintf(fptr,"\nonly with exponent 3 or only with exponent 4 and this exponent occurs more than once.");
+                    printf("\n\n     Note,the diagram is not unique because there is a generator which appears");
+                    printf("\nonly with exponent 3 or only with exponent 4 and this exponent occurs more than once.");
                     break;
                 case NON_UNIQUE_1:
-                    fprintf(fptr,"\n\n     Note,the diagram is not unique because there is a generator which appears");
-                    fprintf(fptr,"\nwith only one exponent, either 3,4 or 6, and a needed symmetry does not exist.");
+                    printf("\n\n     Note,the diagram is not unique because there is a generator which appears");
+                    printf("\nwith only one exponent, either 3,4 or 6, and a needed symmetry does not exist.");
                     break;
                 case ANNULUS_EXISTS:
                     p = *SUR[SWhichInput][0];
                     x = *p++;
                     y = *p++;                
-                    fprintf(fptr,"\n\nVertices '%c' and '%c' separate the diagram.",x,y);
-                    fprintf(fptr,"\nThe component consisting of vertice(s) { %c",*p);
+                    printf("\n\nThe pair of vertices (%c,%c) separate the diagram.",x,y);
+                    printf("\nThe component consisting of vertice(s) { %c",*p);
                     p++;
                     while((x = *p) != '@')
                         {
-                        fprintf(fptr,",%c",x);
+                        printf(",%c",x);
                         p++;
                         }
-                    fprintf(fptr," }");    
+                    printf(" }");    
                     p++;        
-                    fprintf(fptr,"\nlies in an annulus which swallows the component and otherwise follows the curve:");
-                    fprintf(fptr,"\n%s.",p);
+                    printf("\nlies in an annulus which swallows the component and otherwise follows the curve:");
+                    printf("\n%s.",p);
                     Error = TRUE;
                     break;
                 case V2_ANNULUS_EXISTS:
                     p = *SUR[SWhichInput][0];
-                    fprintf(fptr,"\n\nThere exists an annulus which swallows vertice(s) { %c",*p);
+                    printf("\n\nThere exists an annulus which swallows vertice(s) { %c",*p);
                     p++;
                     while((x = *p) != '@')
                         {
-                        fprintf(fptr,",%c",x);
+                        printf(",%c",x);
                         p++;
                         }
-                    fprintf(fptr," }");    
+                    printf(" }");    
                     p++;        
-                    fprintf(fptr,"\nand otherwise follows the curve:");
-                    fprintf(fptr,"\n%s.",p);
+                    printf("\nand otherwise follows the curve:");
+                    printf("\n%s.",p);
                     Error = TRUE;
                     break;                
                 }            
             }
         }
 
-END:                    
-    if(PrintOut == 2)
-        printf("\n\nTHESE TABLES ARE PRINTED IN THE FILE 'Heegaard_Results'.");
-    if(PrintOut == 1)
-        {
-        printf("\n");
-        printf("\nHIT 'P' TO PRINT THE DIAGRAM.");
-        printf("\n   HIT 'm' TO RETURN TO DIAGRAM %d.",WhichInput + 1);
-        printf("\n      HIT 'v' TO REVIEW PRESENTATION %d.",WhichInput + 1);
-        if(F1)
-            {
-            printf("\n         HIT 'n' TO SEE THE NEXT PRESENTATION.");
-            printf("\n            HIT 'p' TO SEE THE PREVIOUS PRESENTATION.");
-            if(!Error && Connected && !SepPairs && NumGenerators > 1)
-                {
-                printf("\n               HIT 'b' FOR INFO ABOUT THE BDRY OF THIS MANIFOLD.");            
-                printf("\n                  HIT 'D' TO SEE THE 'DUAL' RELATORS FOR THIS DIAGRAM.");
-                printf("\n                     HIT 'O' TO SEE THE 'OUT' RELATORS FOR THIS DIAGRAM.");
-                }
-            }
-        else
-            {    
-            printf("\n         HIT 'n' TO SEE THE NEXT DIAGRAM.");
-            printf("\n            HIT 'p' TO SEE THE PREVIOUS DIAGRAM.");
-            printf("\n               HIT 'q' TO QUIT VIEWING DIAGRAMS.");
-            if(!Error && Connected && !SepPairs && NumGenerators > 1)
-                {
-                printf("\n                  HIT 'b' FOR INFO ABOUT THE BDRY OF THIS MANIFOLD.");
-                printf("\n                     HIT 'D' TO SEE THE 'DUAL' RELATORS FOR THIS DIAGRAM.");
-                printf("\n                        HIT 'O' TO SEE THE 'OUT' RELATORS FOR THIS DIAGRAM.");
-                }
-            }
-        }
+END:
     return(Error);            
 } 
 
-void Floating_Gauss_Seidel(void)
-{    
-    /****************************************************************************************** 
-        This routine determines where the vertices of the Heegaard diagram are to be located
-        in the plane. First the locations of the vertices that belong to the boundary of the
-        "infinite" face of the diagram are determined. Then each remaining vertex of the
-        diagram is located at the barycenter of the locations of its neighbors. Determining 
-        the locations of these vertices requires solving a set of linear equations. We do this
-        using the Gauss-Seidel method.
-    ******************************************************************************************/
-    
-    register int     h,
-                    i,
-                    j,
-                    k;
-                    
-    register double x,
-                    y,
-                    z;
-                                    
-    int             converge,
-                    NumVert,
-                    PVert,
-                    Vert;
-    
-    double             bottom,
-                    left,
-                    RIC[VERTICES],
-                    right,
-                    top,
-                    X1,
-                    X2,
-                    XF[VERTICES],
-                    Y1,
-                    Y2,
-                    YF[VERTICES];
-                                
-    for(i = 0; i < Vertices; i++)
-        {
-        XF[i] = 290.0;    
-        YF[i] = 200.0;
-        if(VWG[i]) Flags[i] = 1;
-        else Flags[i] = 0;
-        }    
-        
-    /******************************************************************************************
-        Plot the vertices of the "infinite" face of the graph. These vertices will be spaced 
-        around the perimeter of a rectangle on the screen -- unless there are only 3 vertices
-        in the boundary of the "infinite" face. So that the cyclic orders of the vertices are
-        represented correctly, the order in which vertices appear in the boundary of the
-        infinite face is such that the interior of the infinite face lies to the right-hand
-        side of its oriented boundary.
-    ******************************************************************************************/
-    
-    if((MaxLength < 2) || (MaxLength > VERTICES)) goto _DONE;        
-    
-    if(MaxLength == 3)
-        {
-        x = 290.0;
-        y = 30.0;
-        for(i = 0; i < MaxLength; i++)
-            {
-            j = SaveBdry[i];
-            XF[j] = x;
-            YF[j] = y;
-            if(x == 290.0)
-                {
-                x = 30.0;
-                y = 370.0;
-                }
-            else if(x == 30.0)
-                x = 550.0;
-            Flags[j] = 0;
-            }    
-        }
-    else    
-        {
-        top = 31.0;
-        left = 31.0;
-        right = 549.0;
-        bottom = 369.0;
-        i = MaxLength/4;
-        switch(MaxLength % 4)
-            {
-            case 0:
-                X2 = X1 = 520.0/(double)i;
-                Y2 = Y1 = 340.0/(double)i;
-                break;
-            case 1:
-                X1 = 520.0/(double)(i+1);
-                X2 = 520.0/(double)i;
-                Y2 = Y1 = 340.0/(double)i;
-                break;
-            case 2:
-                X2 = X1 = 520.0/(double)(i+1);
-                if(i)
-                Y2 = Y1 = 340.0/(double)i;
-                break;
-            case 3:
-                X2 = X1 = 520.0/(double)(i+1);
-                Y1 = 340.0/(double)(i+1);
-                if(i)
-                Y2 = 340.0/(double)i;
-                break;
-            }
-        x = 30.0;
-        y = 30.0;        
-        for(i = 0; i < MaxLength; i++)
-            {
-            j = SaveBdry[i];
-            XF[j] = x;
-            YF[j] = y;
-            if(y < top && x > left) x -= X1;
-            else
-            if(x < left && y < bottom) y += Y1;
-            else
-            if(y > bottom && x < right) x += X2;
-            else
-            if(x > right && y > top) y -= Y2;
-            Flags[j] = 0;
-            }    
-        }            
-        
-    for(i = 0; i < Vertices; i++)
-        {
-        XF[i] -= 290.0;
-        YF[i] -= 200.0;
-        }
-                    
-    /******************************************************************************************
-        Save the reciprocals of the valences of those vertices with nonzero valence in the
-                                    array RIC[].
-    ******************************************************************************************/
-    
-    if(NonPlanar || !Connected)
-        {
-        for(i = 0;i < Vertices; i++) if(VWG[i])
-        RIC[i] = 1.0/((double)VWG[i]);
-        }
-    else for(i = 0;i < Vertices; i++) if(VWG[i] && Flags[i])
-        {
-        
-        /**************************************************************************************
-            Add some "virtual" edges to the graph so that the graph will have a more visually
-            appealling embedding on screen.
-        **************************************************************************************/
-            
-        NumVert = 0;
-        for(h = 0; (j = AJ1[i][h]) < VERTICES; h++)
-            {
-            Vert = j;
-            for(k = 0; (k < NumVert) && AJ3[i][k] != Vert; k++) ;
-            if(k == NumVert)
-                {
-                AJ3[i][NumVert] = Vert;
-                NumVert ++;
-                }
-            Vert = CO[j][i];
-            for(k = 0; (k < NumVert) && AJ3[i][k] != Vert; k++) ;
-            if(k == NumVert)
-                {
-                AJ3[i][NumVert] = Vert;
-                NumVert ++;
-                }
-            Vert = i;
-            do
-                {
-                PVert = Vert;
-                Vert = CO[j][PVert];
-                }
-            while(Vert != i);
-            Vert = PVert;    
-            for(k = 0; (k < NumVert) && AJ3[i][k] != Vert; k++) ;
-            if(k == NumVert)
-                {
-                AJ3[i][NumVert] = Vert;
-                NumVert ++;
-                }
-            }
-        AJ3[i][NumVert] = VERTICES;
-        z = NumVert + 2.0*VWG[i];
-        RIC[i] = 1.0/z;
-        }
+void Diagram_Data_for_Graphviz(int F2,int Pres,int HS)
+{
+	unsigned char	x,
+				    y;
+				    
+	int				i,
+					j,
+					NumPts;
+					
+	long			DeltaX,
+					DeltaY,
+					DeltaSquared,
+					MinDist,
+					MinDistSquared;
+	
+	if(Batch == FALSE)
+		{
+		if((Gvizdata = fopen("Heegaard_Diagrams.dot","w+")) == NULL)
+			{
+			printf("\n\nUnable to create file Gvizdata used by Graphviz() to display Heegaard's Heegaard diagrams");
+			return;
+			}						
+	
+		fprintf(Gvizdata,"graph G{layout = neato; model = circuit; size = \04210.0,8.0\042; ratio = fill ;\n");
+		if(F2)
+			fprintf(Gvizdata,"label = \042Diagram of Pres %d of HS %d of the Initial Presentation %s\042; \n",Pres,HS,PresName);	
+		else
+			fprintf(Gvizdata,"label = \042Diagram of Presentation %d of the Initial Presentation %s\042; \n",
+			WhichInput + 1, PresName);
+		}
+	else
+		{
+		printf("\n\n****************************************************************************************");
+		printf("\nThe following lines describe the Heegaard diagram in Graphviz() readable form.");
+		printf("\nCopy and paste into 'Heegaard_Diagrams.dot to have Graphviz() display the diagram.");
+		
+		printf("\n\n graph G{layout = neato; model = circuit; size = \04210.0,8.0\042; ratio = fill ;\n");
+		if(F2)
+			printf(" label = \042Diagram of Pres %d of HS %d of the Initial Presentation %s\042; \n",Pres,HS,PresName);	
+		else
+			printf(" label = \042Diagram of Presentation %d of the Initial Presentation %s\042; \n",WhichInput + 1, PresName);		
+		}	
+	
+	MinDist = 15;
+	MinDistSquared = MinDist*MinDist;
+	
+	for(i = NumPts = 0; i < Vertices - 1; i++) if(Flags[i])
+		{
+		for(j = i + 1; j < Vertices; j++) if(Flags[j])
+			{
+			DeltaX = labs(X[i]-X[j]);
+			DeltaY = labs(Y[i]-Y[j]);
+			if(DeltaX > MinDist || DeltaY > MinDist || DeltaX + DeltaY > MinDist) continue;
+			DeltaSquared = DeltaX*DeltaX + DeltaY*DeltaY;
+			if(DeltaSquared > MinDistSquared) continue;
+			if(!A[i][j] && 4*DeltaSquared > MinDistSquared) continue;	
+			if(Flags[i] > 1) 
+				{
+				Flags[i] ++;
+				NumPts ++;
+				}
+			if(Flags[j] > 1)
+				{
+				Flags[j] ++;
+				NumPts ++;
+				}
+			}
+		}
+		
+	if(NumPts)
+		{
+		for(i = 0; i < Vertices - 1; i++) if(Flags[i] == 3)
+			{
+			for(j = i + 1; j < Vertices; j++) if(Flags[j] > 2)
+				{
+				DeltaX = labs(X[i]-X[j]);
+				DeltaY = labs(Y[i]-Y[j]);
+				if(DeltaX > MinDist || DeltaY > MinDist || DeltaX + DeltaY > MinDist) continue;
+				DeltaSquared = DeltaX*DeltaX + DeltaY*DeltaY;
+				if(DeltaSquared > MinDistSquared) continue;
+				if(!A[i][j] && 4*DeltaSquared > MinDistSquared) continue;
+				if(4*DeltaSquared > MinDistSquared)
+					{
+					Flags[i] = 2;
+					NumPts --;
+					}			
+				}
+			}
+		}		
+	
+	if(Batch == FALSE)
+		{	
+		if(NumPts)
+			{
+			fprintf(Gvizdata,"node [shape = point, height = 0.05]; { \n");
+			for(i = 0; i < Vertices; i++) if(Flags[i] > 2)
+				{
+				if(i & 1) x = i/2 + 97;
+				else      x = i/2 + 65;
+				fprintf(Gvizdata,"%c [pos = \042%d,%d!\042]; ",x,X[i],Y[i]);	
+				}
+			fprintf(Gvizdata,"} \n");
+			}	
+		
+		fprintf(Gvizdata,"node [shape = circle, fontsize = 10, height = 0.1, style = white] \n");
 
-    /******************************************************************************************
-        Iterate until two successive iterations don't move any vertex by more than ERROR.
-    ******************************************************************************************/
-    
-    if(NonPlanar || !Connected)
-        {
-        converge = 1;
-        k = 0;
-        while (1)
-            {
-            k ++;
-            for(i = 0; i < Vertices; i++) if(Flags[i])
-                {
-                x = y = 0.0;
-                z = RIC[i];
-                for(h = 0; (j = AJ1[i][h]) < VERTICES; h++)    
-                    {
-                    x += XF[j];
-                    y += YF[j];
-                    }
-                x *= z;
-                y *= z;                                
-                if(converge)
-                    if((fabs(x - XF[i]) + fabs(y - YF[i])) > ERROR) converge = 0;                        
-                XF[i] = x;
-                YF[i] = y;
-                }
-            if (++converge == 2 || k > 3000) break;                        
-             }
-         }    
-    else
-        {                    
-        converge = 1;
-        k = 0;
-        while (1)
-            {
-            k ++;
-            for(i = 0; i < Vertices; i++) if(Flags[i])
-                {
-                x = y = 0.0;
-                z = RIC[i];
-                for(h = 0; (j = AJ3[i][h]) < VERTICES; h++)    
-                    {
-                    if(A[i][j])
-                        {
-                        x += 3.0*XF[j];
-                        y += 3.0*YF[j];
-                        }
-                    else
-                        {
-                        x += XF[j];
-                        y += YF[j];
-                        }
-                    }
-                x *= z;
-                y *= z;                                
-                if(converge)
-                    if((fabs(x - XF[i]) + fabs(y - YF[i])) > ERROR) converge = 0;                        
-                XF[i] = x;
-                YF[i] = y;
-                }
-            if (++converge == 2 || k > 3000) break;                        
-             }
-         }    
-     
-    /******************************************************************************************
-        Shrink the interior of the complement of the 'infinite' face of the graph slightly so
-        that vertices which should not appear on the boundary of the infinite face do not
-        appear there. Then translate the center of the graph to the center of the screen.
-    ******************************************************************************************/
-    
-     for(i = 0; i < Vertices; i++)
-        {
-        if(Flags[i])
-            {
-            XF[i] *= 0.95;
-            YF[i] *= 0.95;
-            }
-        XF[i] += 290.0;
-        YF[i] += 200.0;
-        }
-        
-_DONE:        
-     /*****************************************************************************************
-             Convert the floating point values in XF[] and YF[] to integers in X[] and Y[].
-     *****************************************************************************************/    
-     
-     for(i = 0; i < Vertices; i ++) 
-        {
-        X[i] = XF[i] + 0.5;
-        Y[i] = YF[i] + 0.5;
-        }                    
+		for(i = 0; i < Vertices; i++) if(Flags[i] == 1 || Flags[i] == 2)
+			{
+			if(i & 1) x = i/2 + 97;
+			else      x = i/2 + 65;
+			fprintf(Gvizdata,"%c [pos = \042%d,%d!\042]; ",x,X[i],Y[i]);	
+			}
+	
+		fprintf(Gvizdata,"\n edge [fontsize = 10]; { ");
+	
+		for(i = 0; i < Vertices - 1; i++)
+			{
+			if(i & 1) x = i/2 + 97;
+			else      x = i/2 + 65;
+			for(j = i+1; j < Vertices; j++) if(A[i][j])
+				{
+				if(j & 1) y = j/2 + 97;
+				else      y = j/2 + 65;
+				fprintf(Gvizdata,"%c -- %c ; ",x,y);
+				}
+			}
+		
+		fprintf(Gvizdata,"}}\n\n");
+		fclose(Gvizdata);
+    	}
+    if(Batch)
+    	{
+		if(NumPts)
+			{
+			printf("node [shape = point, height = 0.05]; { \n");
+			for(i = 0; i < Vertices; i++) if(Flags[i] > 2)
+				{
+				if(i & 1) x = i/2 + 97;
+				else      x = i/2 + 65;
+				printf("%c [pos = \042%d,%d!\042]; ",x,X[i],Y[i]);	
+				}
+			printf("} \n");
+			}	
+		
+		printf("node [shape = circle, fontsize = 10, height = 0.1, style = white] \n");
+
+		for(i = 0; i < Vertices; i++) if(Flags[i] == 1 || Flags[i] == 2)
+			{
+			if(i & 1) x = i/2 + 97;
+			else      x = i/2 + 65;
+			printf("%c [pos = \042%d,%d!\042]; ",x,X[i],Y[i]);	
+			}
+	
+		printf("\n edge [fontsize = 10]; { ");
+	
+		for(i = 0; i < Vertices - 1; i++)
+			{
+			if(i & 1) x = i/2 + 97;
+			else      x = i/2 + 65;
+			for(j = i+1; j < Vertices; j++) if(A[i][j])
+				{
+				if(j & 1) y = j/2 + 97;
+				else      y = j/2 + 65;
+				printf("%c -- %c ; ",x,y);
+				}
+			}
+		
+		printf("}}\n\n");  	
+    	}	 
 }
 
 void Gauss_Seidel(void)
@@ -2693,12 +2337,12 @@ void Gauss_Seidel(void)
         using the Gauss-Seidel method.
     ******************************************************************************************/
     
-    register int     h,
+    register int    h,
                     i,
                     j,
                     k;
                     
-    register long    x,
+    register long   x,
                     y,
                     z;
                                     
@@ -2707,7 +2351,7 @@ void Gauss_Seidel(void)
                     PVert,
                     Vert;
     
-    long             bottom,
+    long            bottom,
                     left,
                     RIC[VERTICES],
                     right,
@@ -2721,9 +2365,11 @@ void Gauss_Seidel(void)
                                 
     for(i = 0; i < Vertices; i++)
         {
+        /* Put every vertex at screen center initially. */
+        
         XF[i] = 290000;    
-        YF[i] = 200000;
-        if(VWG[i]) Flags[i] = 1;
+        YF[i] = 225000;	
+        if(VWG[i]) Flags[i] = 2;
         else Flags[i] = 0;
         }    
         
@@ -2736,64 +2382,66 @@ void Gauss_Seidel(void)
         side of its oriented boundary.
     ******************************************************************************************/
     
-    if((MaxLength < 2) || (MaxLength > VERTICES)) goto _DONE;        
+    if((MaxLength < 2) || (MaxLength > VERTICES)) goto _DONE;   
     
     if(MaxLength == 3)
         {
-        x = 290000;
+        x = 30000;
         y = 30000;
-        for(i = 0; i < MaxLength; i++)
+		for(i = 0; i < MaxLength ; i++)	
             {
             j = SaveBdry[i];
             XF[j] = x;
-            YF[j] = y;
-            if(x == 290000)
-                {
-                x = 30000;
-                y = 370000;
-                }
-            else if(x == 30000)
-                x = 550000;
-            Flags[j] = 0;
+            YF[j] = y;    
+         	switch(x)
+				{
+				case 30000:
+					x = 550000;
+					y = 30000;
+					break;
+				case 550000:
+					x = 290000;
+					y = 420000;
+					break;
+				}
+            /* Set Flags[j] = 1 so that vertex j will not be moved. */    
+            Flags[j] = 1;
             }    
         }
     else    
         {
-        top = 31000;
+ 		top = 31000;
         left = 31000;
-        right = 549000;
-        bottom = 369000;
+        right = 549000;				
+ 		bottom = 419000;
         i = MaxLength/4;
         switch(MaxLength % 4)
             {
             case 0:
                 X2 = X1 = 520000/i;
-                Y2 = Y1 = 340000/i;
+                Y2 = Y1 = 390000/i;
                 break;
             case 1:
                 X1 = 520000/(i+1);
                 X2 = 520000/i;
-                Y2 = Y1 = 340000/i;
+                Y2 = Y1 = 390000/i;	           
                 break;
             case 2:
                 X2 = X1 = 520000/(i+1);
                 if(i)
-                Y2 = Y1 = 340000/i;
+                Y2 = Y1 = 390000/i;               
                 break;
             case 3:
                 X2 = X1 = 520000/(i+1);
-                Y1 = 340000/(i+1);
+                Y1 = 390000/(i+1);
                 if(i)
-                Y2 = 340000/i;
+                Y2 = 390000/i;
                 break;
             }
         x = 30000;
         y = 30000;        
-        for(i = 0; i < MaxLength; i++)
+ 		for(i = MaxLength - 1; i >= 0; i--)	
             {
-            j = SaveBdry[i];
-            XF[j] = x;
-            YF[j] = y;
             if(y < top && x > left) x -= X1;
             else
             if(x < left && y < bottom) y += Y1;
@@ -2801,14 +2449,20 @@ void Gauss_Seidel(void)
             if(y > bottom && x < right) x += X2;
             else
             if(x > right && y > top) y -= Y2;
-            Flags[j] = 0;
+            j = SaveBdry[i];
+            XF[j] = x;
+            YF[j] = y;
+            /* Set Flags[j] = 1 so that vertex j will not be moved. */
+            Flags[j] = 1;
             }    
         }            
         
     for(i = 0; i < Vertices; i++)
         {
+        /* Move the graph center from (290000,225000) to the origin (0,0). */
+        
         XF[i] -= 290000;
-        YF[i] -= 200000;
+        YF[i] -= 225000;
         }
                     
     /******************************************************************************************
@@ -2820,12 +2474,12 @@ void Gauss_Seidel(void)
         for(i = 0;i < Vertices; i++) if(VWG[i])
         RIC[i] = VWG[i];
         }
-    else for(i = 0;i < Vertices; i++) if(VWG[i] && Flags[i])
+    else for(i = 0;i < Vertices; i++) if(Flags[i] == 2)
         {
         
         /**************************************************************************************
             Add some "virtual" edges to the graph so that the graph will have a more visually
-            appealling embedding on screen.
+            appealing embedding on screen.
         **************************************************************************************/
             
         NumVert = 0;
@@ -2862,21 +2516,21 @@ void Gauss_Seidel(void)
             }
         AJ3[i][NumVert] = VERTICES;
         z = NumVert + 2*VWG[i];
-        RIC[i] = z;
+        RIC[i] = z;	
         }
 
-    /******************************************************************************************
-        Iterate until two successive iterations don't move any vertex by more than ERROR.
-    ******************************************************************************************/
+    /**********************************************************************************************
+        Iterate until two successive iterations don't move any interior vertex by more than ERROR.
+    ***********************************************************************************************/
     
     if(NonPlanar || !Connected)
         {
-        converge = 1;
+        converge = TRUE;
         k = 0;
         while (1)
             {
             k ++;
-            for(i = 0; i < Vertices; i++) if(Flags[i])
+            for(i = 0; i < Vertices; i++) if(Flags[i] == 2)
                 {
                 x = y = 0;
                 z = RIC[i];
@@ -2888,7 +2542,7 @@ void Gauss_Seidel(void)
                 x = x/z;
                 y = y/z;                                
                 if(converge)
-                    if((labs(x - XF[i]) + labs(y - YF[i])) > 100) converge = 0;                        
+                    if((labs(x - XF[i]) + labs(y - YF[i])) > 100) converge = FALSE;                        
                 XF[i] = x;
                 YF[i] = y;
                 }
@@ -2897,12 +2551,12 @@ void Gauss_Seidel(void)
          }    
     else
         {                    
-        converge = 1;
+        converge = TRUE;
         k = 0;
         while (1)
             {
             k ++;
-            for(i = 0; i < Vertices; i++) if(Flags[i])
+            for(i = 0; i < Vertices; i++) if(Flags[i] == 2)
                 {
                 x = y = 0;
                 z = RIC[i];
@@ -2922,12 +2576,12 @@ void Gauss_Seidel(void)
                 x = x/z;
                 y = y/z;                                
                 if(converge)
-                    if((labs(x - XF[i]) + labs(y - YF[i])) > 100) converge = 0;                        
+                    if((labs(x - XF[i]) + labs(y - YF[i])) > 100) converge = FALSE;                        
                 XF[i] = x;
                 YF[i] = y;
                 }
             if (++converge == 2 || k > 3000) break;                        
-             }
+             }   
          }    
      
     /******************************************************************************************
@@ -2938,15 +2592,18 @@ void Gauss_Seidel(void)
     
      for(i = 0; i < Vertices; i++)
         {
-        if(Flags[i])
+        if(Flags[i] == 2)
             {
             XF[i] *= 95;
             XF[i] = XF[i]/100;
             YF[i] *= 95;
             YF[i] = YF[i]/100;
             }
+            
+        /* Move the graph center from the origin (0,0) to (290000,225000). */ 
+           
         XF[i] += 290000;
-        YF[i] += 200000;
+        YF[i] += 225000;
         }
         
 _DONE:        
@@ -2960,346 +2617,25 @@ _DONE:
         Y[i] = YF[i]/1000;
         }                    
 }
-
-Print_Picture(m)
-int m;
+    
+void Print_Bdry_Comp_Info(int F2,int Pres,int HS)
 {
-#ifndef MAC
-  printf("Function Print_Picture is disabled.\n\r");
-#else 
-    TPrStatus        prStatus;                    
-    THPrint            hPrint;
-    TPPrPort        pPrPort;
-    GrafPtr            savePort;
-    int                Error;
-    
-    Error = FALSE;
-    GetPort(&savePort);
-    PrOpen();
-    hPrint = (THPrint) NewHandle(sizeof(TPrint));
-    PrintDefault(hPrint);
-    PrValidate(hPrint);
-    if(PrStlDialog(hPrint) == FALSE)
-        {
-        Error = TRUE;
-        goto _END;
-        }
-    if(PrJobDialog(hPrint) == FALSE)
-        {
-        Error = TRUE;
-        goto _END;
-        }
-    prStatus.iTotPages = 1;    
-    pPrPort = PrOpenDoc(hPrint,NULL,NULL);
-    if(PrError() == noErr)
-        {
-        PrOpenPage(pPrPort,NULL);
-        TextFont(4);
-        TextSize(9);
-        TextFace(0);
-        if(PrError() == noErr)
-            Plot_Graph(1,m,0);
-        else
-            {
-            PrClosePage(pPrPort);
-            PrCloseDoc(pPrPort);
-            Error = TRUE;
-            goto _END;
-            }    
-        PrClosePage(pPrPort);
-        PrCloseDoc(pPrPort);
-        if((**hPrint).prJob.bJDocLoop == bSpoolLoop && PrError() == noErr)
-        PrPicFile(hPrint,NULL,NULL,NULL,&prStatus);
-        }
-    else
-        {
-        PrCloseDoc(pPrPort);
-        Error = TRUE;
-        }    
-_END:        
-    PrClose();
-    PrDrvrClose();
-    SetPort(savePort);
-    return(Error);
-#endif
-}    
-
-Print_Diagram_Data(m)
-int m;
-{
-#ifndef MAC
-  printf("Function Print_Diagram_Data is disabled.\n\r");
-#else
-    register int     i,
-                    j;
-                    
-    unsigned char     *p,
-                    x,
-                    y;
-                    
-    char            **HText,
-                    *textptr;
-                    
-    long            length;                    
-                    
-    GrafPtr            SavePort;                                
-
-    unsigned int Diagram_Main();
-    
-    HText = (char **) NewHandle(35000L);
-    if((textptr = *HText) == NULL) return(TOO_LONG);
-    HLock(HText);
-            
-    textptr += sprintf(textptr,"                                DATA FOR DIAGRAM %d",m);
-    textptr --;
-    textptr += sprintf(textptr,"\r\rGENERATORS %d, RELATORS %d, LENGTH %lu.",NumGenerators,NumRelators,Length);
-    textptr --;
-    textptr += sprintf(textptr,"\r\rTHE FOLLOWING TABLE GIVES THE NUMBER OF EDGES JOINING EACH PAIR OF VERTICES.\r");
-    textptr --;
-    
-    for(i = 0; i < Vertices - 1; i++)
-        {
-        for(j = i + 1; j < Vertices && !A[i][j]; j++) ;
-        if(j >= Vertices) continue;
-        if(i & 1)
-            x = i/2 + 97;
-        else
-            x = i/2 + 65;
-        textptr += sprintf(textptr,"\r%c: ",x);
-        textptr --;    
-        for(j = i + 1; j < Vertices; j++)
-            {
-            if(A[i][j])
-                {
-                if(j & 1)
-                    y = j/2 + 97;
-                else
-                    y = j/2 + 65;
-                textptr += sprintf(textptr,"%c%u ",y,A[i][j]);
-                textptr --;    
-                }    
-            }    
-        }
-
-    if(!Connected)
-        {
-        textptr += sprintf(textptr,"\r\rThe diagram is not connected, so complete data is unavailable.");    
-        textptr --;
-        }
-    else if(SepPairs)
-        {
-        textptr += sprintf(textptr,"\r\rVertices '%c' and '%c' separate the Whitehead graph, so complete data is unavailable.",
-        x = LSP[WhichInput],y = LSQ[WhichInput]);
-        textptr --;
-        }
-    else if(NumGenerators > 1 && Connected && !SepPairs && !NonPlanar)    
-        {
-        length = textptr - *HText;
-        HUnlock(HText);
-        switch(Diagram_Main())
-            {
-            case NON_UNIQUE_1:
-                if(UDV[WhichInput] < DONE) UDV[WhichInput] = NON_UNIQUE_1;
-                break;
-            case NON_UNIQUE_2:
-                if(UDV[WhichInput] < DONE) UDV[WhichInput] = NON_UNIQUE_2;
-                break;
-            case NON_UNIQUE_3:
-                if(UDV[WhichInput] < DONE) UDV[WhichInput] = NON_UNIQUE_3;
-                break;
-            case NON_UNIQUE_4:
-                if(UDV[WhichInput] < DONE) UDV[WhichInput] = NON_UNIQUE_4;
-                break;
-            }    
-        
-        HLock(HText);
-        textptr = *HText + length;
-        textptr += sprintf(textptr,"\r\rFOR EACH (X,x) PAIR OF VERTICES, IDENTIFY EDGE 0 OF THE FIRST VERTEX");
-        textptr --;
-        textptr += sprintf(textptr,"\rWITH THE EDGE OF THE SECOND VERTEX SHOWN IN THE FOLLOWING LIST.\r\r");
-        textptr --;
-        textptr += sprintf(textptr,"(%u",OSA[0] % VA[0]);
-        textptr --;
-        for(i = 2; i < Vertices; i += 2)
-            {
-            textptr += sprintf(textptr,",%u",OSA[i] % VA[i/2]);
-            textptr --;
-            }
-        textptr += sprintf(textptr,")");
-        textptr --;
-    
-        switch(UDV[WhichInput])
-            {
-            case NON_UNIQUE_4:
-                textptr += sprintf(textptr,"\r\r     Note,the diagram is not unique because there is a generator which appears");
-                textptr --;
-                textptr += sprintf(textptr,"\rwith only one exponent and that exponent is greater than 6.");
-                textptr --;
-                break;
-            case NON_UNIQUE_3:
-                textptr += sprintf(textptr,"\r\r     Note,the diagram is not unique because there is a generator which appears");
-                textptr --;
-                textptr += sprintf(textptr,"\ronly with exponent 5.");
-                textptr --;
-                break;
-            case NON_UNIQUE_2:
-                textptr += sprintf(textptr,"\r\r     Note,the diagram is not unique because there is a generator which appears");
-                textptr --;
-                textptr += sprintf(textptr,"\ronly with exponent 3 or only with exponent 4 and this exponent occurs more than once.");
-                textptr --;
-                break;
-            case NON_UNIQUE_1:
-                textptr += sprintf(textptr,"\r\r     Note,the diagram is not unique because there is a generator which appears");
-                textptr --;
-                textptr += sprintf(textptr,"\rwith only one exponent, either 3,4 or 6, and a needed symmetry does not exist.");
-                textptr --;
-                break;    
-            case ANNULUS_EXISTS:
-                p = *SUR[WhichInput][0];
-                x = *p++;
-                y = *p++;                
-                textptr += sprintf(textptr,"\r\rNote that, vertices '%c' and '%c' separate the diagram.",x,y);
-                textptr --;
-                textptr += sprintf(textptr,"\rThe component consisting of vertice(s) { %c",*p);
-                textptr --;
-                p++;
-                while((x = *p) != '@')
-                    {
-                    textptr += sprintf(textptr,",%c",x);
-                    textptr --;
-                    p++;
-                    }
-                textptr += sprintf(textptr," }");
-                textptr --;
-                p++;        
-                textptr += sprintf(textptr,"\rlies in an annulus which swallows the component and otherwise follows the curve:");
-                textptr --;
-                textptr += sprintf(textptr,"\r%s.",p);
-                textptr --;
-                break;
-            case V2_ANNULUS_EXISTS:
-                p = *SUR[WhichInput][0];
-                textptr += sprintf(textptr,"\r\rNote that there exists an annulus which swallows vertice(s) { %c",*p);
-                textptr --;
-                p++;
-                while((x = *p) != '@')
-                    {
-                    textptr += sprintf(textptr,",%c",x);
-                    textptr --;
-                    p++;
-                    }
-                textptr += sprintf(textptr," }");    
-                textptr --;
-                p++;        
-                textptr += sprintf(textptr,"\rand otherwise follows the curve:");
-                textptr --;
-                textptr += sprintf(textptr,"\r%s.",p);
-                textptr --;
-                break;                
-            }    
-        }
-    
-    *textptr = EOS;
-    textptr++;
-    HUnlock(HText);
-    SetHandleSize(HText,textptr - *HText);
-    GetPort(&SavePort);
-    PrintText(HText,GetHandleSize(HText) - 1,SavePort,StringWidth("\pmmmm"));
-    DisposeHandle(HText);
-    return(NO_ERROR);                    
-#endif
-}
-
-Print_Presentation(m)
-int m;
-{
-#ifndef MAC
-  printf("Function Print_Presentation has been disabled.\n\r");
-#else
-    int             i,
-                    j;
-                    
-    unsigned char     *p;
-                    
-    char            **HText,
-                    *textptr;
-                    
-    long            length = 0L;                
-                    
-    GrafPtr            SavePort;                                    
-    
-    for(i = 1; i <= NumRelators; i++)
-        length += GetHandleSize((char **) Relators[i]) + GetHandleSize((char **) Relators[i]) / 25;
-    length += 20*NumRelators + 200;
-        
-    HText = (char **) NewHandle(length);
-    if((textptr = *HText) == NULL) return(TOO_LONG);
-    HLock(HText);
-    
-    textptr += sprintf(textptr,"\r\rPRESENTATION  %d",m);
-    textptr --;
-    
-    textptr += sprintf(textptr,"\rGENERATORS %d, RELATORS %d, LENGTH  %ld\r",
-    NumGenerators,NumRelators,Length);
-    textptr --;
-            
-    for(i = 1; i <= NumRelators; i++)    
-        {
-        HLock((char **) Relators[i]);         
-        textptr += sprintf(textptr,"\rR%3u)   ",i);
-        textptr --;
-        j = 8;
-        p = *Relators[i];
-        while(*textptr++ = *p++)
-            {
-            if(j++ >= 80 && *p)
-                {
-                *textptr ++ = '\r';
-                *textptr ++ = '\t';
-                *textptr ++ = '\t';
-                j = 8;
-                }
-            }    
-        HUnlock((char **) Relators[i]);                                                        
-        }
-            
-    *textptr ++ = '\r';
-    HUnlock(HText);
-    SetHandleSize(HText,textptr - *HText);
-    GetPort(&SavePort);
-    PrintText(HText,GetHandleSize(HText) - 1,SavePort,StringWidth("\pmmmm"));
-    DisposeHandle(HText);
-    return(NO_ERROR);                    
-#endif
-} 
-    
-void Print_Bdry_Comp_Info(void)
-{
-    register unsigned char    x;
-    
-    int                        h,
-                            i,
+    register unsigned char  x;
+    int                     i,
                             j,
                             k,
                             n,
                             ParallelRel;
 
-    register unsigned char    *p;
-
-    FILE                    *fptr;
+    register unsigned char  *p;
     
-    fptr = stdout;
-    
-    RERUN_AND_SAVE:
-    
-    fprintf(fptr,"\n\n                    DATA ABOUT THE BOUNDARY COMPONENTS OF DIAGRAM %d:",
-        WhichInput + 1);
-    
-    if(fptr == myout)
-        Get_Bdry_Comps(TRUE,TRUE,WhichInput);
+    if(F2)
+    	printf("\n\n                    DATA ABOUT THE BOUNDARY COMPONENTS OF THE DIAGRAM OF PRES %d OF HS %d:",Pres,HS);    
     else
-        Get_Bdry_Comps(TRUE,FALSE,WhichInput);
-    
+    	printf("\n\n                    DATA ABOUT THE BOUNDARY COMPONENTS OF DIAGRAM %d:",WhichInput + 1);
+
+	Get_Bdry_Comps(TRUE,FALSE,WhichInput);
+	
     ParallelRel = 0;    
     for(i = 0; i <= NumGenerators && BCWG[i] < BDRY_UNKNOWN; i++) if(BCWG[i])
         {
@@ -3307,23 +2643,23 @@ void Print_Bdry_Comp_Info(void)
             {
             if(GBC[j] == 0)
                 {
-                for(k = 1,n = 0,h = 0; k <= NumFaces; k++) if(BCF[k] == j) n++;
+                for(k = 1,n = 0; k <= NumFaces; k++) if(BCF[k] == j) n++;
                 if(n == 0)
                     {
                     ParallelRel ++;
                     continue;
                     }
                 }
-            fprintf(fptr,"\n\nThe following faces 'form' a boundary component of genus %d.\n",i);
-            for(k = 1,n = 1,h = 0; k <= NumFaces; k++) if(BCF[k] == j)
+            printf("\n\nFaces which 'form' boundary component %d of genus %d.\n\n",j,i);
+            for(k = 1,n = TRUE; k <= NumFaces; k++) if(BCF[k] == j)
                 {
-                if(h >= 80)
-                    {
-                    fprintf(fptr,"\n");
-                    h = 0;
-                    }
-                h += fprintf(fptr," %d) ",n);
-                n++;
+                if(n)
+                	{
+                	printf(" F%d) ",k);
+                	n = FALSE;
+                	}
+                else
+                	printf(", F%d) ",k);
                 p = Face[k];
                 while((x = *p++) < VERTICES)
                     {
@@ -3331,7 +2667,7 @@ void Print_Bdry_Comp_Info(void)
                         x = x/2 + 97;
                     else
                         x = x/2 + 65;    
-                    h += fprintf(fptr,"%c",x);
+                    printf("%c",x);
                     }
                 }
             }
@@ -3340,46 +2676,13 @@ void Print_Bdry_Comp_Info(void)
             case 0:
                 break;
             case 1:
-                fprintf(fptr,"\n\nThe diagram also has a pair of 'parallel' relators which form a boundary component of genus 0.");            
+                printf("\n\nThe diagram also has a pair of 'parallel' relators which form a boundary component of genus 0.");            
                 break;
             default:    
-                fprintf(fptr,"\n\nThe diagram also has %d pairs of 'parallel' relators which form %d boundary components of genus 0.",
+                printf("\n\nThe diagram also has %d pairs of 'parallel' relators which form %d boundary components of genus 0.",
                     ParallelRel,ParallelRel);
                 break;    
             }
         }
-    
-    if(fptr == stdout)
-        {
-        printf("\n\n    SAVE A COPY OF THIS DATA IN 'Heegaard_Results' ?  HIT 'y' OR 'n'.");
-        GET_RESPONSE1:
-        switch(WaitkbHit())
-            {
-            case 'y':
-                fptr = myout;
-                goto RERUN_AND_SAVE;
-            case 'n':
-                break;
-            default:
-                SysBeep(5);
-                goto GET_RESPONSE1;    
-            }
-        }
-    fptr = stdout;
 }    
 
-void MyDrawString(char *p)
-{
-#ifndef MAC
-  printf("Function MyDrawString has been disabled.\n\r");
-#else
-    register char    *q;
-                    
-    short int        len;
-
-    q = p;
-    while (*q++) ;
-    len = q - p;
-    DrawText(p,0,len);
-#endif
-}

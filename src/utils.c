@@ -3,18 +3,14 @@
 #include <sys/time.h>
 #include <termios.h>
 
+/* #define DEBUG_MALLOC	*/
+
 extern struct termios normal_termio;
 
 void   SysBeep(int seconds);
-void   ObscureCursor(void);
 char   **NewHandle(size_t);
 void   DisposeHandle(char **);
-void   ReallocateHandle(char **, size_t);
 size_t GetHandleSize(char **);
-void   SetHandleSize(char **, size_t);
-void   EmptyHandle(char **);
-void   HLock(char **);
-void   HUnlock(char **);
 void   *NewPtr(size_t);
 void   DisposePrt(void *);
 size_t GetPtrSize(void *);
@@ -24,7 +20,6 @@ char   *ReadString(char *buffer, int size);
 typedef struct Handle{
   void *data;
   size_t size;
-  int lock;
 } Handle_t;
 
 typedef struct Pointer{
@@ -32,13 +27,10 @@ typedef struct Pointer{
 } Pointer_t;
   
 void SysBeep(int seconds){
-  printf("\007");
+	printf("\a");
 }
 
-void ObscureCursor(void){
-  return;
-}
-
+#ifndef DEBUG_MALLOC
 char **NewHandle(size_t size){
   Handle_t *handle;
   
@@ -47,25 +39,13 @@ char **NewHandle(size_t size){
     return NULL;
   handle->data = malloc(size);
   handle->size = size;
-  handle->lock = 0;
   return (char **)handle;
-}
-
-void ReallocateHandle(char **h, size_t size){
-  Handle_t *handle = (Handle_t *)h;
-  
-  handle->data = realloc(handle->data, size);
-  handle->size = size;
 }
 
 void DisposeHandle(char **h){
   Handle_t *handle = (Handle_t *)h;
   if (handle == NULL)
     return;
-  if (handle->lock){
-    fprintf(stderr, "Attempt to free locked handle!\n\r");
-    return;
-  }
   if (handle->data)
     free(handle->data);
   free(handle);
@@ -76,29 +56,8 @@ size_t GetHandleSize(char **h){
   return handle->size;
 }
 
-void SetHandleSize(char **h, size_t size){
-  Handle_t *handle = (Handle_t *)h;
-  handle->data = realloc(handle->data, size);
-  handle->size = size;
-}
-
-void EmptyHandle(char **h){
-  SetHandleSize(h, 0);
-}
-
-void HLock(char **h){
-  Handle_t *handle = (Handle_t *)h;
-  handle->lock = 1;
-}
-
-void HUnlock(char **h){
-  Handle_t *handle = (Handle_t *)h;
-  handle->lock = 0;
-}
-
 void *NewPtr(size_t size){
-  Pointer_t *pointer;
-  
+  Pointer_t *pointer; 
   pointer = (Pointer_t *)malloc(size + sizeof(Pointer_t));
   if (pointer == NULL)
     return NULL;
@@ -118,6 +77,110 @@ size_t GetPtrSize(void *p){
   Pointer_t *pointer = (Pointer_t *)(p - sizeof(Pointer_t));
   return pointer->size;
 }
+#endif
+
+#ifdef DEBUG_MALLOC
+
+static const char   test_padding[5] = "[]{}";
+unsigned long		NumErrors;
+
+char **NewHandle(size_t size){
+  Handle_t *handle;
+  char		*test_bytes;
+  int		i;
+  
+  handle = (Handle_t *)malloc(sizeof(Handle_t));
+  if (handle == NULL)
+    return NULL;
+  handle->data = malloc(size + 4);
+  if(handle->data == NULL)
+  	{
+  	free(handle);
+  	return NULL;
+  	}
+  handle->size = size;  
+  test_bytes = (char *)handle->data + size;
+  for(i = 0; i < 4; i++)
+  	test_bytes[i] = test_padding[i];  
+  return (char **)handle;
+}
+
+void DisposeHandle(char **h){
+  char	*p,
+  		*test_bytes;
+  
+  int 	i;
+  
+  if (h == NULL) return;
+  Handle_t *handle = (Handle_t *)h;
+  if (handle->data)
+  	{
+  	test_bytes = (char *)handle->data + handle->size;
+  	for(i = 0; i < 4; i++) if(test_bytes[i] != test_padding[i])
+  		{
+   		NumErrors ++; 			
+  		printf("\n\nError in DisposeHandle().\n");	
+  		p = (char *)handle->data;
+  		while(p < test_bytes + 4) putchar(*p++);
+  		break;
+  		}	
+    free(handle->data);
+    }
+  free(handle);
+}
+
+size_t GetHandleSize(char **h){
+  Handle_t *handle = (Handle_t *)h;
+  return handle->size;
+}
+	
+void *NewPtr(size_t size){
+  char		*test_bytes;
+  int		i;
+  
+  Pointer_t *pointer;  
+  pointer = (Pointer_t *)malloc(size + sizeof(Pointer_t) + 4);
+  if (pointer == NULL)
+    return NULL;
+  pointer->size = size;  
+  test_bytes = (char *)pointer + sizeof(Pointer_t) + size;
+  for(i = 0; i < 4; i++)
+  	test_bytes[i] = test_padding[i];    
+  return (void *)pointer + sizeof(Pointer_t);
+}
+
+void DisposePtr(void *p){
+  char	*q,
+  		*test_bytes;
+  
+  int 	i;
+  		
+  if (p == NULL) return;
+  Pointer_t *pointer;
+  pointer = (Pointer_t *)(p - sizeof(Pointer_t));  
+  test_bytes = (char *)p + pointer->size;
+  for(i = 0; i < 4; i++) if(test_bytes[i] != test_padding[i])
+	{
+	NumErrors ++; 			
+	printf("\n\nError in DisposePtr().\n");	
+	q = (char *)p;
+	while(q < test_bytes + 4) putchar(*q++);
+	break;
+	} 
+  free(pointer);
+}
+
+size_t GetPtrSize(void *p){
+  Pointer_t *pointer = (Pointer_t *)(p - sizeof(Pointer_t));
+  return pointer->size;
+}
+#endif
+
+void Mem_Error(void)
+{
+printf("\n\nUnable to allocate memory. Heegaard will now quit.\n");
+exit(0);
+}
 
 void   ReadDateTime(unsigned long *seconds){
   struct timeval tv;
@@ -127,20 +190,24 @@ void   ReadDateTime(unsigned long *seconds){
 
 char *ReadString(char *buffer, int size){
   struct termios this_termio;
-  char *result;
+  char *result;			
   
   tcgetattr(0, &this_termio);
   tcsetattr(0, 0, &normal_termio);
-  result = fgets(buffer, size, stdin);
+  result = fgets(buffer, size, stdin); 
   while (*buffer){
-    if (*buffer == '\n') *buffer='\0';
+    if (*buffer == '\n') 
+    	{
+    	*buffer='\0';
+    	break;
+    	}
     buffer++;
   }
   tcsetattr(0, 0, &this_termio);
+  return result;
 }
 
 /* 
-
 main(){
   void **p;
   unsigned long time;
@@ -149,18 +216,14 @@ main(){
   printf("%u seconds\n\r", time);
   printf("handle struct size is %d\n\r", sizeof(Handle_t));
   SysBeep(5);
-  ObscureCursor();
   p = NewHandle(100);
   printf("Allocated %d bytes\n\r", GetHandleSize(p));
   ReallocateHandle(p, 200);
   printf("reallocated %d bytes\n\r", GetHandleSize(p));
-  HLock(p);
   DisposeHandle(p);
-  HUnlock(p);
   DisposeHandle(p);
   p = NewPtr(100);
   printf("Allocated %d bytes\n\r", GetPtrSize(p));
   DisposePtr(p);
 }
-
 */

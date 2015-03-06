@@ -1,12 +1,27 @@
 #include "Heegaard.h"
 #include "Heegaard_Dec.h"            
 
+/****************************** function prototypes *****************************************
+L   24 Reduce_Genus(Input,InitPres,F1)
+L  222 Defining_Relator(h,Input,InitPres,F1)
+L  603 Proper_Power(void)
+L  978 Check_For_Primitives(int Input,int MyNumRelators)
+L 1073 Lens_Space_D(int Prim)
+L 1310 Lens_Space(void)
+L 1510 Transverse(unsigned char *ptr)
+L 1817 Recip_Mod_P(p,q)
+L 1851 Find_Flow_B(unsigned int Source)
+L 1972 Get_Connected_Components(void)
+L 2011 LGCD(p,q)
+L 2061 Split_At_Empty_Relators(F1)
+L 2472 Split_At_Empty_Relators_Sub1(void)
+L 2537 Split_At_Empty_Relators_Sub2(int NumGen,int NumNewPres)
+L 2648 Splitting_Pres_On_File(int WhoCalled,int NumNewPres)
+********************************************************************************************/
+
 int InitialNumGenerators;
     
-unsigned int Reduce_Genus(Input,InitPres,F1)
-int         Input,
-            InitPres,
-            F1;
+unsigned int Reduce_Genus(int Input,int InitPres,int F1)
 {    
     /******************************************************************************************
         Reduce_Genus() first calls Defining_Relator() which looks for defining relators among
@@ -17,7 +32,7 @@ int         Input,
         appropriate reductions made to the number of generators and to the number of relators.
     ******************************************************************************************/
     
-    register unsigned char     *p,
+    register unsigned char  *p,
                             *q,
                             **Temp;
                             
@@ -25,18 +40,17 @@ int         Input,
                             InitialNumGenerators,
                             SMicro_Print;
                             
-    unsigned int            i,
-                            j;                        
+    unsigned int            j;                        
     
-    unsigned long            STotalAuts;
+    unsigned long           STotalAuts;
     
     unsigned int Lens_Space();
     unsigned int Proper_Power();
     
     /******************************************************************************************
-        A) If Do_Not_Reduce_Genus is true, the program is in a mode where it will not
+        A) If Do_Not_Reduce_Genus is true, Heegaard is in a mode where it will not
         look for primitives, defining relators, proper powers of generators or lens spaces.
-        B) If Delete_Only_Short_Primitives is true, the program is in a mode where
+        B) If Delete_Only_Short_Primitives is true, Heegaard is in a mode where
         it will delete only relators of length one or two from the presentation.
     ******************************************************************************************/    
 
@@ -76,16 +90,9 @@ int         Input,
         if(Micro_Print)
             {
             printf("\n\nRelator %d is a primitive.",k);
-            if(Micro_Print_F)
-                fprintf(myout,"\n\nRelator %d is a primitive.",k);
             if(k > 1)
-                {
                 printf(" Swapped Relator %d and Relator 1.",k);
-                if(Micro_Print_F)
-                    fprintf(myout," Swapped Relator %d and Relator 1.",k);
-                }
-            printf("\n");
-            if(Micro_Print_F) fprintf(myout,"\n");    
+            printf("\n");   
             }
             
         FoundPrimitive = TRUE;
@@ -119,15 +126,19 @@ int         Input,
                 LensSpace = TRUE;
                 return(0);    
                 }
-                
-            ReallocateHandle((char **) Relators[3],GetHandleSize((char **) Relators[1]));
-            if((p = *Relators[3]) == NULL) return(TOO_LONG);
+            
+            if(Relators[3] != NULL) DisposeHandle((char **) Relators[3]);
+            Relators[3] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[1]));  
+            if(Relators[3] == NULL) Mem_Error();
+            p = *Relators[3];
             q = *Relators[1];
-            while(*p++ = *q++) ;
-            ReallocateHandle((char **) Relators[4],GetHandleSize((char **) Relators[2]));
-            if((p = *Relators[4]) == NULL) return(TOO_LONG);
+            while( (*p++ = *q++) ) ;
+            if(Relators[4] != NULL) DisposeHandle((char **) Relators[4]);
+            Relators[4] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[2]));
+            if(Relators[4] == NULL) Mem_Error();
+            p = *Relators[4];
             q = *Relators[2];
-            while(*p++ = *q++) ;
+            while( (*p++ = *q++) ) ;
             
             switch(Lens_Space())
                 {
@@ -138,14 +149,18 @@ int         Input,
                     LensSpace = NOT_CONNECTED;        /*** The diagram is not connected. ***/
                     return(0);
                 default:
-                    ReallocateHandle((char **) Relators[1],GetHandleSize((char **) Relators[3]));
-                    if((p = *Relators[1]) == NULL) return(TOO_LONG);
+                	if(Relators[1] != NULL) DisposeHandle((char **) Relators[1]);
+                	Relators[1] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[3]));
+                    if(Relators[1] == NULL) Mem_Error();
+                    p = *Relators[1];
                     q = *Relators[3];
-                    while(*p++ = *q++) ;
-                    ReallocateHandle((char **) Relators[2],GetHandleSize((char **) Relators[4]));
-                    if((p = *Relators[2]) == NULL) return(TOO_LONG);
+                    while( (*p++ = *q++) ) ;
+                    if(Relators[2] != NULL) DisposeHandle((char **) Relators[2]);
+                    Relators[2] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[4]));
+                    if(Relators[2] == NULL) Mem_Error();
+                    p = *Relators[2];
                     q = *Relators[4];
-                    while(*p++ = *q++) ;
+                    while( (*p++ = *q++) ) ;
                     
                     j = Defining_Relator(0,Input,InitPres,F1);    
                     if(j == TOO_LONG) return(TOO_LONG);
@@ -171,14 +186,8 @@ int         Input,
         if(Micro_Print)
             {
             printf("\n\nRelator %d is a proper power of a free generator.",k);
-            if(Micro_Print_F)
-                fprintf(myout,"\n\nRelator %d is a proper power of a free generator.",k);
             if(k > 1)
-                {
                 printf(" Swapped Relator %d and Relator 1.",k);
-                if(Micro_Print_F)
-                    fprintf(myout," Swapped Relator %d and Relator 1.",k);
-                }
             }
             
         FoundPower = TRUE;
@@ -210,11 +219,7 @@ int         Input,
     return(0);    
 }
         
-Defining_Relator(h,Input,InitPres,F1)
-int     h,
-        Input,
-        InitPres,
-        F1;
+int Defining_Relator(int h,int Input,int InitPres,int F1)
 {        
     /******************************************************************************************
         This routine checks the relators for defining relators. If it finds a defining
@@ -227,7 +232,7 @@ int     h,
         if it finds a defining relator and otherwise returns FALSE.
     ******************************************************************************************/
     
-    register unsigned char     s,
+    register unsigned char  s,
                             t,
                             x,
                             y,
@@ -236,20 +241,20 @@ int     h,
                             *q,
                             *r;
                             
-    unsigned char             **Temp;
+    unsigned char           **Temp;
     
-    int                        PassNum,
+    int                     PassNum,
                             SNumGenerators,
                             SSNumGenerators;
                             
-    unsigned int             C[125],
+    unsigned int            C[125],
                             f,
                             i,
                             j,
                             k,
                             RL[MAXNUMRELATORS + 1];
                             
-    unsigned long             length,
+    unsigned long           length,
                             M;
     
     unsigned int            Lens_Space(),
@@ -287,7 +292,7 @@ RE_ENTER:
             
         if(h && PassNum == 2 && f > 1) break;
         i = RL[f];
-        if((Delete_Only_Short_Primitives || PassNum != 2) && GetHandleSize((char **) Relators[i]) > 3L)
+        if((Delete_Only_Short_Primitives || PassNum != 2) && GetHandleSize((char **) Relators[i]) > 3)
             continue;    
         
         /**************************************************************************************            
@@ -296,8 +301,8 @@ RE_ENTER:
         
         for(x = 'A',y = 'a'; x < 'A' + NumGenerators; x++,y++)    C[x] = C[y] = 0;
         p = *Relators[i];
-        while(z = *p++) C[z]++;
-        for(x = 'A',y = 'a',j = 0; x < 'A' + NumGenerators; x++,y++) if(C[x] + C[y] == 1) j++;
+        while( (z = *p++) ) C[z]++;
+        for(x = 'A',y = 'a',(j = 0); x < 'A' + NumGenerators; x++,y++) if(C[x] + C[y] == 1) j++;
         if(j == 0) continue;
         k = abs(rand()) % j;
         k++;
@@ -332,15 +337,19 @@ RE_ENTER:
                     Relators[2] = Relators[1];
                     Relators[1] = Temp;
                     }
-                    
-                ReallocateHandle((char **) Relators[3],GetHandleSize((char **) Relators[1]));
-                if((p = *Relators[3]) == NULL) return(TOO_LONG);
+                
+                if(Relators[3] != NULL) DisposeHandle((char **) Relators[3]); 
+                Relators[3] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[1]));   
+                if(Relators[3] == NULL) Mem_Error();
+                p = *Relators[3];
                 q = *Relators[1];
-                while(*p++ = *q++) ;
-                ReallocateHandle((char **) Relators[4],GetHandleSize((char **) Relators[2]));
-                if((p = *Relators[4]) == NULL) return(TOO_LONG);
+                while( (*p++ = *q++) ) ;
+                if(Relators[4] != NULL) DisposeHandle((char **) Relators[4]);
+                Relators[4] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[2]));
+                if(Relators[4] == NULL) Mem_Error();
+                p = *Relators[4];
                 q = *Relators[2];
-                while(*p++ = *q++) ;
+                while( (*p++ = *q++) ) ;
                     
                 switch(Lens_Space())
                     {
@@ -351,15 +360,19 @@ RE_ENTER:
                         LensSpace = NOT_CONNECTED;    /*** The diagram is not connected. ***/
                         return(FALSE);
                     }
-                    
-                ReallocateHandle((char **) Relators[1],GetHandleSize((char **) Relators[3]));
-                if((p = *Relators[1]) == NULL) return(TOO_LONG);
+                
+                if(Relators[1] != NULL) DisposeHandle((char **) Relators[1]);
+                Relators[1] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[3]));  
+                if(Relators[1] == NULL) Mem_Error();
+                p = *Relators[1];
                 q = *Relators[3];
-                while(*p++ = *q++) ;
-                ReallocateHandle((char **) Relators[2],GetHandleSize((char **) Relators[4]));
-                if((p = *Relators[2]) == NULL) return(TOO_LONG);
+                while( (*p++ = *q++) ) ;
+                if(Relators[2] != NULL) DisposeHandle((char **) Relators[2]);
+                Relators[2] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[4]));
+                if(Relators[2] == NULL) Mem_Error();
+                p = *Relators[2];
                 q = *Relators[4];
-                while(*p++ = *q++) ;
+                while( (*p++ = *q++) ) ;
                         
                 if(i == 2)
                     {
@@ -376,10 +389,12 @@ RE_ENTER:
                 
                 for(j = 1; j <= NumRelators; j++)
                     {
-                    ReallocateHandle((char **) Copy_Of_Rel_1[j],GetHandleSize((char **) Relators[j]));
-                    if((p = *Copy_Of_Rel_1[j]) == NULL) return(TOO_LONG);
+                    if(Copy_Of_Rel_1[j] != NULL) DisposeHandle((char **) Copy_Of_Rel_1[j]);
+                    Copy_Of_Rel_1[j] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[j]));
+                    if(Copy_Of_Rel_1[j] == NULL) Mem_Error();
+                    p = *Copy_Of_Rel_1[j];
                     q = *Relators[j];
-                    while(*p++ = *q++) ;                    
+                    while( (*p++ = *q++) ) ;                    
                     }
                                         
             /**********************************************************************************     
@@ -390,40 +405,28 @@ RE_ENTER:
             if(Micro_Print)
                 {
                 printf("\n\nRelator %d is a defining relator which was used to eliminate generator %c.",i,x);
-                if(Micro_Print_F)
-                    fprintf(myout,"\n\nRelator %d is a defining relator which was used to eliminate generator %c.",i,x);
                 if(i != NumRelators)
-                    {
                     printf("\nSwapped Relator %d with Relator %d and reduced the number of relators.",i,NumRelators);
-                    if(Micro_Print_F)
-                    fprintf(myout,"\nSwapped Relator %d with Relator %d and reduced the number of relators.",i,NumRelators);
-                    }
                 }
                 
             p = *Relators[i];
-            while(z = *p++) if(z == x || z == y) break;
-            ReallocateHandle((char **) Temp6,GetHandleSize((char **) Relators[i]) -1);
-            if((q = *Temp6) == NULL) return(TOO_LONG);
+            while( (z = *p++) ) if(z == x || z == y) break;
+            if(Temp6 != NULL) DisposeHandle((char **) Temp6);
+            Temp6 = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[i]) -1);
+            if(Temp6 == NULL) Mem_Error();
+            q = *Temp6;
             while(*p) *q++ = *p++;
             p = *Relators[i];
-            while(z != *p) *q++ = *p++;
+            while( (z != *p) ) *q++ = *p++;
             *q = EOS;
             p = *Temp6;
-            ReallocateHandle((char **) Temp7,GetHandleSize((char **) Relators[i]) -1);
-            if((q = *Temp7) == NULL) return(TOO_LONG);
-            while(*q++ = *p++) ;
-            if(z == x)
-                {
-                HLock((char **) Temp6);
-                Inverse(*Temp6);
-                HUnlock((char **) Temp6);
-                }
-            else
-                {
-                HLock((char **) Temp7);
-                Inverse(*Temp7);
-                HUnlock((char **) Temp7);
-                }    
+            if(Temp7 != NULL) DisposeHandle((char **) Temp7);
+            Temp7 = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[i]) -1);
+            if(Temp7 == NULL) Mem_Error();
+            q = *Temp7;
+            while( (*q++ = *p++) ) ;
+            if(z == x) Inverse(*Temp6);
+            else Inverse(*Temp7);
                 
             /**********************************************************************************
                  Next, if i < NumRelators, exchange Relator[NumRelators] and Relator[i]. Also
@@ -448,35 +451,38 @@ RE_ENTER:
                 {
                 k = 0;    
                 p = *Relators[j];
-                while(z = *p++) if(z == x || z == y) k++;
+                while( (z = *p++) ) if(z == x || z == y) k++;
                 if(k)
                     {
                     M = GetHandleSize((char **) Relators[j]) + k*GetHandleSize((char **) Relators[NumRelators]);
                     M -= 3*k;
                     if(M > MAXLENGTH)
                         {
-                        SysBeep(5);
+                        if(Batch == FALSE)
                         printf("\nA relator derived from Pres %d is too long after deleting a primitive.",ReadPres + 1);
+                        NumRelTooLong ++;
                         return(TOO_LONG);
                         }
-                    ReallocateHandle((char **) Temp4,M);    
-                    if((q = *Temp4) == NULL) return(TOO_LONG);    
+                    if(Temp4 != NULL) DisposeHandle((char **) Temp4);
+                    Temp4 = (unsigned char **) NewHandle(M);
+                    if(Temp4 == NULL) Mem_Error();
+                    q = *Temp4;    
                     p = *Relators[j];
-                    while(z = *p++)
+                    while( (z = *p++) )
                         {
                         *q++ = z;
                         if(z == x)
                             {
                             q--;
                             r = *Temp6;
-                            while(*q++ = *r++) ;
+                            while( (*q++ = *r++) ) ;
                             q--;
                             }
                         if(z == y)
                             {
                             q--;
                             r = *Temp7;
-                            while(*q++ = *r++) ;
+                            while( (*q++ = *r++) ) ;
                             q--;
                             }
                         }
@@ -499,7 +505,7 @@ RE_ENTER:
                 for(j = 1; j < NumRelators; j++)
                     {
                     p = *Relators[j];
-                    while(z = *p)
+                    while( (z = *p) )
                         {
                         if(z == s) *p = x;
                         if(z == t) *p = y;
@@ -507,11 +513,7 @@ RE_ENTER:
                         }
                     }
                 if(Micro_Print)
-                    {
                     printf("\n\nRewrote the relators by replacing %c with %c.",s,x);
-                    if(Micro_Print_F)
-                        fprintf(myout,"\n\nRewrote the relators by replacing %c with %c.",s,x);
-                    }    
                 }    
                 
             /**********************************************************************************
@@ -545,7 +547,7 @@ RE_ENTER:
                 relators lie on the Heegaard surface.
             **********************************************************************************/
             
-            if(k)
+            if(k & !InitPres)
                 {
                 if(BDY[ReadPres] == FALSE && NumGenerators == NumRelators) return(TRUE);
                 SSNumGenerators = NumGenerators;
@@ -558,12 +560,7 @@ RE_ENTER:
                     if(Micro_Print)
                         {
                         printf("\n\nDeleting the previous primitive created some empty relators. This means the manifold");
-                        printf("\nis a connected sum. However, the program could not determine what the summands are.");                
-                        if(Micro_Print_F)
-                            {
-                            fprintf(myout,"\n\nDeleting the previous primitive created some empty relators. This means the manifold");
-                            fprintf(myout,"\nis a connected sum. However, the program could not determine what the summands are.");                
-                            }
+                        printf("\nis a connected sum. However, Heegaard could not determine what the summands are.");
                         }                    
                     return(CAN_NOT_DELETE);
                     }
@@ -577,16 +574,12 @@ RE_ENTER:
                     }
                 EmtyRel = TRUE;                    
                 }
+            if(k & InitPres) EmtyRel = TRUE;   
             
             if(Micro_Print && length == Length && !EmtyRel)
                 {
                 printf("\n\nThe presentation is currently:\n");
-                Print_Relators(Relators,NumRelators,stdout);
-                if(Micro_Print_F)
-                    {
-                    fprintf(myout,"\n\nThe presentation is currently:\n");
-                    Print_Relators(Relators,NumRelators,myout);
-                    }
+                Print_Relators(Relators,NumRelators);
                 }
             
             h = 0;    
@@ -612,40 +605,41 @@ unsigned int Proper_Power()
     /******************************************************************************************
         This routine is called when Relators[1] is a proper power. In this case, the routine
         deletes appearances of Relators[1] and its inverse from the remaining relators. If the
-        presentation is one which the program knows is realizable, then this process is fairly
-        simple. If the presentation is not known to be realizable, then the program must run
+        presentation is one which Heegaard knows is realizable, then this process is fairly
+        simple. If the presentation is not known to be realizable, then Heegaard must run
         some further checks in order to insure that it does not transform an unrealizable
         presentation into a realizable presentation.
     ******************************************************************************************/
     
-    register unsigned char     *p,
+    register unsigned char  *p,
                             *q,
-                            *r,
                             x,
                             y,
                             z;
                             
-    register unsigned int    j,
+    register unsigned int   j,
                             length;                                            
                             
-    unsigned char             SaveMinV,
+    unsigned char           SaveMinV,
                             SaveMinZ,
                             **Temp,
                             v;
         
-    unsigned int             h,
+    unsigned int            h,
                             i,
                             MaxExp,
                             MinExp,
                             VL,
                             VLI;
     
-    int                        NumComps,
+    int                     NumComps,
                             OrigNumComps;
                             
-    unsigned long            longlength;                                
+    unsigned long           HS,
+    						jj,
+   							longlength;                                
     
-    unsigned int             Split_At_Empty_Relators();
+    unsigned int            Split_At_Empty_Relators();
     
     longlength = GetHandleSize((char **) Relators[1]) - 1;
     if(longlength > MAXLENGTH) return(TOO_LONG);
@@ -678,11 +672,7 @@ unsigned int Proper_Power()
     Relators[NumRelators] = Temp;
     
     if(Micro_Print)
-        {
         printf("\n\nSwapped Relator 1 and Relator %d.",NumRelators);
-        if(Micro_Print_F)
-            fprintf(myout,"\n\nSwapped Relator 1 and Relator %d.",NumRelators);
-        }        
 
     /******************************************************************************************
         Save a copy of the current relators in Copy_Of_Rel_1[]. We will need this copy of
@@ -691,10 +681,12 @@ unsigned int Proper_Power()
         
     for(j = 1; j <= NumRelators; j++)
         {
-        ReallocateHandle((char **) Copy_Of_Rel_1[j],GetHandleSize((char **) Relators[j]));
-        if((p = *Copy_Of_Rel_1[j]) == NULL) return(TOO_LONG);
+        if(Copy_Of_Rel_1[j] != NULL) DisposeHandle((char **) Copy_Of_Rel_1[j]);
+        Copy_Of_Rel_1[j] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[j]));
+        if(Copy_Of_Rel_1[j] == NULL) Mem_Error();
+        p = *Copy_Of_Rel_1[j];
         q = *Relators[j];
-        while(*p++ = *q++) ;                    
+        while( (*p++ = *q++) ) ;                    
         }
                 
     /******************************************************************************************
@@ -753,7 +745,7 @@ unsigned int Proper_Power()
                     continue;
                     }
                 }        
-            while(z = *p)
+            while( (z = *p) )
                 {
                 p++;
                 if(z != x && z != y)
@@ -866,11 +858,7 @@ unsigned int Proper_Power()
                 }
         
         if(Micro_Print)
-            {
             printf("\n\nPerforming level-transformations in order to eliminate a proper power.");
-            if(Micro_Print_F)
-                fprintf(myout,"\n\nPerforming level-transformations in order to eliminate a proper power.");
-            }
                                     
         if(VL & 1)
             {
@@ -910,25 +898,33 @@ unsigned int Proper_Power()
     
     for(i = 1; i < NumRelators;    i++)
         {
-        if(GetHandleSize((char **) Relators[i]) <= 1L) continue;
-        ReallocateHandle((char **) Temp4,GetHandleSize((char **) Relators[i]));
-        if((q = *Temp4) == NULL) return(TOO_LONG);        
+        HS = GetHandleSize((char **) Relators[i]);
+        if(HS <= 1) continue;
+        if(Temp4 != NULL) DisposeHandle((char **) Temp4);
+        Temp4 = (unsigned char **) NewHandle(HS);
+        if(Temp4 == NULL) Mem_Error();
+        q = *Temp4;      
         p = *Relators[i];
         z = *p;
-        j = 1;
-        while(z = *p++)
+        jj = 1;
+        while( (z = *p++) )
             {
             if(z != x && z != y)
                 {    
                 *q++ = z;
-                j++;
+                jj++;
                 }
             }
         *q = EOS;
-        SetHandleSize((char **) Temp4,j);
-        Temp = Relators[i];
-        Relators[i] = Temp4;
-        Temp4 = Temp;                            
+        if(jj < HS)
+        	{
+        	if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+        	Relators[i] = (unsigned char **) NewHandle(jj);
+        	if(Relators[i] == NULL) Mem_Error();
+        	p = *Relators[i];
+        	q = *Temp4;
+        	while( (*p++ = *q++) ) ;
+        	}                           
         }
             
     /******************************************************************************************
@@ -938,12 +934,7 @@ unsigned int Proper_Power()
     if(Micro_Print)
         {
         printf("\n\nThe presentation is currently:\n");
-        Print_Relators(Relators,NumRelators,stdout);
-        if(Micro_Print_F)
-            {
-            fprintf(myout,"\n\nThe presentation is currently:\n");
-            Print_Relators(Relators,NumRelators,myout);
-            }    
+        Print_Relators(Relators,NumRelators);
         }
         
     i = Freely_Reduce();
@@ -970,12 +961,7 @@ unsigned int Proper_Power()
             if(Micro_Print)
                 {
                 printf("\n\nDeleting the previous proper power created some empty relators. This means the manifold");
-                printf("\nis a connected sum. However, the program could not determine what the summands are.");                
-                if(Micro_Print_F)
-                    {
-                    fprintf(myout,"\n\nDeleting the previous proper power created some empty relators. This means the manifold");
-                    fprintf(myout,"\nis a connected sum. However, the program could not determine what the summands are.");                
-                    }
+                printf("\nis a connected sum. However, Heegaard could not determine what the summands are.");
                 }                            
             return(CAN_NOT_DELETE);
             }
@@ -989,9 +975,7 @@ unsigned int Proper_Power()
     return(NO_ERROR);    
 }            
     
-Check_For_Primitives(Input,MyNumRelators)
-int         Input,
-            MyNumRelators;
+int Check_For_Primitives(int Input,int MyNumRelators)
 {        
     /******************************************************************************************
         If Input = BANDSUM, this routine checks whether the relator Relators[1] is a primitive
@@ -1001,13 +985,13 @@ int         Input,
         Relators[i] is a proper power and otherwise returns 0 or TOO_LONG.
     ******************************************************************************************/
     
-    register unsigned char     *p,
+    register unsigned char  *p,
                             *q;
                             
-    register int             i,
+    register int            i,
                             j;         
     
-    int                        k,
+    int                     k,
                             RL[MAXNUMRELATORS + 1];
     
     if(NumGenerators == 1) return(0);
@@ -1016,18 +1000,22 @@ int         Input,
               Since Relators[1] gets trashed by Find_Primitives() etc., we need to make a copy.
     ******************************************************************************************/    
     
-    ReallocateHandle((char **) Temp11,GetHandleSize((char **) Relators[1]));
-    if((p = *Relators[1]) == NULL) return(TOO_LONG);
+    if(Temp11 != NULL) DisposeHandle((char **) Temp11);
+    Temp11 = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[1]));
+    if(Temp11 == NULL) Mem_Error();
     q = *Temp11;
-    while(*q++ = *p++) ;    
+    p = *Relators[1];
+    while( (*q++ = *p++) ) ;    
     
     if(Input == BANDSUM)
         {
         j = CheckPrimitivity();
-        ReallocateHandle((char **) Relators[1],GetHandleSize((char **) Temp11));
-        if((p = *Relators[1]) == NULL) return(TOO_LONG);
+        if(Relators[1] != NULL) DisposeHandle((char **) Relators[1]);
+        Relators[1] = (unsigned char **) NewHandle(GetHandleSize((char **) Temp11));
+        if(Relators[1] == NULL) Mem_Error();
+        p = *Relators[1];
         q = *Temp11;
-        while(*p++ = *q++) ;
+        while( (*p++ = *q++) ) ;
         if(j == TOO_LONG) return(TOO_LONG);
         if(j > 0) return(1);
         if(j < 0) return(-1);
@@ -1053,23 +1041,29 @@ int         Input,
         {
         if(RL[i] == 1)
             {
-            ReallocateHandle((char **) Relators[1],GetHandleSize((char **) Temp11));        
+            if(Relators[1] != NULL) DisposeHandle((char **) Relators[1]);
+            Relators[1] = (unsigned char **) NewHandle(GetHandleSize((char **) Temp11));
+            if(Relators[1] == NULL) Mem_Error();
             p = *Temp11;            
             }
         else
-            {    
-            ReallocateHandle((char **) Relators[1],GetHandleSize((char **) Relators[RL[i]]));        
+            { 
+            if(Relators[1] != NULL) DisposeHandle((char **) Relators[1]);
+            Relators[1] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[RL[i]]));
+            if(Relators[1] == NULL) Mem_Error();
             p = *Relators[RL[i]];
             }
-        if((q = *Relators[1]) == NULL) return(TOO_LONG);
-        while(*q++ = *p++) ;
-        if(j = CheckPrimitivity()) break;    
+        q = *Relators[1];
+        while( (*q++ = *p++) ) ;
+        if( (j = CheckPrimitivity()) ) break;    
         }
-        
-    ReallocateHandle((char **) Relators[1],GetHandleSize((char **) Temp11));
-    if((p = *Relators[1]) == NULL) return(TOO_LONG);
+    
+    if(Relators[1] != NULL) DisposeHandle((char **) Relators[1]);
+    Relators[1] = (unsigned char **) NewHandle(GetHandleSize((char **) Temp11));  
+    if(Relators[1] == NULL) Mem_Error();
+    p = *Relators[1];
     q = *Temp11;
-    while(*p++ = *q++) ;
+    while( (*p++ = *q++) ) ;
     if(j == TOO_LONG) return(TOO_LONG);
     if(j > 0) return(RL[i]);
     if(j < 0) return(-RL[i]);        
@@ -1086,16 +1080,15 @@ int Lens_Space_D(int Prim)
         been swapped here since this presentation comes from dualizing!)
     ******************************************************************************************/
         
-    register unsigned char     x,
-                            *ptr1,
+    register unsigned char  x,
                             *p,
                             *q;
     
-    unsigned char            **Temp;
+    unsigned char           **Temp;
     
-    int                        SMicro_Print;
+    int                     SMicro_Print;
                             
-    unsigned int             edge,
+    unsigned int            edge,
                             ee,
                             s,
                             u,
@@ -1103,16 +1096,16 @@ int Lens_Space_D(int Prim)
                             vertex,
                             w;
     
-    long                     a,
+    long                    a,
                             b,
                             c,
                             d,
                             e,
                             f,
-                            *ptr,
+                            *ptr = NULL,
                             t;
 
-    unsigned long            Recip_Mod_P();
+    unsigned long           Recip_Mod_P();
     unsigned int            Whitehead_Graph();
     
     /******************************************************************************************
@@ -1197,8 +1190,10 @@ END:
         }
     
     s = ee - edge;
-    ReallocateHandle((char **) Temp13,s + 1);
-    if((q = *Temp13) == NULL) return(TOO_LONG);
+    if(Temp13 != NULL) DisposeHandle((char **) Temp13);
+    Temp13 = (unsigned char **) NewHandle(s + 1);
+    if(Temp13 == NULL) Mem_Error();
+    q = *Temp13;
     if(Prim == 2)
         p = *Relators[1];
     else
@@ -1223,20 +1218,20 @@ END:
     ******************************************************************************************/
     
     ptr = (long *)NewPtr(sizeof(long)*100);
-    if(ptr == NULL) return(TOO_LONG);
+    if(ptr == NULL) Mem_Error();
     ptr['A'] = ptr['B'] = ptr['a'] = ptr['b'] = 0;
     p = *Relators[1];
-    while(x = *p++) ptr[x] ++;
+    while( (x = *p++) ) ptr[x] ++;
     a = ptr['A'] - ptr['a'];
     b = ptr['B'] - ptr['b'];
     ptr['A'] = ptr['B'] = ptr['a'] = ptr['b'] = 0;
     p = *Relators[2];
-    while(x = *p++) ptr[x] ++;    
+    while( (x = *p++) ) ptr[x] ++;    
     c = ptr['A'] - ptr['a'];
     d = ptr['B'] - ptr['b'];
     ptr['A'] = ptr['B'] = ptr['a'] = ptr['b'] = 0;
     p = *Temp13;
-    while(x = *p++) ptr[x] ++;
+    while( (x = *p++) ) ptr[x] ++;
     e = ptr['A'] - ptr['a'];
     f = ptr['B'] - ptr['b'];
     DisposePtr((char *) ptr);
@@ -1308,13 +1303,6 @@ END:
         printf("\nmanifold M, for which one of the relators is a primitive. Thus M is a lens space.");
         printf("\nIn particular, M is the lens space L(%lu,%lu).",P,Q);
         printf("\nSwapped the current relators and dual relators.");
-        if(Micro_Print_F)
-            {
-            fprintf(myout,"\n\nThe current presentation is a two generator, two relator presentation of a closed");
-            fprintf(myout,"\nmanifold M, for which one of the relators is a primitive. Thus M is a lens space.");
-            fprintf(myout,"\nIn particular, M is the lens space L(%lu,%lu).",P,Q);
-            fprintf(myout,"\nSwapped the current relators and dual relators.");
-            }
         }    
     return(0);                
 }
@@ -1328,31 +1316,29 @@ unsigned int Lens_Space()
         lens space, the routine tries to determine which lens space it is.
     ******************************************************************************************/
         
-    register int             i,
-                            j,
-                            k;
+    register int		i,
+						j;
                             
-    register unsigned char     x,
-                            *ptr1,
-                            *p,
-                            *q;
+    register unsigned char 	x,
+	                        *ptr1 = NULL,
+							*p;
     
-    unsigned char            **Temp;
+    unsigned char         	**Temp;
     
-    int                        LTRV;
+    int                   	LTRV;
                             
-    unsigned int             r;
+    unsigned int          	r;
     
-    long                     a,
+    long                  	a,
                             b,
                             c,
                             d,
                             e,
                             f,
-                            *ptr,
+                            *ptr = NULL,
                             t;
 
-    unsigned long            Recip_Mod_P();
+    unsigned long         	Recip_Mod_P();
     unsigned int            Whitehead_Graph();
     
     /******************************************************************************************
@@ -1372,21 +1358,19 @@ _GET_DIAGRAM:
         case NO_ERROR:
             break;
         case SEP_PAIRS:
-            NumCalled = 0;
+            Num_Saved_LPres = 0;
             NotNewPres = 0;
-            LTRV = Level_Transformations(FALSE,TRUE,FALSE,0,0);
-            for(i = 0; i < NumCalled; i++)
-            for(j = 1; j <= NumRelators; j++) DisposeHandle((char **) SLR[i][j]);            
-            
+            LTRV = Level_Transformations(FALSE,TRUE,FALSE);
+            for(i = 0; i < Num_Saved_LPres; i++)
+            for(j = 0; j <= NumRelators; j++) if(SLR[i][j] != NULL)
+            	{
+            	DisposeHandle((char **) SLR[i][j]);
+            	SLR[i][j] = NULL;
+            	}
             if(Micro_Print)
                 {
                 printf("\n\nThe current Presentation is:\n");
-                Print_Relators(Relators,NumRelators,stdout);
-                if(Micro_Print_F)
-                    {
-                    fprintf(myout,"\n\nThe current Presentation is:\n");
-                    Print_Relators(Relators,NumRelators,myout);
-                    }
+                Print_Relators(Relators,NumRelators);
                 }
                         
             switch(LTRV)
@@ -1430,10 +1414,10 @@ _GET_DIAGRAM:
     if(LR[2] > a) a = LR[2];
     a *= 2;
     ptr1 = (unsigned char *) NewPtr(a + 1);
-    if(ptr1 == NULL) return(TOO_LONG);
+    if(ptr1 == NULL) Mem_Error();
     if(Transverse(ptr1))
         {                            
-        DisposePtr((char *) ptr1);                                                
+        DisposePtr((char *) ptr1);
         return(1);
         }
                                             
@@ -1446,24 +1430,21 @@ _GET_DIAGRAM:
     ******************************************************************************************/
     
     ptr = (long *)NewPtr(sizeof(long)*100);
-    if(ptr == NULL)
-        {
-        DisposePtr((char *) ptr1);
-        return(TOO_LONG);
-        }
+    if(ptr == NULL) Mem_Error();
+
     ptr['A'] = ptr['B'] = ptr['a'] = ptr['b'] = 0;
     p = *Relators[1];
-    while(x = *p++) ptr[x] ++;
+    while( (x = *p++) ) ptr[x] ++;
     a = ptr['A'] - ptr['a'];
     b = ptr['B'] - ptr['b'];
     ptr['A'] = ptr['B'] = ptr['a'] = ptr['b'] = 0;
     p = *Relators[2];
-    while(x = *p++) ptr[x] ++;    
+    while( (x = *p++) ) ptr[x] ++;    
     c = ptr['A'] - ptr['a'];
     d = ptr['B'] - ptr['b'];
     ptr['A'] = ptr['B'] = ptr['a'] = ptr['b'] = 0;
     p = ptr1;
-    while(x = *p++) ptr[x] ++;
+    while( (x = *p++) ) ptr[x] ++;
     e = ptr['A'] - ptr['a'];
     f = ptr['B'] - ptr['b'];
     DisposePtr((char *) ptr);
@@ -1522,17 +1503,11 @@ _GET_DIAGRAM:
         printf("\n\nThe current presentation is a two generator, two relator presentation of a closed");
         printf("\nmanifold M, in which one of the relators is a primitive. Thus M is a lens space.");
         printf("\nIn particular, M is the lens space L(%lu,%lu).",P,Q);
-        if(Micro_Print_F)
-            {
-            fprintf(myout,"\n\nThe current presentation is a two generator, two relator presentation of a closed");
-            fprintf(myout,"\nmanifold M, in which one of the relators is a primitive. Thus M is a lens space.");
-            fprintf(myout,"\nIn particular, M is the lens space L(%lu,%lu).",P,Q);
-            }
         }
     return(NO_ERROR);                            
 }
 
-Transverse(ptr)
+int Transverse(ptr)
 unsigned char *ptr;
 {
     /******************************************************************************************
@@ -1542,16 +1517,16 @@ unsigned char *ptr;
         it returns the word representing the transverse curve in the string pointed to by ptr.
     ******************************************************************************************/
     
-    register unsigned char     *p,
+    register unsigned char 	*p,
                             *q,
                             *r;
                             
-    register unsigned int     d,
+    register unsigned int  	d,
                             e,
                             v,
                             vv;
     
-    unsigned char             x,
+    unsigned char          	x,
                             y,
                             z,
                             w;
@@ -1559,11 +1534,11 @@ unsigned char *ptr;
     int                     i,
                             j;
     
-    unsigned int             edge,
+    unsigned int          	edge,
                             edge2,
                             vertex;
     
-    unsigned long            max;
+    unsigned long          	max;
     
     max = GetPtrSize((char *) ptr) - 1;
     
@@ -1585,7 +1560,7 @@ unsigned char *ptr;
             
     for(i = 1; i <= 2; i++)
         {
-        if(GetHandleSize((char **) DualRelators[i]) < 3L) continue;
+        if(GetHandleSize((char **) DualRelators[i]) < 3) continue;
         for(p = *DualRelators[i], q = p + 1; *p; p++,q++)
             {
             if(!*q) q = *DualRelators[i];
@@ -1658,7 +1633,7 @@ unsigned char *ptr;
                     vertex = 2;
                 for(j = 1; j <= 2; j++)
                     {
-                    if(GetHandleSize((char **) DualRelators[j]) < 4L) continue;
+                    if(GetHandleSize((char **) DualRelators[j]) < 4) continue;
                     for(p = *DualRelators[j],r = p + 1, q = p + 2; *p; p++,r++,q++)
                         {
                         if(!*q) q = *DualRelators[j];
@@ -1750,12 +1725,97 @@ unsigned char *ptr;
                     }
                 }
             }
-        }                    
+        } 
+
+    /******************************************************************************************
+        If execution gets to this point, then neither relator appears in the dual relators
+        with exponent greater than 1. We next look for an occurance of the "non-primitive" 
+        relator lying between two oppositely oriented edges of the "primitive" relator.
+        If this situation occurs, a "wave" to the "primitive" relator will intersect the
+        "non-primitive" relator once. 
+        	Note that this situation will not arise when the so-called "primitive" relator 
+        is a "positive" relator. Including the following code allows this subroutine to be
+        used to locate transverse curves in more general situations.
+    ******************************************************************************************/
+       
+    for(i = 1; i <= 2; i++)
+		{
+		if(GetHandleSize((char **) DualRelators[i]) < 4) continue;
+		for(p = *DualRelators[i],r = p + 1, q = p + 2; *p; p++,r++,q++)
+			{
+			if(!*q) q = *DualRelators[i];
+            if(!*r) r = *DualRelators[i];
+			if((*r == x || *r == y) && ((*p == z && *q == w) || (*p == w && *q == z)))
+				{
+				e = p - *DualRelators[i];
+                edge = q - *DualRelators[i];
+                if(i == 1)
+                    {
+					v = 0;
+					vertex = 1;
+					}
+                else
+                    {
+					v = 2;
+					vertex = 3;
+					}				
+				edge = OSA[v] - edge;
+				if(edge >= V[v]) edge -= V[v];	 
+                r = ptr;
+				
+				do
+					{
+					if(v & 1)
+						{
+						*r = (v >> 1) + 'a';
+						vv = v - 1;
+						}
+					else
+						{
+						*r = (v >> 1) + 'A';
+						vv = v + 1;
+						}
+					e = OSA[v] - e;
+					if(e >= V[v]) e -= V[v];
+					r++;
+					if(r - ptr > max )
+						{
+						r--;
+						*r = EOS;
+						return(5001);
+						}
+					v = FV[vv];
+					d = A[vv][v];
+					while(d <= e)
+						{
+						v = CO[vv][v];
+						d += A[vv][v];
+						}
+					e = B[vv][v] - e;
+					}
+				while(v != vertex || e != edge);
+                        
+				/****** Freely reduce the string in ptr. ******/
+				
+				r--;
+				for(p = ptr + 1; abs(*p - *r) == 32 && p < r; p++, r--) ;
+				r++;
+				*r = EOS;
+				
+				/****** Move the freely reduced string in ptr so it starts at ptr. *****/
+				
+				q = ptr;
+				while( (*q++ = *p++) ) ;
+				return(NO_ERROR);
+				}
+			}
+		}
+                           
     return(1);
 }        
     
 unsigned long Recip_Mod_P(p,q)
-register unsigned long     p,
+register unsigned long  p,
                         q;
 {
     /******************************************************************************************
@@ -1763,19 +1823,19 @@ register unsigned long     p,
         then L(p,q), L(p,p - q), L(p, q') and L(p, p - q') are homeomorphic. This routine is
         used to find that element of the set {q, p - q, q', p - q'} which is minimal. This 
         means that a user can directly compare the parameters of two lens spaces returned by
-        the program and determine whether the lens spaces are homeomorphic.
+        Heegaard and determine whether the lens spaces are homeomorphic.
     ******************************************************************************************/
         
     unsigned long     min;
     unsigned long LGCD();
     
-    if(p <= 1L) return(0L);
-    if(q == 0L) return(0L);             /** Error!!! **/
-    if(LGCD(p,q) != 1L) return(0L);        /** Error!!! **/
+    if(p <= 1) return(0);
+    if(q == 0) return(0);             	/** Error!!! **/
+    if(LGCD(p,q) != 1) return(0);        	/** Error!!! **/
     q = q % p;
     min = q;
     if(p - q < min) min = p - q;
-    if(Recip_Q < 0L)
+    if(Recip_Q < 0)
         {
         Recip_Q = -Recip_Q;
         Recip_Q = Recip_Q % p;
@@ -1797,7 +1857,7 @@ int Find_Flow_B(unsigned int Source)
         relators which are proper powers of free generators.
     ******************************************************************************************/
             
-    register unsigned int     i,
+    register unsigned int  	i,
                             j,
                             max,
                             min,
@@ -1805,7 +1865,7 @@ int Find_Flow_B(unsigned int Source)
                             *q,
                             *r;
                             
-    unsigned int             Flow,
+    unsigned int           	Flow,
                             k,
                             MaxFlow,
                             S[VERTICES],
@@ -1919,9 +1979,9 @@ int Get_Connected_Components(void)
         determined by: the original adjacency lists less the vertices deleted from these lists.
     ******************************************************************************************/    
     
-    int                        CompNum;
+    int                    	CompNum;
      
-    register unsigned int     h,
+    register unsigned int  	h,
                             i,
                             j,
                             *p,
@@ -1948,8 +2008,8 @@ int Get_Connected_Components(void)
         }        
 }
 
-unsigned long LGCD(p,q)
-unsigned long     p,
+unsigned long 	LGCD(p,q)
+unsigned long  	p,
                 q;
 {
     /******************************************************************************************
@@ -1960,13 +2020,13 @@ unsigned long     p,
                         LGCD(p,q) = p*Recip_P + q*Recip_Q.
     ******************************************************************************************/    
     
-    register long     d,
+    register long  	d,
                     t,
                     u2,
                     v1,
                     v2;
                     
-    long             u1;
+    long           	u1;
         
     u1 = 0L;
     u2 = p;
@@ -1985,7 +2045,7 @@ unsigned long     p,
     if(p)
         {
         t = u2 - q*u1;
-        if(t < 0L)
+        if(t < 0)
             {
             t = - t;
             Recip_P = t/p;
@@ -2002,7 +2062,8 @@ unsigned int Split_At_Empty_Relators(F1)
 int        F1;
 {
     register unsigned char  *p,
-                            *q;
+                            *q,
+                            *r;
 
     unsigned char           BCL1[MAXNUMRELATORS + 2],
                             BCL2[MAXNUMRELATORS + 2],
@@ -2011,7 +2072,7 @@ int        F1;
                             ERL2[MAXNUMRELATORS + 1],
                             **Temp;
                     
-    int                        i,
+    int                    	i,
                             j,
                             k,
                             N1,
@@ -2027,7 +2088,7 @@ int        F1;
     unsigned int            Error,
                             SaveUDV;
 
-    unsigned long            HS;
+    unsigned long          	HS;
     
     Error = FALSE;
     
@@ -2045,9 +2106,9 @@ int        F1;
     
     for(i = 1; i <= NumRelators; i++)
         { 
-        Temp                 = Relators[i];
+        Temp               	= Relators[i];
         Relators[i]         = Copy_Of_Rel_1[i];
-        Copy_Of_Rel_1[i]     = Temp;    
+        Copy_Of_Rel_1[i]    = Temp;    
         }
     
     for(i = 1,Length = 0L; i <= NumRelators; i++) Length += GetHandleSize((char **) Relators[i]);
@@ -2056,15 +2117,10 @@ int        F1;
     if(Micro_Print)
         {
         printf("\n\nSwapped the presentation with a copy of the previous presentation to get:\n");
-        Print_Relators(Relators,NumRelators,stdout);
-        if(Micro_Print_F)
-            {                
-            fprintf(myout,"\n\nSwapped the presentation with a copy of the previous presentation to get:\n");
-            Print_Relators(Relators,NumRelators,myout);
-            }
+        Print_Relators(Relators,NumRelators);
         }
 
-    if(Error = Find_Flow_A(NORMAL,FALSE)) return(Error);
+    if( (Error = Find_Flow_A(NORMAL,FALSE)) ) return(Error);
     
     if(Micro_Print)
         {
@@ -2073,21 +2129,10 @@ int        F1;
             printf("\n\n%lu automorphism(s) reduced the length to %lu.",
                 Automorphisms,Length);
             printf("\n\nThe presentation is currently:\n");
-            Print_Relators(Relators,NumRelators,stdout);
-            if(Micro_Print_F)
-                {    
-                fprintf(myout,"\n\n%lu automorphism(s) reduced the length to %lu.",
-                    Automorphisms,Length);
-                fprintf(myout,"\n\nThe presentation is currently:\n");
-                Print_Relators(Relators,NumRelators,myout);
-                }
+            Print_Relators(Relators,NumRelators);
             }
         else
-            {
-            printf("\n\nThe current set of relators has minimal length of %lu.",Length);
-            if(Micro_Print_F)
-                fprintf(myout,"\n\nThe current set of relators has minimal length of %lu.",Length);
-            }        
+            printf("\n\nThe current set of relators has minimal length of %lu.",Length);   
         }
         
     DrawingDiagrams = TRUE;
@@ -2113,20 +2158,19 @@ int        F1;
         case TOO_LONG:        
             return(Error);            
         case SEP_PAIRS:
-            NumCalled = 0;
-            NotNewPres = 0;        
-            Error = Level_Transformations(FALSE,TRUE,TRUE,0,0);
-            for(i = 0; i < NumCalled; i++)
-            for(j = 1; j <= NumRelators; j++) DisposeHandle((char **) SLR[i][j]);
+            Num_Saved_LPres = 0;
+            NotNewPres = 0; 
+            Error = Level_Transformations(FALSE,TRUE,TRUE);
+            for(i = 0; i < Num_Saved_LPres; i++)
+            for(j = 0; j <= NumRelators; j++) if(SLR[i][j] != NULL)
+            	{
+            	DisposeHandle((char **) SLR[i][j]);
+            	SLR[i][j] = NULL;
+            	}
             if(Micro_Print)
                 {
                 printf("\n\nThe current Presentation is:\n");
-                Print_Relators(Relators,NumRelators,stdout);
-                if(Micro_Print_F)
-                    {
-                    fprintf(myout,"\n\nThe current Presentation is:\n");
-                    Print_Relators(Relators,NumRelators,myout);
-                    }
+                Print_Relators(Relators,NumRelators);
                 }                        
             if(Error != 2)
                 return(TRUE);
@@ -2138,9 +2182,9 @@ int        F1;
         }
 
     /***************************************************************************************
-        The program has found a diagram corresponding to the presentation in Relators[].
+        Heegaard has found a diagram corresponding to the presentation in Relators[].
         If TestRealizability1 is TRUE and TestRealizability2 is FALSE, we can return
-        because the program is only looking for an initial diagram which is realizable,
+        because Heegaard is only looking for an initial diagram which is realizable,
         and we have found one.
     ***************************************************************************************/
     
@@ -2154,7 +2198,7 @@ int        F1;
                             
     for(i = 1; i <= NumRelators; i++) ERL1[i] = EOS;
     NumEmtyRel = 0;
-    for(i = 1; i < NumRelators; i++) if(GetHandleSize((char **) Copy_Of_Rel_1[i]) == 1L)
+    for(i = 1; i < NumRelators; i++) if(GetHandleSize((char **) Copy_Of_Rel_1[i]) == 1)
         {
         ERL1[i] = TRUE;
         NumEmtyRel ++;
@@ -2256,16 +2300,25 @@ int        F1;
         case V2_ANNULUS_EXISTS:
             return(TRUE);
         }    
-    UDV[ReadPres]             = SPLIT;                
+    UDV[ReadPres]          	= SPLIT;                
     Daughters[ReadPres]     = NumFilled;
-    NCS[ReadPres]             = 0;    
-    SaveCS                    = CS[CurrentComp];
+    NCS[ReadPres]          	= 0;    
+    SaveCS                 	= CS[CurrentComp];
     if(!CS[CurrentComp])    CS[CurrentComp] = TRUE;
     
-    SaveNumRelators = NumRelators;
-    SaveNumGens     = NumGenerators;
-    NumNewPres         = 0;
-    NumEmtyGens     = 0;
+    SaveNumRelators 	= NumRelators;
+    SaveNumGens     	= NumGenerators;
+    NumNewPres         	= 0;
+    NumEmtyGens     	= 0;
+
+	/***************************************************************************************** 
+	The line below sets UDV[] == DONE for each presentation in the component that just split
+	so it won't be run again. Comment out the line below here and in Heegaard3.c and 
+	Heegaard8.c to let Heegaard rerun presentations that have split.
+	******************************************************************************************/ 
+	
+	for(i = 0; i < NumFilled; i++) 
+		if(ComponentNum[i] == ComponentNum[ReadPres] && UDV[i] < DONE) UDV[i] = DONE;
     
     for(i = 0; i <= SaveNumGens; i++) BCWG[i] = EOS;
     
@@ -2285,11 +2338,12 @@ int        F1;
             if(ERL1[k]) continue;
             NumRelators ++;
             HS = GetHandleSize((char **) Copy_Of_Rel_1[k]);
-            ReallocateHandle((char **) Relators[NumRelators],HS);
-            if((p = *Relators[NumRelators]) == NULL)
-                return(TOO_LONG);
+            if(Relators[NumRelators] != NULL) DisposeHandle((char **) Relators[NumRelators]);
+            Relators[NumRelators] = (unsigned char **) NewHandle(HS);
+            if(Relators[NumRelators] == NULL) Mem_Error();
+            p = *Relators[NumRelators];
             q = *Copy_Of_Rel_1[k];
-            while(*p++ = *q++) ;
+            while( (*p++ = *q++) ) ;
             }
             
         if(NumRelators == 0)
@@ -2309,10 +2363,7 @@ int        F1;
                 for(i = NumFilled - NumNewPres; i < NumFilled; i++)
                     {
                     BytesUsed -= SURL[i];
-                    if(UDV[i] == ANNULUS_EXISTS || UDV[i] == V2_ANNULUS_EXISTS)
-                        DisposeHandle((char **) SUR[i][0]);
                     UDV[i] = PRIM[i] = 0;
-                    for(j = 1; j <= NR[i]; j++) DisposeHandle((char **) SUR[i][j]);
                     CBC[TotalComp][0] = BDRY_UNKNOWN;
                     MLC[TotalComp][NG[i]] = BIG_NUMBER;
                     OnStack -= 2*NG[i];
@@ -2366,49 +2417,52 @@ int        F1;
     if(BCWG[0] < BDRY_UNKNOWN)
         {
         if(NumFilled >= MAX_SAVED_PRES - 3) return(TOO_LONG);        
-        TotalComp                     ++;
-        NCS[ReadPres]                 ++;
-        BDY[NumFilled]                 = 3;
+        TotalComp                  	++;
+        NCS[ReadPres]              	++;
+        BDY[NumFilled]            	= 3;
         ComponentNum[NumFilled]     = TotalComp;            
-        ER[NumFilled]                  = 0;
-        FR[NumFilled]                = ReadPres;
+        ER[NumFilled]              	= 0;
+        FR[NumFilled]             	= ReadPres;
         MLC[TotalComp][NumEmtyGens] = 0L;    
-        NG[NumFilled]                 = NumEmtyGens;
-        NR[NumFilled]                 = NumEmtyRel;
+        NG[NumFilled]              	= NumEmtyGens;
+        NR[NumFilled]              	= NumEmtyRel;
         PRIM[NumFilled]             = 12;
         SURL[NumFilled]             = 0L;
-        TP[NumFilled]                = 0;
+        TP[NumFilled]              	= 0;
         for(i = 1; i <= NumEmtyRel; i++)
             {
-            SUR[NumFilled][i] = (unsigned char **) NewHandle(1L);            
+            HS = sizeof(char);
+            if(SUR[NumFilled][i] != NULL) DisposeHandle((char **) SUR[NumFilled][i]);
+            SUR[NumFilled][i] = (unsigned char **) NewHandle(HS); 
+            if(SUR[NumFilled][i] == NULL) Mem_Error();         
             q = *SUR[NumFilled][i];
-            *q = EOS;                                    
+            r = q;
+            *q++ = EOS; 
+        	if((q-r) != HS) 
+        		{
+        		NumErrors ++;
+        		printf("\n\n4) Error in Presentation %u! |Relator[%d]| = 0, HS = %lu.",NumFilled + 1,i,HS);
+        		}        	
             }
         NumNewPres ++;
-        UDV[NumFilled]         = MISSING_GEN_DONE1;
-        CS[TotalComp]         = 2;
-        N1H[TotalComp]         = 0;
-        NS1XS2[TotalComp]     = NumEmtyRel;
-        NS1XD2[TotalComp]     = NumEmtyGens - NumEmtyRel;
+        UDV[NumFilled]     	= MISSING_GEN_DONE1;
+        CS[TotalComp]      	= 2;
+        N1H[TotalComp]     	= 0;
+        NS1XS2[TotalComp]  	= NumEmtyRel;
+        NS1XD2[TotalComp]  	= NumEmtyGens - NumEmtyRel;
         for(j = 0; (CBC[TotalComp][j] = BCWG[j]) < BDRY_UNKNOWN; j++) ;
         
         if(Micro_Print)
             {
             printf("\nThe presentation of summand %d is:\n",NumNewPres);
-            Print_Relators(Relators,NumRelators,stdout);
+            Print_Relators(Relators,NumRelators);
             printf("\n\nSaved this presentation as: Presentation %u\n",NumFilled + 1);
-            if(Micro_Print_F)
-                {
-                fprintf(myout,"\nThe presentation of summand %d is:\n",NumNewPres);
-                Print_Relators(Relators,NumRelators,myout);
-                fprintf(myout,"\n\nSaved this presentation as: Presentation %u\n",NumFilled + 1);
-                }
             }
                         
         NumFilled ++;
         SaveMinima = TRUE;
-        fprintf(stdout,"\nPres%6u  ToDo%6u  Summand%3d  ",NumFilled,OnStack,TotalComp);
-        fprintf(stdout,"Gen%3d  Rel%3d  Length%6lu  From%6d  ER",
+        printf("\nPres%6u  ToDo%6u  Summand%3d  ",NumFilled,OnStack,TotalComp);
+        printf("Gen%3d  Rel%3d  Length%6lu  From%6d  ER",
             NumEmtyGens,NumEmtyRel,0L,ReadPres + 1);        
         }
         
@@ -2417,17 +2471,16 @@ int        F1;
 
 void Split_At_Empty_Relators_Sub1(void)
 {
-    unsigned char    *p,
+    unsigned char  	*p,
                     x;
     
-    int                Genus;
+    int           	Genus;
     
     unsigned int    Edge,
                     i,
                     j,
                     TheBdryComp,
                     v,
-                    V1,
                     V2,
                     V3;
 
@@ -2442,7 +2495,6 @@ void Split_At_Empty_Relators_Sub1(void)
     
     for(i = 1; i <= NumFaces; i++)
         {
-        V1 = Face[i][0];
         V2 = Face[i][1];
         V3 = Face[i][2];
         for(Edge = 0, v = FV[V2]; v != V3; v = CO[V2][v]) Edge += A[V2][v];
@@ -2484,12 +2536,15 @@ void Split_At_Empty_Relators_Sub1(void)
 
 int Split_At_Empty_Relators_Sub2(int NumGen,int NumNewPres)
 {
-    register unsigned char    *p,
-                            *q;
+    register unsigned char 	*p,
+                            *q,
+                            *r;
                             
-    int                        h,
+    int                    	h,
                             i,
                             j;
+                            
+    unsigned long			HS;
     
     /*****************************************************************************************
         Call Rewrite_Input() to rewrite the relators corresponding to the current summand.
@@ -2501,12 +2556,7 @@ int Split_At_Empty_Relators_Sub2(int NumGen,int NumNewPres)
     if(Micro_Print)
         {
         printf("\n\nThe presentation of summand %d is currently:\n",NumNewPres + 1);
-        Print_Relators(Relators,NumRelators,stdout);
-        if(Micro_Print_F)
-            {
-            fprintf(myout,"\n\nThe presentation of summand %d is currently:\n",NumNewPres + 1);
-            Print_Relators(Relators,NumRelators,myout);    
-            }
+        Print_Relators(Relators,NumRelators);
         }
                 
     Rewrite_Input();
@@ -2524,35 +2574,37 @@ int Split_At_Empty_Relators_Sub2(int NumGen,int NumNewPres)
         greater than the number of generators which appear explicitly in the relators.
     *****************************************************************************************/
             
-    NumGenerators                     = NumGen;
+    NumGenerators                  	= NumGen;
             
-    TotalComp                         ++;
+    TotalComp                      	++;
     ComponentNum[NumFilled]         = TotalComp;    
-    ER[NumFilled]                    = -4;
-    FR[NumFilled]                    = ReadPres;        
-    MLC[TotalComp][NumGenerators]     = Length;
-    NG[NumFilled]                     = NumGenerators;
-    NR[NumFilled]                     = NumRelators;
-    PRIM[NumFilled]                    = 12;
+    ER[NumFilled]                  	= -4;
+    FR[NumFilled]                 	= ReadPres;        
+    MLC[TotalComp][NumGenerators]  	= Length;
+    NG[NumFilled]                  	= NumGenerators;
+    NR[NumFilled]                  	= NumRelators;
+    PRIM[NumFilled]                	= 12;
     SURL[NumFilled]                 = Length;
-    UDV[NumFilled]                     = 0;
-    TP[NumFilled]                    = NumRelators;
-    BDY[NumFilled]                     = 3;
-    OnStack                            += 2*NumGenerators;
+    UDV[NumFilled]                 	= 0;
+    TP[NumFilled]                 	= NumRelators;
+    BDY[NumFilled]                 	= 3;
+    OnStack                        	+= 2*NumGenerators;
     
     for(i = 1; i <= NumRelators; i++)
         {
-        SUR[NumFilled][i] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[i]));            
-        if((q = *SUR[NumFilled][i]) == NULL)
-            {
-            for(j = 1; j < i; j++) DisposeHandle((char **) SUR[NumFilled][j]);
-            MLC[TotalComp][NumGenerators] = BIG_NUMBER;
-            TotalComp --;
-            OnStack -= 2*NumGenerators;
-            return(TOO_LONG);
-            }
+        HS = GetHandleSize((char **) Relators[i]);
+        if(SUR[NumFilled][i] != NULL) DisposeHandle((char **) SUR[NumFilled][i]);
+        SUR[NumFilled][i] = (unsigned char **) NewHandle(HS);            
+        if(SUR[NumFilled][i] == NULL) Mem_Error();
         p = *Relators[i];
-        while(*q++ = *p++) ;                                    
+        q = *SUR[NumFilled][i];    
+        r = q;
+        while( (*q++ = *p++) ) ; 
+        if((q-r) != HS) 
+        	{
+        	NumErrors ++;
+        	printf("\n\n5) Error in Presentation %u! |Relator[%d]| = %lu, HS = %lu.",NumFilled + 1,i,q-r-1,HS);
+        	}
         }
         
     BytesUsed += Length;        
@@ -2580,20 +2632,14 @@ int Split_At_Empty_Relators_Sub2(int NumGen,int NumNewPres)
     if(Micro_Print)
         {
         printf("\nThe presentation of summand %d is:\n",NumNewPres + 1);
-        Print_Relators(Relators,NumRelators,stdout);
+        Print_Relators(Relators,NumRelators);
         printf("\nSaved this presentation as: Presentation %u\n",NumFilled + 1);
-        if(Micro_Print_F)
-            {
-            fprintf(myout,"\nThe presentation of summand %d is:\n",NumNewPres + 1);
-            Print_Relators(Relators,NumRelators,myout);
-            fprintf(myout,"\nSaved this presentation as: Presentation %u\n",NumFilled + 1);
-            }
         }    
                                                              
     NumFilled ++;
     
-    fprintf(stdout,"\nPres%6u  ToDo%6u  Summand%3d  ",NumFilled,OnStack,TotalComp);
-    fprintf(stdout,"Gen%3d  Rel%3d  Length%6lu  From%6u  ER",
+    printf("\nPres%6u  ToDo%6u  Summand%3d  ",NumFilled,OnStack,TotalComp);
+    printf("Gen%3d  Rel%3d  Length%6lu  From%6u  ER",
         NG[NumFilled-1],NR[NumFilled-1],SURL[NumFilled-1],ReadPres + 1);
     
     return(NO_ERROR);
@@ -2609,7 +2655,9 @@ int Splitting_Pres_On_File(int WhoCalled,int NumNewPres)
         we don't want to save another copy of it.
     **************************************************************************************/    
     
-    Canonical_Rewrite(Relators,FALSE,FALSE);        
+    Canonical_Rewrite(Relators,FALSE,FALSE); 
+    
+/*          
     for(i = 0,Dup_On_File = INFINITE; i < NumFilled; i++)
         if(SURL[i] == Length  
             && NG[i] == NumGenerators
@@ -2628,9 +2676,29 @@ int Splitting_Pres_On_File(int WhoCalled,int NumNewPres)
              break;        
              }    
          }
+*/
+ /* Tried changing this so it only searches the current component. 2/18/15 */
+ 
+     for(i = 0,Dup_On_File = INFINITE; i < NumFilled; i++)
+        if(ComponentNum[i] == CurrentComp && SURL[i] == Length && NG[i] == NumGenerators && NR[i] == NumRelators)
+        {
+         for(j = 1; j <= NumRelators; j++)
+             if(GetHandleSize((char **) Relators[j]) != GetHandleSize((char **) SUR[i][j])) break;    
+         if(j > NumRelators && Compare_Pres(i))
+             {
+             if(ComponentNum[i] != CurrentComp)
+                 {
+                 if(Dup_On_File == INFINITE) Dup_On_File = i;
+                 }
+             else if(i != ReadPres)
+                 return(TRUE);    
+             break;        
+             }    
+         }
+         
     if(i == NumFilled && Dup_On_File < INFINITE)
         {
-        WhoCalled = 12;
+         WhoCalled = 12;
          if((NumFilled >= MAX_SAVED_PRES - 3) || 
              Save_Pres(ReadPres,Dup_On_File,Length,1,WhoCalled,1,0,0)) return(TOO_LONG);                
          Mark_As_Duplicate(Dup_On_File);
@@ -2646,27 +2714,13 @@ int Splitting_Pres_On_File(int WhoCalled,int NumNewPres)
                 NumRelators);
             printf("\ndeletion creates empty relators in the presentation.");    
             printf("\nThis means the manifold 'splits' as a connected sum.");    
-            printf("\nThe program will look for presentations corresponding to each summand.\n");
-            if(Micro_Print_F)
-                {
-                fprintf(myout,"\n\nRelator %d of the preceding presentation is a primitive or proper power whose",
-                    NumRelators);
-                fprintf(myout,"\ndeletion creates empty relators in the presentation.");                
-                fprintf(myout,"\nThis means the manifold 'splits' as a connected sum.");    
-                fprintf(myout,"\nThe program will look for presentations corresponding to each summand.\n");                    
-                }
+            printf("\nHeegaard will look for presentations corresponding to each summand.\n");
             }
         if(WhoCalled == 40)
             {
             printf("\n\nA relator in the preceding dual presentation freely reduces to an empty relator.");
             printf("\nThis means the manifold 'splits' as a connected sum.");    
-            printf("\nThe program will look for presentations corresponding to each summand.\n");
-            if(Micro_Print_F)
-                {
-                fprintf(myout,"\n\nA relator in the preceding dual presentation freely reduces to an empty relator.");                    
-                fprintf(myout,"\nThis means the manifold 'splits' as a connected sum.");    
-                fprintf(myout,"\nThe program will look for presentations corresponding to each summand.\n");                        
-                }
+            printf("\nHeegaard will look for presentations corresponding to each summand.\n");
             }
         }
         
@@ -2685,16 +2739,22 @@ int Splitting_Pres_On_File(int WhoCalled,int NumNewPres)
         }    
         
     /**************************************************************************************
-         If the program already has as many summands as it can handle, flag any other
+         If Heegaard already has as many summands as it can handle, flag any other
          presentations corresponding to this summand so that we will quit processing them.
      **************************************************************************************/    
          
      if(TotalComp + NumNewPres > MAXNUMCOMPONENTS - 3)
          {
          ReadPres = SReadPres;
-        Mark_As_Found_Elsewhere(CurrentComp);
-        SysBeep(5);
-        printf("\n\nStopping because the program cannot deal with any more summands. Sorry!");    
+         Mark_As_Found_Elsewhere(CurrentComp);
+         if(Batch == FALSE) SysBeep(5);
+         printf("\n\nStopping because Heegaard cannot deal with any more summands. Sorry!"); 
+         if(NumErrors == 1)
+			printf("\nOne error was detected. Scroll back for details.");
+		 if(NumErrors > 1)
+			printf("\n%lu errors were detected. Scroll back for details.",NumErrors); 
+         printf("\n\nRerunning using Depth-First Search may help.");
+         Too_Many_Components_ALert();   
          return(TOO_MANY_COMPONENTS);
         }
     return(NO_ERROR);    

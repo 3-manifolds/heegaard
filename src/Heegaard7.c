@@ -1,18 +1,37 @@
 #include "Heegaard.h"
 #include "Heegaard_Dec.h"
 
-#define MAX_NOT_NEW_PRES	10 
-#define SAVE_LEVEL_PRES		TRUE
+/****************************** function prototypes *****************************************
+L   31 Level_Transformations(int F1,int F2,int F3)
+L  275 Get_Components(void)
+L  322 Been_Seen(void)
+L  353 Annulus(unsigned int V3,unsigned int V4,int TheComp,int F1)
+L  511 Find_Path(int V1,int V2,int TheComp,int SepType)
+L  692 Do_Aut_L(void)
+L  802 Do_Aut_L_Long(int V1,int V2,int TheComp)
+L 1089 Delete_Trivial_Generators(int Test)
+L 1236 Level_Transformations_2(int F1,int F2,int F3,unsigned int MyNum)
+L 1320 Do_Aut_L_Long_2(int V1,int V2,int TheComp)
+L 1611 Slide_ValenceTwo_Comp(int TheComp,unsigned int VL,unsigned int VR,unsigned int MyNum)
+L 1701 Level_Trans_Reset(unsigned int MyNum, unsigned int V3, unsigned int V4)
+L 1741 Micro_Print_Level_Transformations_Reset(unsigned int MyNum)
+L 1747 Count_Sep_Pairs(unsigned int Num_Saved_LPres)
+L 1835 Is_Sep_Pair(unsigned int VL,unsigned int VR,unsigned int MyNum)
+L 1873 Micro_Print_Level_Transformations(unsigned int TheComp,unsigned int V1,unsigned int V2,
+	unsigned int Type)
+L 1920 Slide_LComp(unsigned int VX, unsigned int VY, int TheComp, int SepType, unsigned int MyNum,
+    int F1, int F2, int F3, int F5)
+L 1994 Random_Sep_Pair(unsigned int WhichSLRPres)  	
+********************************************************************************************/
 
-Level_Transformations(F1,F2,F3,F4,F5)
-int 	F1,
-		F2,
-		F3,
-		F4,
-		F5;
+#define MAX_NOT_NEW_PRES	50 
+
+int		Found_L_Annulus;
+
+int Level_Transformations(int F1,int F2,int F3)
 {
 	/******************************************************************************************
-		This routine is called when the "reduced" Whitehead graph has a pair of separating
+		This routine is called when the "reduced" Whitehead graph has a separating pair of
 		vertices and hence does not have a unique embedding in the plane. Since the
 		connectivity of the "reduced" Whitehead graph of a set of relators is not invariant
 		under level transformations, it is sometimes possible to perform some length
@@ -31,48 +50,47 @@ int 	F1,
 		ground and further searching will probably not yield anything new, so it stops and
 		returns 6.
 	******************************************************************************************/
+
+	char			MyChar;
 	
 	unsigned char 	*p,
 					*q;
-							
+
+	int 			k,
+					MyNumSepComps,
+					TheComp;
+					
 	unsigned int 	i,
+					j,
+					MyNum,
+					Random,
+					V3,
+					V4,
 					VL,
 					VR,
 					VLI,
 					VRI;
-	
-	char			MyChar;
-							
-	int 			MyNumSepComps,
-					TheComp;
-							
-	unsigned int 	j,
-					MyNum,
-					NumReps,
-					V3,
-					V4;
 	
 	/******************************************************************************************
 		Each invocation of Level_Transformations() "owns" a presentation. On entry, the
 		routine first checks that the presentation being passed to it is distinct from those
 		passed to all previous invocations. The routine Been_Seen() is called to check this.
 		We also check at this point whether the previous invocation of Level_Transformations()
-		has managed to get rid of all pairs of separating vertices in the graph. If so, we save
+		has managed to get rid of all separating pairs of vertices in the graph. If so, we save
 		this new modified presentation and return 1 as a signal of success. Otherwise we save
 		a copy of our private presentation on the stack of presentations SLR[][] at the
 		locations SLR[MyNum][1] ... SLR[MyNum][NumRelators] and start looking for level
 		transformations.
 	******************************************************************************************/	
 	
-	if(NumCalled >= MAX_SAVED_LEVELS) return(7);
-/*	if(NumCalled >= 50) return(7);	*/
-	if(Been_Seen() < NumCalled) return(0);
-/*	j = Been_Seen();
-	if(j < NumCalled)
+	if(Num_Saved_LPres >= MAX_SAVED_LEVELS) return(7);
+	k = Been_Seen();
+	if(k < Num_Saved_LPres)
 		{
-		printf("\nPres %u --> %u.",F4+2,j+2);
+		if(Micro_Print) printf("\n\nPresentation L%u is a duplicate of Presentation %d, and will be deleted.",
+			Num_Saved_LPres + 1, k);
 		return(0);
-		}			*/
+		}
 	if((MyChar = mykbhit()) && !TestRealizability1)
 		{
 		if(MyChar == ' ')
@@ -82,20 +100,23 @@ int 	F1,
 			}
 		Level_Interrupt = 2;	
 		}
-	MyNum = NumCalled;
-	switch(Sep_Pairs(0,0))
+	MyNum = Num_Saved_LPres;
+	if(Num_Saved_LPres == 0) Found_L_Annulus = FALSE;
+	Fill_A(NumRelators);
+	Get_Matrix();	
+	switch(Sep_Pairs(0,0,1))
 		{
 		case 0:
 			if(F3) return(2);
-			if(NumCalled)
+			if(Num_Saved_LPres)
 				{
 				This_Pres = On_File();	
 				if(This_Pres == NumFilled)
 					{
-					if(BytesUsed > BytesAvailable)
+					if((Batch == FALSE) && (BytesUsed > BytesAvailable))
 						{
 						if(UserSaidQuit) return(6);
-						if(UserSaidQuit = User_Says_Quit()) return(6);
+						if( (UserSaidQuit = User_Says_Quit()) ) return(6);
 						}
 					NotNewPres = 0;
 					if(NumFilled >= MAX_SAVED_PRES - 3) return(TOO_LONG);
@@ -115,38 +136,57 @@ int 	F1,
 					}
 				else
 					if(++NotNewPres > MAX_NOT_NEW_PRES) return(6);
-				}		
-			return(1);	
+				}
+			return(2);
 		case 1:
-			BSV1[MyNum] = V1;
-			BSV2[MyNum] = V2;
-			break;	
-		case 2:
-			return(4);	
-		case TOO_LONG:
-			return(TOO_LONG);
+			break;
 		}
 
-	if(TestRealizability1 && Planar(TRUE,FALSE)) return(3);
+	/******************************************************************************************
+			If a minimal length presentation P is realizable, then P and any presentation P'
+		obtained from P by level-transformations must have a planar Whitehead graph, even if P
+		and P' have separating pairs of vertices. 
+			So we may be able to verify that P is not realizable by checking every P' obtained
+		from P by level-transformations for planarity, even when we cannot find a presentation
+		without any separating pairs of vertices.
+	******************************************************************************************/
+
+	if((TestRealizability1 || TestRealizability4) && Planar(TRUE,FALSE)) return(3);
+
+	/******************************************************************************************
+			At this point, Been_Seen() has checked that the incoming presentation in Relators[] 
+		has a separating pair of vertices and is not on file in SLR[]. So save a copy of this
+		incoming presentation in SLR[] for future reference.
+	******************************************************************************************/
 	
 	for(i = 1; i <= NumRelators; i++)
 		{
-		SLR[NumCalled][i] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[i]));
-		if((q = *SLR[NumCalled][i]) == NULL)
-			{
-			for(j = 1; j < i; j++) DisposeHandle((char **) SLR[NumCalled][j]);
-			return(6);
-			}
+		if(SLR[Num_Saved_LPres][i] != NULL) DisposeHandle((char **) SLR[Num_Saved_LPres][i]);
+		SLR[Num_Saved_LPres][i] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[i]));
+		if(SLR[Num_Saved_LPres][i] == NULL) Mem_Error();
+		q = *SLR[Num_Saved_LPres][i];	
 		p = *Relators[i];
-		while(*q++ = *p++) ;
+		while( (*q++ = *p++) ) ;
 		}
 	
-/*	if(SAVE_LEVEL_PRES && Save_Pres(F4+1,0,Length,1,70,1,0,0)) return(TOO_LONG);	*/
-				
-	NumCalled ++;
+	Num_Saved_LPres ++;
+	
+	/*******************************************************************************************
+			Next, call Count_Sep_Pairs(). It counts the total number of separating pairs of 
+		vertices in the reduced Whitehead graph RWG of the incoming presentation, and saves a
+		list of these in the array SLR[Num__Saved_Pres - 1][0]. Then call Random_Sep-Pair() to
+		select a random separating pair of vertices to process.
+	*******************************************************************************************/
+	
+	j = Count_Sep_Pairs(Num_Saved_LPres);
+	if(j == TOO_LONG) return(TOO_LONG);
+
+	if(Random_Sep_Pair(MyNum)) return(0);
+	BSV1[MyNum] = V1;
+	BSV2[MyNum] = V2;
 		
 	/******************************************************************************************
-		VL and VR are the current pair of separating vertices. We look for a component
+		VL and VR are the current separating pair of vertices. We look for a component
 		"TheComp", of the separation produced by deleting VL and VR, with the property that
 		neither VL inverse or VR inverse are in TheComp. The objective is to "slide" the
 		component TheComp around the Whitehead graph sliding first to the "left" and then
@@ -169,209 +209,88 @@ int 	F1,
 		if(VL & 1)
 			VLI = VL - 1;
 		else
-			VLI = VL + 1;
-			
+			VLI = VL + 1;		
 		if(VR & 1)
 			VRI = VR - 1;
 		else
 			VRI = VR + 1;		
 		Get_Components();
 		MyNumSepComps = NumSepComps;
-		for(TheComp = 1; TheComp <= MyNumSepComps; TheComp ++)
-		if(XX[VLI] != TheComp && XX[VRI] != TheComp)
-			{
-			switch(Find_Path(VL,VR,TheComp,1,&NumReps))
-				{
-				case 0:
-					break;
-				case TOO_LONG:
-					return(6);
-				case FATAL_ERROR:
-					return(FATAL_ERROR);	
-				case 1:
-					if(Slide_ValenceTwo_Comp(TheComp,VL,VR)) break;
-					if(Delete_Trivial_Generators(TRUE))
-						{
-						if(F5)
-							return(5);
-						else
-							goto SLIDE_RIGHT;
-						}		
-					if(F3) return(4);
-					if(Annulus(V3,V4,TheComp,F1) == TOO_LONG) return(TOO_LONG);
-					return(4);	
-				}
-			if(GetHandleSize((char **) Temp8) > 5L)
-				{
-				for(j = 0; j < NumReps; j++)
-					if(Do_Aut_L_Long(VL,VR,TheComp) == TOO_LONG) return(TOO_LONG);
-				}
-			else
-				{
-				for(i = 0; i < Vertices; i++)
-					{
-					if(XX[i] == TheComp)
-						YY[i] = 1;
-					else
-						YY[i] = 0;
-					}
-				for(j = 0; j < NumReps; j++) if(Do_Aut_L() == TOO_LONG)
-					return(TOO_LONG);
-				}		
-			if(Micro_Print) Micro_Print_Level_Transformations(TheComp,VL,VR,1,NumReps);	
-			Fill_A(NumRelators);
-			Get_Matrix();								
-			j = Level_Transformations(F1,F2,F3,MyNum,F5);
-			if(j > 1) return(j);
-					
-			/**********************************************************************************
-				If a call to Level_Transformations() was unsuccessful, then we need to reset
-				Relators[] and other globals that may have been changed before we try to slide
-				TheComp to the "right". The following code is really a duplication of the
-				previous code except that the roles of VL and VR reversed so that we are now
-				sliding TheComp in the other direction.
-			**********************************************************************************/	
-
-SLIDE_RIGHT:			
-			for(i = 1; i <= NumRelators; i++)
-				{
-				ReallocateHandle((char **) Relators[i],GetHandleSize((char **) SLR[MyNum][i]));
-				if((q = *Relators[i]) == NULL) return(TOO_LONG);
-				p = *SLR[MyNum][i];
-				while(*q++ = *p++) ;
-				}
-			if(Micro_Print) Micro_Print_Level_Transformations_Reset();			
-			for(i = 0; i < Vertices; i++) XX[i] = 0;
-			VL = V3;
-			VR = V4;
-			XX[VL] = VERTICES;
-			XX[VR] = VERTICES;
-			if(VL & 1)
-				VLI = VL - 1;
-			else
-				VLI = VL + 1;
-			if(VR & 1)
-				VRI = VR - 1;
-			else
-				VRI = VR + 1;	
-			Fill_A(NumRelators);
-			Get_Matrix();	
-			Get_Components();
-			switch(Find_Path(VR,VL,TheComp,1,&NumReps))
-				{
-				case 0:
-					break;
-				case TOO_LONG:
-					return(TOO_LONG);
-				case FATAL_ERROR:
-					return(FATAL_ERROR);					
-				case 1:
-					if(Slide_ValenceTwo_Comp(TheComp,VL,VR)) break;
-					if(Delete_Trivial_Generators(TRUE))
-						{
-						if(F5)
-							return(5);
-						else
-							goto NEXT_COMP;
-						}					
-					if(F3) return(4);
-					if(Annulus(V3,V4,TheComp,F1) == TOO_LONG) return(TOO_LONG);
-					return(4);	
-				}
-			if(GetHandleSize((char **) Temp8) > 5L)
-				{
-				for(j = 0; j < NumReps; j++)
-					if(Do_Aut_L_Long(VR,VL,TheComp) == TOO_LONG) return(TOO_LONG);
-				}
-			else
-				{
-				for(i = 0; i < Vertices; i++)
-					{
-					if(XX[i] == TheComp)
-						YY[i] = 1;
-					else
-						YY[i] = 0;
-					}
-				for(j = 0; j < NumReps; j++) if(Do_Aut_L() == TOO_LONG)
-					return(TOO_LONG);			
-				}
-			if(Micro_Print) Micro_Print_Level_Transformations(TheComp,VR,VL,1,NumReps);	
-			Fill_A(NumRelators);
-			Get_Matrix();								
-			j = Level_Transformations(F1,F2,F3,MyNum,F5);
-			if(j > 1) return(j);
-				
-			/**********************************************************************************
-				If a call to Level_Transformations() was unsuccessful, then we need to reset
-				Relators[] and other globals that may have been changed before we try to slide
-				other components of the initial separation around.
-			**********************************************************************************/	
-
-NEXT_COMP:			
-			for(i = 1; i <= NumRelators; i++)
-				{
-				ReallocateHandle((char **) Relators[i],GetHandleSize((char **) SLR[MyNum][i]));
-				if((q = *Relators[i]) == NULL) return(TOO_LONG);
-				p = *SLR[MyNum][i];
-				while(*q++ = *p++) ;
-				}
-			if(Micro_Print) Micro_Print_Level_Transformations_Reset();			
-			for(i = 0; i < Vertices; i++) XX[i] = 0;
-			VL = V3;
-			VR = V4;
-			XX[VL] = VERTICES;
-			XX[VR] = VERTICES;
-			if(VL & 1)
-				VLI = VL - 1;
-			else
-				VLI = VL + 1;	
-			if(VR & 1)
-				VRI = VR - 1;
-			else
-				VRI = VR + 1;	
-			Fill_A(NumRelators);
-			Get_Matrix();	
-			Get_Components();
-			}
 		
-		if(MyNumSepComps == 2)
+		for(TheComp = 1; TheComp <= MyNumSepComps; TheComp++)
 			{
-			j = Level_Transformations_2(F1,F2,F3,MyNum,F5);
+			if(RandomizeSlides)	Random = abs(rand()) %2;
+			else Random = 1;
+			
+			if(Random == 1) 
+				{
+				if(XX[VLI] != TheComp && XX[VRI] != TheComp)
+					{
+					j = Slide_LComp(VL,VR,TheComp,1,MyNum,F1,F2,F3);
+					if(j > 1) return(j);
+					if(Level_Trans_Reset(MyNum,V3,V4) == TOO_LONG) return(TOO_LONG);
+					j = Slide_LComp(VR,VL,TheComp,1,MyNum,F1,F2,F3);
+					if(j > 1) return(j);
+					if(Level_Trans_Reset(MyNum,V3,V4) == TOO_LONG) return(TOO_LONG);					
+					}
+				}
+			
+			if(Random == 0)
+				{
+				if(XX[VLI] != TheComp && XX[VRI] != TheComp)
+					{
+					j = Slide_LComp(VR,VL,TheComp,1,MyNum,F1,F2,F3);
+					if(j > 1) return(j);
+					if(Level_Trans_Reset(MyNum,V3,V4) == TOO_LONG) return(TOO_LONG);
+					j = Slide_LComp(VL,VR,TheComp,1,MyNum,F1,F2,F3);
+					if(j > 1) return(j);
+					if(Level_Trans_Reset(MyNum,V3,V4) == TOO_LONG) return(TOO_LONG);
+					}
+				}
+			}	
+		
+		if(MyNumSepComps == 2) 
+			{
+			j = Level_Transformations_2(F1,F2,F3,MyNum);
 			if(j > 1) return(j);
 			}
 		
-		/**************************************************************************************
-			When Sep_Pairs(i,j) is called, it starts searching for separating pairs of
-			vertices in the graph beginning with the ordered pair of vertices following the
-			pair (i,j) --(We always have j > i.)-- If Sep_Pairs(i,j) finds a pair of
-			separating vertices, it returns that pair in the globals V1 and V2. So when the
-			routine Level_Transformations() has dealt with the pair of separating vertices
-			saved in BSV1[MyNum] and BSV2[MyNum], we call Sep_Pairs((BSV1[MyNum],BSV2[MyNum])
-			to see if the graph has any other pairs of separating vertices. If there are none,
-			we return(0), otherwise we update BSV1[MyNum] and BSV2[MyNum] and go to the top
-			of this loop.
-		**************************************************************************************/				
+		/*****************************************************************************************
+			Ask Random_Sep_Pair() to select a random pair of unprocessed separating vertices 
+			(V1,V2) from the set of separating pairs of vertices of the RWG of Presentation 
+			MyNum. If all separating pairs of vertices have been processed, Random_Sep_Pair()
+			returns 1, and we return(0). Otherwise, Random_Sep_Pair() returns 0, and we continue.
+		******************************************************************************************/				
 		
-		if(Sep_Pairs(BSV1[MyNum],BSV2[MyNum]) == FALSE || MajorVert == 2)
+		if(Random_Sep_Pair(MyNum))
+			{
+			if(MyNum == 0)	Print_SLR(0,Found_L_Annulus);
 			return(0);
+			}
 		BSV1[MyNum] = V1;
 		BSV2[MyNum] = V2;	
 		}
 }
 
-Get_Components()
+void Get_Components()
 {
-	register unsigned int g,h,i,j,k;
-	register unsigned int *p,*r;
-	
 	/******************************************************************************************
-		If the "reduced" Whitehead graph has a pair of separating vertices, this routine can
+		If the "reduced" Whitehead graph has a separating pair of vertices, this routine can
 		be used to find all of the components resulting from the deletion of the separating
 		vertices. The array XX[] is initialized by the calling routine, which sets all of the
-		entries to zero except for the two entries corresponding to the separating vertices.
+		entries to zero, except for the two entries corresponding to the separating vertices.
 		These entries are set to the value VERTICES. Upon return, the entries of XX[] which
 		are equal to g are the vertices in the gth component of the graph.
 	******************************************************************************************/	
+	
+	register unsigned int 	g,
+							h,
+							i,
+							j,
+							k;
+							
+	register unsigned int 	*p,
+							*r;
 	
 	k = 2;
 	g = 1;
@@ -400,64 +319,61 @@ Get_Components()
 	NumSepComps = g;					
 }								
 
-Been_Seen()
+int Been_Seen()
 {
 	/******************************************************************************************
 			This routine compares the presentation, which we are about to pass to
 			Level_Transformations(), to all of the presentations passed in previous calls.
 			If there is a duplication, then we do not need or want to make this call.
-			Otherwise it could be a long wait. If there is a match the routine returns the
-			number of the matched presentation. Otherwise it returns NumCalled.
+			If there is a match the routine returns the number of the matched presentation. 
+			Otherwise it returns Num_Saved_LPres.
 	******************************************************************************************/
 		
-	register int i,j;
+	register int 	i,
+					j;
 	
-	for(j = 1; j <= NumRelators; j++) HLock((char **) Relators[j]);
-	for(i = 0; i < NumCalled; i++)
+	for(i = 0; i < Num_Saved_LPres; i++)
 		{
 		for(j = 1; j <= NumRelators; j++)
 			{
 			if(GetHandleSize((char **) Relators[j]) == GetHandleSize((char **) SLR[i][j]))
 				{
-				HLock((char **) SLR[i][j]);
 				if(Compare_Str(*Relators[j],*SLR[i][j],
 					GetHandleSize((char **) Relators[j]) - 1) == FALSE)
-					{
-					HUnlock((char **) SLR[i][j]);
 					break;
-					}
-				HUnlock((char **) SLR[i][j]);
 				}	
 			else
 				break;			
 			}			
 		if(j > NumRelators) break;							
 		}
-	for(j = 1; j <= NumRelators; j++) HUnlock((char **) Relators[j]);			
 	return(i);		
 }
 
-Annulus(V3,V4,TheComp,F1)
-unsigned int 	V3,
-				V4;
-int 			TheComp,
-				F1;
+int Annulus(unsigned int V3,unsigned int V4,int TheComp,int F1)
 {
 	/******************************************************************************************
-		This routine is called by Level_Transformations() when Level_Transformations() has
-		determined that there is an annulus present. V3 and V4 are a pair of vertices that
-		separate the Heegaard diagram. TheComp gives us a set of vertices which are 
-		"swallowed" by the annulus; while Temp8 contains a string which represents the path
-		on the Heegaard surface which serves as the center line of the rest of the annulus.
+		This routine is called by the subroutine Slide_LComp() of Level_Transformations() 
+		when Slide_LComp() has determined that there is an annulus present. V3 and V4 are a 
+		pair of vertices that separate the Heegaard diagram. TheComp gives us a set of 
+		vertices which are "swallowed" by the annulus; while Temp8 contains a string which 
+		represents the path on the Heegaard surface that serves as the center line of the 
+		rest of the annulus.
 	******************************************************************************************/
 		
-	register unsigned char  *p,
-							*q,
-							x,
-							y;
+	unsigned char  *p,
+					*ptr,
+					*q,
+					*r,
+					x,
+					y;
 							
-	register unsigned int 	i,
-							j;
+	unsigned int 	i,
+					j;
+							
+	int				Separating;
+	
+	unsigned long	HS;
 			
 	if(V3 & 1)
 		x = V3/2 + 97;
@@ -467,25 +383,43 @@ int 			TheComp,
 		y = V4/2 + 97;
 	else
 		y = V4/2 + 65;	
-	ReallocateHandle((char **) Relators[0],GetHandleSize((char **) Temp8) + Vertices + 2);
-	if((p = *Relators[0]) == NULL) return(TOO_LONG);
-	*p++ = x;
-	*p++ = y;
-	for(i = 0; i < Vertices; i++)
+	
+	ptr = (unsigned char*) NewPtr((sizeof(char)*(GetHandleSize((char **) Temp8) + Vertices + 2)));
+	if(ptr == NULL) Mem_Error();
+	q = r = ptr;
+	*q++ = x;
+	*q++ = y;
+	for(i = 0,Separating = TRUE; i < Vertices; i++)
 		{
 		if(XX[i] == TheComp)
 			{
 			if(i & 1)
+				{
+				if(XX[i-1] != TheComp) Separating = FALSE;
 				y = i/2 + 97;
+				}
 			else
+				{
+				if(XX[i+1] != TheComp) Separating = FALSE;
 				y = i/2 + 65;
-			*p++ = y;	
+				}
+			*q++ = y;	
 			}
 		}
-	*p++ = '@';
-	q = *Temp8;
-	while(*p++ = *q++) ;
-	Canonical_Rewrite(Relators,TRUE,FALSE);
+	*q++ = '@';
+	p = *Temp8;
+	while( (*q++ = *p++) ) ;
+	
+	if(Relators[0] != NULL) DisposeHandle((char **) Relators[0]);
+	Relators[0] = (unsigned char **) NewHandle(q - r);	
+	if(Relators[0] == NULL) Mem_Error();
+	p = ptr;
+	q = *Relators[0];	
+	while( (*q++ = *p++) ) ;
+	DisposePtr((unsigned char*) ptr);
+	
+	Canonical_Rewrite(Relators,TRUE,FALSE); 
+	
 	for(i = 0; i < NumFilled; i++) if(SURL[i] == Length && NG[i] == NumGenerators
 		&& NR[i] == NumRelators)
 		{
@@ -499,35 +433,82 @@ int 			TheComp,
 	 		******************************************************************************/
 	 		
 	 		if(UDV[i] <= DONE || UDV[i] == SEP_PAIRS)
-	 			{	
-				SUR[i][0] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[0]));
-				if((p = *SUR[i][0]) == NULL) return(TOO_LONG);
-				q = *Relators[0];
-				while(*p++ = *q++) ;
+	 			{
+	 			HS = GetHandleSize((char **) Relators[0]);
+	 			if(SUR[i][0] != NULL) DisposeHandle((char **) SUR[i][0]);
+				SUR[i][0] = (unsigned char **) NewHandle(HS);
+				if(SUR[i][0] == NULL) Mem_Error();
+				p = *Relators[0];
+				q = *SUR[i][0];
+				r = q;
+				while( (*q++ = *p++) ) ;
+				if((q-r) != HS) 
+					{
+					NumErrors ++;
+					printf("\n\n6) Error in Presentation %u! |Relator[0]| = %lu, HS = %lu.",i + 1,q-r-1,HS);
+					}
 				BytesUsed += GetHandleSize((char **) Relators[0]);
 				UDV[i] = ANNULUS_EXISTS;
-				if(F1) printf("\n					There is an annulus in diagram %u.",i + 1);
+				if(F1)
+					{
+					if(Separating)
+						{
+						if((Batch == 4 || Batch == 10 || Batch == 11) && BPrintAnnulusData == TRUE)
+						printf("\n                    There is a separating annulus in diagram %u.",i + 1);
+						NumSepAnnuli ++;
+						}
+					else
+						{
+						if((Batch == 4 || Batch == 10 || Batch == 11) && BPrintAnnulusData == TRUE)
+						printf("\n                    There is a nonseparating annulus in diagram %u.",i + 1);
+						NumNonSepAnnuli ++;
+						}
+					}
 				}
 	 		break;
 	 		}
-	 	}						
+	 	}
+	
 	if(i == NumFilled)
 		{
 		if(NumFilled >= MAX_SAVED_PRES - 3) return(TOO_LONG);
-		if(Save_Pres(ReadPres,0,Length,1,70,0,0,0)) return(TOO_LONG);		
-		SUR[NumFilled - 1][0] = (unsigned char **) NewHandle(GetHandleSize((char **) Relators[0]));
-		if((p = *SUR[NumFilled - 1][0]) == NULL) return(TOO_LONG);
-		q = *Relators[0];
-		while(*p++ = *q++) ;
+		if(Save_Pres(ReadPres,0,Length,1,70,0,0,0)) return(TOO_LONG);
+		HS = GetHandleSize((char **) Relators[0]);
+		if(SUR[NumFilled - 1][0] != NULL) DisposeHandle((char **) SUR[NumFilled - 1][0]);
+		SUR[NumFilled - 1][0] = (unsigned char **) NewHandle(HS);
+		if(SUR[NumFilled - 1][0] == NULL) Mem_Error();
+		p = *Relators[0];
+		q = *SUR[NumFilled - 1][0];		
+		r = q;
+		while( (*q++ = *p++) ) ;
+		if((q-r) != HS) 
+			{
+			NumErrors ++;
+			printf("\n\n7) Error in Presentation %u! |Relator[0]| = %lu, HS = %lu.",NumFilled,q-r-1,HS);
+			}
 		BytesUsed += GetHandleSize((char **) Relators[0]);
 		BDY[NumFilled - 1] = BDY[ReadPres];
 		UDV[NumFilled - 1] = ANNULUS_EXISTS;
-		if(F1) printf("\n					There is an annulus in diagram %u.",NumFilled);
+		if(F1)
+			{
+			if(Separating)
+				{
+				if((Batch == 4 || Batch == 10 || Batch == 11) && BPrintAnnulusData == TRUE)
+				printf("\n                    There is a separating annulus in diagram %u.",NumFilled);
+				NumSepAnnuli ++;
+				}
+			else
+				{
+				if((Batch == 4 || Batch == 10 || Batch == 11) && BPrintAnnulusData == TRUE)
+				printf("\n                    There is a nonseparating annulus in diagram %u.",NumFilled);
+				NumNonSepAnnuli ++;
+				}
+			}	
 		}
-	return(NO_ERROR);			
+	return(Separating);			
 }
 
-int Find_Path(int V1,int V2,int TheComp,int Type,unsigned int *NumRepsPtr)
+int Find_Path(int V1,int V2,int TheComp,int SepType)
 {
 	/******************************************************************************************
 			Let S be the set of directed paths, in the Heegaard diagram, which originate at a
@@ -548,7 +529,8 @@ int Find_Path(int V1,int V2,int TheComp,int Type,unsigned int *NumRepsPtr)
 							z;
 
 	unsigned char 			T1[125],
-							T2[125];
+							T2[125],
+							**Temp;
 								
 	int						FP,
 							i,
@@ -556,9 +538,7 @@ int Find_Path(int V1,int V2,int TheComp,int Type,unsigned int *NumRepsPtr)
 
 	long					max;
 	
-	unsigned long			HS,
-							L,
-							L1;
+	unsigned long			HS;
 								
 	for(i = 65; i < 65 + NumGenerators; i++)
 		{
@@ -580,7 +560,7 @@ int Find_Path(int V1,int V2,int TheComp,int Type,unsigned int *NumRepsPtr)
 		T1[i + 32] = T2[i];
 		}
 
-	if(Type == 2)
+	if(SepType == 2)
 		{
 		for(i = 65; i < 65 + NumGenerators; i++)
 			if(T1[i])
@@ -609,8 +589,9 @@ int Find_Path(int V1,int V2,int TheComp,int Type,unsigned int *NumRepsPtr)
 	for(i = 1,max = 0L; i <= NumRelators; i++)	if(GetHandleSize((char **) Relators[i]) > max)
 		max = GetHandleSize((char **) Relators[i]);
 	
-	ReallocateHandle((char **) Temp8,max + 1);	
-	if(*Temp8 == NULL) return(TOO_LONG);
+	if(Temp8 != NULL) DisposeHandle((char **) Temp8);
+	Temp8 = (unsigned char **) NewHandle(max + 1);
+	if(Temp8 == NULL) Mem_Error();
 	
 	if(V1 & 1)
 		z = (V1 >> 1) + 97;
@@ -627,7 +608,7 @@ int Find_Path(int V1,int V2,int TheComp,int Type,unsigned int *NumRepsPtr)
 		p = *Relators[i];
 		q = p + GetHandleSize((char **) Relators[i]) - 2;
 		x = *q;
-		while(y = *p++)
+		while( (y = *p++) )
 			{
 			if((y == z) && T1[x])
 				{
@@ -679,9 +660,7 @@ int Find_Path(int V1,int V2,int TheComp,int Type,unsigned int *NumRepsPtr)
 				}
 			x = y;	
 			}
-		HLock((char **) Relators[i]);
 		Inverse(*Relators[i]);
-		HUnlock((char **) Relators[i]);			
 		}
 	
 	/******************************************************************************************
@@ -696,96 +675,17 @@ int Find_Path(int V1,int V2,int TheComp,int Type,unsigned int *NumRepsPtr)
 	x = *q;
 	*q = EOS;
 	HS = q - *Temp8;
-	if(T2[x] == 1)
-		{
-		SetHandleSize((char **) Temp8,HS + 1);
-		*NumRepsPtr = 1;		
-		return(1); 					/*	An annulus exists. */
-		}
-	if(V2 & 1)
-		y = (V2 >> 1) + 65;
-	else
-		y = (V2 >> 1) + 97;
-	q--;
-	x = *q;			
-	if(x != y || Type == 2)
-		{
-		SetHandleSize((char **) Temp8,HS + 1);
-		*NumRepsPtr = 1;		
-		return(0);
-		}
 	
-	/******************************************************************************************
-		If execution gets to this point, the path in Temp8 corresponds to sliding TheComp
-		around a circuit that brings TheComp back to again lie between V2 and V1. We will
-		next look for the smallest proper power of *Temp8 which starts at a vertex of TheComp
-		and ends at a vertex which is not part of TheComp. This corresponds to the situation
-		where TheComp can be pushed around a spiral path which represents a proper power of
-		Temp8.
-	******************************************************************************************/	
-	
-	for(j = 0,L1 = BIG_NUMBER; j < 2; j++)
-	for(i = 1; i <= NumRelators; i++)
-		{
-		p = *Relators[i];
-		q = p + GetHandleSize((char **) Relators[i]) - 2;
-		x = *q;
-		if(L1 > 1L) while(y = *p++)
-			{
-			if((y == z) && T1[x])
-				{
-				for(L = 0L,q = *Temp8 + 1; *p ; p++, q++)
-					{
-					if(*q == EOS)
-						{
-						q = *Temp8;
-						L++;	
-						}
-					if(*q != *p)
-						{
-						if(T2[*p] == 1) break;
-						if(L < L1)
-							L1 = L;
-						break;		/* Done with this relator. */
-						}
-					}
-				if(*p == EOS)
-					{
-					for(p = *Relators[i]; *p; p++, q++)
-						{
-						if(*q == EOS)
-							{
-							q = *Temp8;
-							L++;	
-							}
-						if(*q != *p)
-							{
-							if(T2[*p] == 1) break; /* Disregard paths which end in TheComp. */
-							if(L < L1) L1 = L;
-							break;	/* Done with this relator. */
-							}
-						}
-					break;	
-					}						
-				q = p - 1;
-				y = *q;
-				}
-			x = y;	
-			}
-		HLock((char **) Relators[i]);
-		Inverse(*Relators[i]);
-		HUnlock((char **) Relators[i]);			
-		}
-		
-	if(L1 == 1L || L1 == BIG_NUMBER)
-		{
-		SetHandleSize((char **) Temp8,HS + 1);
-		*NumRepsPtr = 1;
-		return(0);		
-		}
-	
-	SetHandleSize((char **) Temp8,HS + 1);
-	*NumRepsPtr = L1;
+	if(Temp16 != NULL) DisposeHandle((char **) Temp16);
+	Temp16 = (unsigned char **) NewHandle(HS + 1);
+	if(Temp16 == NULL) Mem_Error();
+	p = *Temp16;
+	q = *Temp8;
+	while( (*p++ = *q++) ) ;
+	Temp = Temp8;
+	Temp8 = Temp16;
+	Temp16 = Temp;
+	if(T2[x] == 1) return(1); 					/*	An annulus exists. */
 	return(0);
 }
 
@@ -808,18 +708,17 @@ int Do_Aut_L(void)
 	register 				int i;
 	
 	unsigned char 			TX[125],
-							TY[125],
-							**Temp;
+							TY[125];
 							
 	int						Vertex;
 	
-	unsigned int			j,
-							Auts;
+	unsigned int			Auts,
+							j;
 							
 	long					HS;												
 	
+	Num_Level_Slides ++;
 	Auts = GetHandleSize((char **) Temp8) - 1;
-	TotalAuts += Auts;
 	
 	for(j = 0; j < Auts; j++)
 		{
@@ -861,11 +760,13 @@ int Do_Aut_L(void)
 			{
 			HS = GetHandleSize((char **) Relators[i]);
 			if(HS > MAXLENGTH) return(TOO_LONG);
-			ReallocateHandle((char **) Temp5,2*HS);
-			if((p = *Temp5) == NULL) return(TOO_LONG);		
+			if(Temp5 != NULL) DisposeHandle((char **) Temp5);
+			Temp5 = (unsigned char **) NewHandle(2*HS);
+			if(Temp5 == NULL) Mem_Error();
+			p = *Temp5;	
 			q = *Relators[i];
 			x = *q++;
-			while(y = *q++)
+			while( (y = *q++) )
 				{
 				if(x != A && x != a) *p++ = x;
 				if(TX[x] && !TY[y])
@@ -884,13 +785,17 @@ int Do_Aut_L(void)
 			*p = EOS;
 			q = *Temp5;
 			HS = p + 1 - q;
-			if(HS > MAXLENGTH) return(TOO_LONG);
-			SetHandleSize((char **) Temp5,HS);
-			Temp = Relators[i];
-			Relators[i] = Temp5;
-			Temp5 = Temp;					
+			if(HS > MAXLENGTH) return(TOO_LONG);			
+			if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+            Relators[i] = (unsigned char **) NewHandle(HS);
+            if(Relators[i] == NULL) Mem_Error();
+            p = *Temp5;
+            q = *Relators[i];
+            while( (*q++ = *p++) ) ; 					
 			}
 		}
+		
+	TotalAuts += Auts;	
 	return(NO_ERROR);				
 }
 
@@ -917,18 +822,19 @@ int Do_Aut_L_Long(int V1,int V2,int TheComp)
 							y,
 							z;
 	
-	unsigned char 			T1[125],
-							T2[125],
-							**Temp;
+	unsigned char		T1[125],
+						T2[125];
 	
-	int						i,
-							j;
+	int			i,
+				j;
 	
-	unsigned long			Delete,
-							Insert,
-							HS,
-							Li,
-							L8;
+	unsigned long		Delete,
+						Insert,
+						HS,
+						Li,
+						L8;
+	
+	Num_Level_Slides ++;
 	
 	for(x = 65; x < 65 + NumGenerators; x++)
 		{
@@ -975,7 +881,7 @@ int Do_Aut_L_Long(int V1,int V2,int TheComp)
 			q = *Relators[i] + Li - 1;
 			p = q - L8;
 			x = *p++;
-			while(y = *p)
+			while( (y = *p) )
 				{
 				if((y == z) && T1[x])
 					{
@@ -987,9 +893,11 @@ int Do_Aut_L_Long(int V1,int V2,int TheComp)
 				x = y;
 				p++;	
 				}
-			if(Li > MAXLENGTH) return(TOO_LONG);	
-			ReallocateHandle((char **) Temp5,Li);
-			if((r = *Temp5) == NULL) return(TOO_LONG);	
+			if(Li > MAXLENGTH) return(TOO_LONG);
+			if(Temp5 != NULL) DisposeHandle((char **) Temp5);
+			Temp5 = (unsigned char **) NewHandle(Li);	
+			if(Temp5 == NULL) Mem_Error();
+			r = *Temp5;	
 			p = *Relators[i] + Delete;
 			if(Delete)
 				{
@@ -1007,7 +915,7 @@ int Do_Aut_L_Long(int V1,int V2,int TheComp)
 				else
 					*r++ = 63;
 				} 
-			while(y = *p)
+			while( (y = *p) )
 				{
 				if((y == z) && T1[x])
 					{
@@ -1039,16 +947,16 @@ int Do_Aut_L_Long(int V1,int V2,int TheComp)
 				T1[i] 		= TRUE;	
 				*r++ 		= EOS;
 				HS = r - *Temp5;
-				if(HS > MAXLENGTH) return(TOO_LONG);
-				SetHandleSize((char **) Temp5,HS);
-				Temp 		= Relators[i];
-				Relators[i] = Temp5;
-				Temp5 		= Temp;
+				if(HS > MAXLENGTH) return(TOO_LONG);				
+				if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+				Relators[i] = (unsigned char **) NewHandle(HS);
+				if(Relators[i] == NULL) Mem_Error();
+				p = *Temp5;
+				r = *Relators[i];
+				while( (*r++ = *p++) ) ; 
 				}	
 			}
-		HLock((char **) Relators[i]);
 		Inverse(*Relators[i]);
-		HUnlock((char **) Relators[i]);
 		}
 	
 	/*****************************************************************************************
@@ -1057,13 +965,13 @@ int Do_Aut_L_Long(int V1,int V2,int TheComp)
 	
 	HS = L8 + 1;
 	if(HS > MAXLENGTH) return(TOO_LONG);
-	ReallocateHandle((char **) Temp9,HS);
-	if((q = *Temp9) == NULL) return(TOO_LONG);
+	if(Temp9 != NULL) DisposeHandle((char **) Temp9);
+	Temp9 = (unsigned char **) NewHandle(HS);
+	if(Temp9 == NULL) Mem_Error();
+	q = *Temp9;
 	p = *Temp8;
-	while(*q++ = *p++) ;
-	HLock((char **) Temp9);
+	while( (*q++ = *p++) ) ;
 	Inverse(*Temp9);
-	HUnlock((char **) Temp9);
 	
 	if(w < 97)
 		z = w + 32;
@@ -1083,7 +991,7 @@ int Do_Aut_L_Long(int V1,int V2,int TheComp)
 		p = *Relators[i];
 		q = p + Li - 2;
 		x = *q;
-		while(y = *p++)
+		while( (y = *p++) )
 			{
 			if(y == 63 || y == 95)
 				{
@@ -1111,9 +1019,11 @@ int Do_Aut_L_Long(int V1,int V2,int TheComp)
 		*************************************************************************************/
 		
 		HS = Li + Insert*L8;
-		if(HS > MAXLENGTH) return(TOO_LONG);		
-		ReallocateHandle((char **) Temp5,HS);
-		if((r = *Temp5) == NULL) return(TOO_LONG);
+		if(HS > MAXLENGTH) return(TOO_LONG);
+		if(Temp5 != NULL) DisposeHandle((char **) Temp5);
+		Temp5 = (unsigned char **) NewHandle(HS);	
+		if(Temp5 == NULL) Mem_Error();
+		r = *Temp5;
 		
 		/*************************************************************************************
 									Rewrite Relators[i].
@@ -1122,7 +1032,7 @@ int Do_Aut_L_Long(int V1,int V2,int TheComp)
 		p = *Relators[i];
 		q = p + Li - 2;
 		x = *q;
-		while(y = *p++)
+		while( (y = *p++) )
 			{
 			if(y == 63 || y == 95)
 				{
@@ -1132,7 +1042,7 @@ int Do_Aut_L_Long(int V1,int V2,int TheComp)
 			if(y == 64)
 				{
 				q = *Temp8;
-				while(*r++ = *q++) ;
+				while( (*r++ = *q++) ) ;
 				r--;
 				x = EOS;
 				continue;	
@@ -1140,7 +1050,7 @@ int Do_Aut_L_Long(int V1,int V2,int TheComp)
 			if(y == 96)
 				{
 				q = *Temp9;
-				while(*r++ = *q++) ;
+				while( (*r++ = *q++) ) ;
 				r--;
 				x = EOS;
 				continue;	
@@ -1148,14 +1058,14 @@ int Do_Aut_L_Long(int V1,int V2,int TheComp)
 			if((x == z) && T2[y])
 				{
 				q = *Temp8;
-				while(*r++ = *q++) ;
+				while( (*r++ = *q++) ) ;
 				r--;	
 				}
 			else	
 			if((y == w) && T1[x])
 				{
 				q = *Temp9;
-				while(*r++ = *q++) ;
+				while( (*r++ = *q++) ) ;
 				r--;
 				}
 			*r++ = y;	
@@ -1163,20 +1073,27 @@ int Do_Aut_L_Long(int V1,int V2,int TheComp)
 			}
 		*r++ = EOS;
 		HS = r - *Temp5;
-		if(HS > MAXLENGTH) return(TOO_LONG); 
-		SetHandleSize((char **) Temp5,HS);
-		Temp 		= Relators[i];
-		Relators[i] = Temp5;
-		Temp5 		= Temp;			
+		if(HS > MAXLENGTH) return(TOO_LONG); 		
+		if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+		Relators[i] = (unsigned char **) NewHandle(HS);
+		if(Relators[i] == NULL) Mem_Error();
+		p = *Temp5;
+		q = *Relators[i];
+		while( (*q++ = *p++) ) ; 		
 		}
 	
 	TotalAuts += L8;
 	return(NO_ERROR);			
 }
 
-Delete_Trivial_Generators(Test)
-int		Test;
+int Delete_Trivial_Generators(int Test)
 {
+	/***************************************************************************************
+		This routine deletes a generator X from the relators, provided there is a relator
+		of the form X, and the total number of appearances of X, together with its inverse,
+		in the remaining relators is no more than one.
+	***************************************************************************************/
+	
 	register unsigned char	*p,
 							*q,
 							s,
@@ -1187,20 +1104,14 @@ int		Test;
 	
 	unsigned char			**Temp;
 							
-	int						i,
-							j,
-							k,
-							SNumRelators1,
-							SNumRelators2,
-							TheRelator;
+	int			i,
+				j,
+				k,
+				SNumRelators1,
+				SNumRelators2,
+				TheRelator;
 							
-	long					HS;						
-	
-	/***************************************************************************************
-		This routine deletes a generator X from the relators, provided there is a relator
-		of the form X, and the total number of appearances of X, together with its inverse,
-		in the remaining relators is no more than one.
-	***************************************************************************************/
+	long			HS;						
 
 	if(NumRelators == 1) return(FALSE);
 			
@@ -1219,7 +1130,7 @@ RETRY:
 			{
 			if(i == j) continue;
 			p = *Relators[j];
-			while(z = *p++) if(z == x || z == y)
+			while( (z = *p++) ) if(z == x || z == y)
 				{
 				k++;
 				if(k > 1) goto TEST_NEXT_RELATOR;
@@ -1230,7 +1141,7 @@ RETRY:
 		if(k == 1)
 			{
 			HS = GetHandleSize((char **) Relators[TheRelator]);
-			if(HS == 2L)
+			if(HS == 2)
 				{
 				/**************************************************************************
 					If k = 1 and HS = 2, the presentation contains two relators of the
@@ -1240,12 +1151,18 @@ RETRY:
 						
 				continue;
 				}
-			if(Test) return(TRUE);		
+			if(Test) return(TRUE);	
+			
+			if(Temp16 != NULL) DisposeHandle((char **) Temp16);
+			Temp16 = (unsigned char **) NewHandle(HS - 1);
+			if(Temp16 == NULL) Mem_Error();
 			p = *Relators[TheRelator];
-			q = p;
-			while(z = *p++) if(z != x && z != y) *q++ = z;
+			q = *Temp16;
+			while( (z = *p++) ) if(z != x && z != y) *q++ = z;
 			*q = EOS;
-			SetHandleSize((char **) Relators[TheRelator],HS - 1);
+			Temp = 					Relators[TheRelator];
+			Relators[TheRelator] 	= Temp16;
+			Temp16 					= Temp;
 			Length -= 1;
 			}
 		
@@ -1260,14 +1177,8 @@ RETRY:
 			printf("\n\nRelator %d is trivial. ",i);
 			printf("Deleted generator %c from the presentation.",x);
 			if(i != NumRelators)
-				printf("\nSwapped Relator %d with Relator %d and reduced the number of relators.",i,NumRelators);
-			if(Micro_Print_F)
-				{
-				fprintf(myout,"\n\nRelator %d is trivial. ",i);
-				fprintf(myout,"Deleted generator %c from the presentation.",x);
-				if(i != NumRelators)
-					fprintf(myout,"\nSwapped Relator %d with Relator %d and reduced the number of relators.",i,NumRelators);
-				}
+				printf("\nSwapped Relator %d with Relator %d and reduced the number of relators.",
+					i,NumRelators);
 			}
 			
 		/**********************************************************************************
@@ -1282,7 +1193,7 @@ RETRY:
 			for(j = 1; j < NumRelators; j++)
 				{
 				p = *Relators[j];
-				while(z = *p)
+				while( (z = *p) )
 					{
 					if(z == s) *p = x;
 					if(z == t) *p = y;
@@ -1290,11 +1201,7 @@ RETRY:
 					}
 				}
 			if(Micro_Print)
-				{
 				printf("\n\nRewrote the relators by replacing %c with %c.",s,x);
-				if(Micro_Print_F)
-					fprintf(myout,"\n\nRewrote the relators by replacing %c with %c.",s,x);
-				}	
 			}
 		
 		/**********************************************************************************
@@ -1326,39 +1233,36 @@ RETRY:
 	return(TRUE);	
 }
 
-int Level_Transformations_2(int F1,int F2,int F3,unsigned int MyNum,int F5)
+int Level_Transformations_2(int F1,int F2,int F3,unsigned int MyNum)
 {
 	/******************************************************************************************
-			Suppose {X,Y} is a pair of separating vertices of the "reduced" Whitehead graph G
+			Suppose {X,Y} is a separating pair of vertices of the "reduced" Whitehead graph G
 		of a minimal length presentation, with x the inverse of X and y the inverse of Y.
 		Such separating pairs of vertices are of two types. Say {X,Y} is a "Type 1" pair
 		if Y = x, or if deleting X and Y from G yields a component C which contains both x
 		and y. If no such component exists, say that {X,Y} is a "Type 2" pair.
-			We mention that if {X,Y} is a Type 2 pair, then the separation of G, produced by
-		deleting X and Y from G, has only two components, and there is no edge joining X and
-		Y in G.
+			It is possible to show that if {X,Y} is a Type 2 pair, then the separation of G, 
+		produced by deleting X and Y from G, has only two components, and there is no edge 
+		joining X and Y in G.
 			Level_Transformations() calls Level_Transformations_2() when the separation has
 		two components.
 			F1 and F2 are flags which are passed along by Level_Transformations_2() to any
 		new invocations of Level_Transformations(). If F1 is FALSE, then printing of
 		information about any annuli the routine finds is  suppressed. If F2 is TRUE, new
 		invocations of Level_Transformations() will stop and return 2 when they find the
-		first new presentation without any pairs of separating vertices.	
+		first new presentation without any separating pairs of vertices.	
 	******************************************************************************************/
 	
-	unsigned char 	*p,
-					*q;
+	int 		k,
+				TheComp;	
 							
 	unsigned int 	i,
+					j,
+					Random,
 					VL,
 					VR,
 					VLI,
 					VRI;
-							
-	int 			TheComp;
-							
-	unsigned int 	j,
-					NumReps;
 		
 	/******************************************************************************************
 			Let VL and VR be a pair of Type 2 separating vertices of G, and let TheComp be one
@@ -1387,152 +1291,29 @@ int Level_Transformations_2(int F1,int F2,int F3,unsigned int MyNum,int F5)
 	else
 		VRI = VR + 1;		
 	Get_Components();
-	if(NumSepComps != 2 && !TestRealizability1) return(0);
-	if(NumSepComps == 2)
-	for(TheComp = 1; TheComp <= 2; TheComp ++)
+
+	if(NumSepComps != 2) return(0);
+	
+	if(RandomizeSlides)	Random = abs(rand()) %2;
+	else	Random = 1;
+	
+	for(k = 1; k <= 2; k++)
 		{
+		if(Random) TheComp = k;
+		else TheComp = 3 - k;
 		if(XX[VLI] != TheComp && XX[VRI] == TheComp)
 			{
-			switch(Find_Path(VL,VR,TheComp,2,&NumReps))
-				{
-				case 0:
-					break;
-				case TOO_LONG:
-					return(6);
-				case FATAL_ERROR:
-					return(FATAL_ERROR);						
-				case 1:
-					if(Delete_Trivial_Generators(TRUE))
-						{
-						if(F5)
-							return(5);
-						else
-							goto SLIDE_RIGHT;
-						}		
-					XX[VR] = TheComp;
-					if(Annulus(VL,VR,TheComp,F1) == TOO_LONG) return(TOO_LONG);
-					return(4);	
-				}
-			if(GetHandleSize((char **) Temp8) > 5L)
-				j = Do_Aut_L_Long_2(VL,VR,TheComp);
-			else
-				{
-				for(i = 0; i < Vertices; i++)
-					{
-					if(XX[i] == TheComp)
-						YY[i] = 1;
-					else
-						YY[i] = 0;
-					}
-				YY[VR] = 1;	
-				j = Do_Aut_L();
-				}					
-			if(j == TOO_LONG) return(TOO_LONG);
-			if(Micro_Print)
-				{
-				XX[VR] = TheComp;
-				Micro_Print_Level_Transformations(TheComp,VL,VR,2,NumReps);
-				XX[VR] = VERTICES;
-				}
-			Fill_A(NumRelators);
-			Get_Matrix();								
-			j = Level_Transformations(F1,F2,F3,MyNum,F5);
-			if(j > 1) return(j);
-					
-			/******************************************************************************
-				If a call to Level_Transformations() was unsuccessful, then we need to
-				reset Relators[] and other globals that may have been changed before we
-				try to slide the other component together with VL to the "right".
-			******************************************************************************/	
-
-SLIDE_RIGHT:			
-			for(i = 1; i <= NumRelators; i++)
-				{
-				ReallocateHandle((char **) Relators[i],GetHandleSize((char **) SLR[MyNum][i]));
-				if((q = *Relators[i]) == NULL) return(TOO_LONG);
-				p = *SLR[MyNum][i];
-				while(*q++ = *p++) ;
-				}
-			if(Micro_Print) Micro_Print_Level_Transformations_Reset();
-			for(i = 0; i < Vertices; i++) XX[i] = 0;
-			XX[VL] = VERTICES;
-			XX[VR] = VERTICES;
-			Fill_A(NumRelators);
-			Get_Matrix();	
-			Get_Components();
+			if((j = Slide_LComp(VL,VR,TheComp,2,MyNum,F1,F2,F3)) > 1) return(j);
+			if(Level_Trans_Reset(MyNum,VL,VR) == TOO_LONG) return(TOO_LONG);
 			}
 			
 		if(XX[VLI] == TheComp && XX[VRI] != TheComp)			
 			{
-			switch(Find_Path(VR,VL,TheComp,2,&NumReps))
-				{
-				case 0:
-					break;
-				case TOO_LONG:
-					return(TOO_LONG);
-				case FATAL_ERROR:
-					return(FATAL_ERROR);						
-				case 1:
-					if(Delete_Trivial_Generators(TRUE))
-						{
-						if(F5)
-							return(5);
-						else
-							goto NEXT_COMP;
-						}		
-					XX[VL] = TheComp;
-					if(Annulus(VR,VL,TheComp,F1) == TOO_LONG) return(TOO_LONG);
-					return(4);	
-				}
-			if(GetHandleSize((char **) Temp8) > 5L)
-				j = Do_Aut_L_Long_2(VR,VL,TheComp);
-			else
-				{
-				for(i = 0; i < Vertices; i++)
-					{
-					if(XX[i] == TheComp)
-						YY[i] = 1;
-					else
-						YY[i] = 0;
-					}
-				YY[VL] = 1;					
-				j = Do_Aut_L();
-				}
-			if(j == TOO_LONG) return(TOO_LONG);
-			if(Micro_Print)
-				{
-				XX[VL] = TheComp;
-				Micro_Print_Level_Transformations(TheComp,VR,VL,2,NumReps);
-				XX[VL] = VERTICES;
-				}
-			Fill_A(NumRelators);
-			Get_Matrix();								
-			j = Level_Transformations(F1,F2,F3,MyNum,F5);
-			if(j > 1) return(j);
-				
-			/******************************************************************************
-				If a call to Level_Transformations() was unsuccessful, then we need to
-				reset Relators[] and other globals that may have been changed before we
-				try to slide the other component of the separation around.
-			******************************************************************************/	
-
-NEXT_COMP:			
-			for(i = 1; i <= NumRelators; i++)
-				{
-				ReallocateHandle((char **) Relators[i],GetHandleSize((char **) SLR[MyNum][i]));
-				if((q = *Relators[i]) == NULL) return(TOO_LONG);
-				p = *SLR[MyNum][i];
-				while(*q++ = *p++) ;
-				}
-			if(Micro_Print) Micro_Print_Level_Transformations_Reset();	
-			for(i = 0; i < Vertices; i++) XX[i] = 0;
-			XX[VL] = VERTICES;
-			XX[VR] = VERTICES;
-			Fill_A(NumRelators);
-			Get_Matrix();	
-			Get_Components();
+			if((j = Slide_LComp(VR,VL,TheComp,2,MyNum,F1,F2,F3)) > 1) return(j);
+			if(Level_Trans_Reset(MyNum,VL,VR) == TOO_LONG) return(TOO_LONG);
 			}
 		}
+			
 	return(0);
 }
 
@@ -1559,17 +1340,18 @@ int Do_Aut_L_Long_2(int V1,int V2,int TheComp)
 							y,
 							z;
 	
-	unsigned char 			T1[125],
-							T2[125],
-							**Temp;
+	unsigned char			T1[125],
+							T2[125];
 	
-	int						i,
-							j;
+	int			i,
+				j;
 	
-	unsigned long			Delete,
-							Insert,
-							Li,
-							L8;
+	unsigned long		Delete,
+						Insert,
+						Li,
+						L8;
+							
+	Num_Level_Slides ++;						
 	
 	for(x = 65; x < 65 + NumGenerators; x++)
 		{
@@ -1628,7 +1410,7 @@ int Do_Aut_L_Long_2(int V1,int V2,int TheComp)
 			q = *Relators[i] + Li - 1;
 			p = q - L8;
 			x = *p++;
-			while(y = *p)
+			while( (y = *p) )
 				{
 				if((y == z) && T1[x])
 					{
@@ -1640,8 +1422,10 @@ int Do_Aut_L_Long_2(int V1,int V2,int TheComp)
 				x = y;
 				p++;	
 				}
-			ReallocateHandle((char **) Temp5,Li);
-			if((r = *Temp5) == NULL) return(TOO_LONG);	
+			if(Temp5 != NULL) DisposeHandle((char **) Temp5);
+			Temp5 = (unsigned char **) NewHandle(Li);
+			if(Temp5 == NULL) Mem_Error();
+			r = *Temp5;
 			p = *Relators[i] + Delete;
 			if(Delete)
 				{
@@ -1659,7 +1443,7 @@ int Do_Aut_L_Long_2(int V1,int V2,int TheComp)
 				else
 					*r++ = 63;
 				} 
-			while(y = *p)
+			while( (y = *p) )
 				{
 				if((y == z) && T1[x])
 					{
@@ -1689,29 +1473,29 @@ int Do_Aut_L_Long_2(int V1,int V2,int TheComp)
 			if(Delete)
 				{
 				T1[i] 		= TRUE;	
-				*r++ 		= EOS;
-				SetHandleSize((char **) Temp5,r - *Temp5);
-				Temp 		= Relators[i];
-				Relators[i] = Temp5;
-				Temp5 		= Temp;
+				*r++ 		= EOS;				
+				if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+				Relators[i] = (unsigned char **) NewHandle(r - *Temp5);
+				if(Relators[i] == NULL) Mem_Error();
+				r = *Temp5;
+				p = *Relators[i];
+				while( (*p++ = *r++) ) ; 
 				}	
 			}
-		HLock((char **) Relators[i]);
 		Inverse(*Relators[i]);
-		HUnlock((char **) Relators[i]);
 		}
 	
 	/*****************************************************************************************
 						Put a copy of the inverse of Temp8 in Temp9.
 	*****************************************************************************************/
-		
-	ReallocateHandle((char **) Temp9,L8 + 1);
-	if((q = *Temp9) == NULL) return(TOO_LONG);
+	
+	if(Temp9 != NULL) DisposeHandle((char **) Temp9);
+	Temp9 = (unsigned char **) NewHandle(L8 + 1);	
+	if(Temp9 == NULL) Mem_Error();
+	q = *Temp9;
 	p = *Temp8;
-	while(*q++ = *p++) ;
-	HLock((char **) Temp9);
+	while( (*q++ = *p++) ) ;
 	Inverse(*Temp9);
-	HUnlock((char **) Temp9);
 	
 	if(w < 97)
 		z = w + 32;
@@ -1733,7 +1517,7 @@ int Do_Aut_L_Long_2(int V1,int V2,int TheComp)
 		p = *Relators[i];
 		q = p + Li - 2;
 		x = *q;
-		while(y = *p++)
+		while( (y = *p++) )
 			{
 			if(y == 63 || y == 95)
 				{
@@ -1759,9 +1543,11 @@ int Do_Aut_L_Long_2(int V1,int V2,int TheComp)
 		/*************************************************************************************
 					Reserve some memory for the	new version of Relators[i].
 		*************************************************************************************/
-				
-		ReallocateHandle((char **) Temp5,Li + Insert*L8);
-		if((r = *Temp5) == NULL) return(TOO_LONG);
+		
+		if(Temp5 != NULL) DisposeHandle((char **) Temp5);
+		Temp5 = (unsigned char **) NewHandle(Li + Insert*L8);	
+		if(Temp5 == NULL) Mem_Error();
+		r = *Temp5;
 		
 		/*************************************************************************************
 									Rewrite Relators[i].
@@ -1770,7 +1556,7 @@ int Do_Aut_L_Long_2(int V1,int V2,int TheComp)
 		p = *Relators[i];
 		q = p + Li - 2;
 		x = *q;
-		while(y = *p++)
+		while( (y = *p++) )
 			{
 			if(y == 63 || y == 95)
 				{
@@ -1780,7 +1566,7 @@ int Do_Aut_L_Long_2(int V1,int V2,int TheComp)
 			if(y == 64)
 				{
 				q = *Temp8;
-				while(*r++ = *q++) ;
+				while( (*r++ = *q++) ) ;
 				r--;
 				x = EOS;
 				continue;	
@@ -1788,7 +1574,7 @@ int Do_Aut_L_Long_2(int V1,int V2,int TheComp)
 			if(y == 96)
 				{
 				q = *Temp9;
-				while(*r++ = *q++) ;
+				while( (*r++ = *q++) ) ;
 				r--;
 				x = EOS;
 				continue;	
@@ -1796,38 +1582,47 @@ int Do_Aut_L_Long_2(int V1,int V2,int TheComp)
 			if((x == z) && T2[y])
 				{
 				q = *Temp9;
-				while(*r++ = *q++) ;
+				while( (*r++ = *q++) ) ;
 				r--;	
 				}
 			else	
 			if((y == w) && !T1[x])
 				{
 				q = *Temp8;
-				while(*r++ = *q++) ;
+				while( (*r++ = *q++) ) ;
 				r--;
 				}
 			*r++ = y;	
 			x = y;	
 			}
-		*r++ = EOS;
-		SetHandleSize((char **) Temp5,r - *Temp5);
-		Temp 		= Relators[i];
-		Relators[i] = Temp5;
-		Temp5 		= Temp;			
+		*r++ = EOS;		
+		if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+		Relators[i] = (unsigned char **) NewHandle(r - *Temp5);
+		if(Relators[i] == NULL) Mem_Error();
+		r = *Temp5;
+		p = *Relators[i];
+		while( (*p++ = *r++) ) ; 			
 		}
 	
 	TotalAuts += L8;
 	return(NO_ERROR);			
 }
 
-int Slide_ValenceTwo_Comp(int TheComp,unsigned int VL,unsigned int VR)
+int Slide_ValenceTwo_Comp(int TheComp,unsigned int VL,unsigned int VR,unsigned int MyNum)
 {
-int				i;
-
-unsigned char	x,
-				j,
-				*p;
-
+	char			xx,
+					yy;
+					
+	unsigned char	x,
+					j,
+					*p,
+					*q,
+					**Temp;
+					
+	int				i;
+	
+	unsigned int	Width;
+	
 	/******************************************************************************************
 							Check if each vertex in TheComp has valence two.
 	******************************************************************************************/
@@ -1835,21 +1630,23 @@ unsigned char	x,
 
 	for(i = 0; i < Vertices; i++)
 	if(XX[i] == TheComp && VWG[i] != 2) return(0);
-
+		
 	/******************************************************************************************
-			Check that TheComp is joined to ech of VL and VR with only one edge.
-	******************************************************************************************/
-			
-
-	for(i = 0; i < Vertices; i++)
-	if(XX[i] == TheComp && (A[i][VL] > 1 || A[i][VR] > 1)) return(0);
+		Compute the Width of the annulus. This is the number of edges of the Whitehead graph
+	which connect vertices of TheComp to VL (resp VR). (Note that because the presentation
+	has been reduced to minimal length, the number of edges connecting vertices of TheComp
+	to VL and the number of edges connecting vertices of TheComp to VR must be equal.)
+	******************************************************************************************/	
+	
+	for(i = Width = 0; i < Vertices; i++) if(XX[i] == TheComp) Width += A[i][VL];
 	
 	/******************************************************************************************
-	Check if there is a pair of vertices in the Whitehead graph which are joined only
-	by an edge of the annulus which swallows TheComp. If there is, we will slide TheComp
-	until it joins these two vertices.												
+		Check if there is a pair of vertices, say Vx and Vy, in the Whitehead graph, which are 
+	connected only by edges of the annulus swallowing TheComp. This will be the case if and
+	only if A[Vx][Vy] = Width. If this happens, and the pair (Vx,Vy) is not a pair of 
+	separating vertices of the Whitehead graph, we will slide TheComp around the annulus until 
+	it lies between Vx and Vy.												
 	******************************************************************************************/
-	
 	
 	p = *Temp8;
 	if(*p == EOS) return(0);
@@ -1858,20 +1655,386 @@ unsigned char	x,
 	else x -= 194;
 	j = x;
 	p++;
-	while(x = *p)
+	while( (x = *p) )
 		{
 		x = x << 1;
 		if(x < 194) x -= 130;
 		else x -= 193;
-		if(A[j][x] == 1)	/* 	We have found the edge we are looking for.	*/
+		if((A[j][x] == Width) && (Is_Sep_Pair(j,x,MyNum) == FALSE))
 			{
-			*p = EOS;
-			SetHandleSize((char **) Temp8,p - *Temp8 + 1);
+			*p = EOS;			
+			if(Temp16 != NULL) DisposeHandle((char **) Temp16);
+			Temp16 = (unsigned char **) NewHandle(p - *Temp8 + 1);
+			if(Temp16 == NULL) Mem_Error();
+			p = *Temp16;
+			q = *Temp8;
+			while( (*p++ = *q++) ) ;
+			Temp = Temp8;
+			Temp8 = Temp16;
+			Temp16 = Temp;
+			
+			/* 	We have found a pair of vertices we are looking for.	*/
+			
+			if(Micro_Print)
+				{
+				if(j & 1)
+					xx = j/2 + 97;
+				else
+					xx = j/2 + 65;
+				if(x & 1)
+					yy = x/2 + 97;
+				else
+					yy = x/2 + 65;     
+				printf("\n\nTheComp lies in a 'Valence-Two Annulus'. Will slide TheComp around ");
+				printf("this annulus so it lies between vertices %c and %c.",xx,yy);
+				}
 			return(1);
 			}
 		if(x & 1) j = x - 1;
 		else j = x + 1;
 		p++;
 		}
+		
 	return(0);	
 }				
+
+int Level_Trans_Reset(unsigned int MyNum, unsigned int V3, unsigned int V4)
+{
+	/**********************************************************************************
+		If a call to Level_Transformations() is unsuccessful, then we need to reset
+		Relators[] and other globals that may have been changed before we try to slide
+		TheComp in the other direction. This routine performs those restitutions.
+	**********************************************************************************/	
+	
+	unsigned char 	*p,
+					*q;
+					
+	unsigned int 	i,
+					VL,
+					VR;
+
+	for(i = 1; i <= NumRelators; i++)
+		{
+		if(Relators[i] != NULL) DisposeHandle((char **) Relators[i]);
+		Relators[i] = (unsigned char **) NewHandle(GetHandleSize((char **) SLR[MyNum][i]));
+		if(Relators[i] == NULL) Mem_Error();
+		q = *Relators[i];
+		p = *SLR[MyNum][i];
+		while( (*q++ = *p++) ) ;
+		}
+		
+	if(Micro_Print) Micro_Print_Level_Transformations_Reset(MyNum);	
+	
+	for(i = 0; i < Vertices; i++) XX[i] = 0;
+	
+	VL = V3;
+	VR = V4;
+	XX[VL] = VERTICES;
+	XX[VR] = VERTICES;
+	Fill_A(NumRelators);
+	Get_Matrix();	
+	Get_Components();
+	
+	return(0);
+}
+
+void Micro_Print_Level_Transformations_Reset(unsigned int MyNum)
+{
+    printf("\n\nReverting to looking for level-transformations of Presentation L%u:\n", MyNum + 1);
+    Print_Relators(Relators,NumRelators);
+}
+
+unsigned int Count_Sep_Pairs(unsigned int Num_Saved_LPres)
+{
+	/**********************************************************************************
+	  This routine calls Sep_Pairs() repeatedly in order to locate all pairs of 
+	  separating vertices of the Reduced Whitehead Graph RWG of the presentation
+	  Num_Saved_LPres -1. At termination, the array SLR[Num_Saved_LPres -1][0] 
+	  contains a list of all separating pairs of vertices of the RWG. 
+	  	The total number of separating pairs of vertices found is saved twice. Once in
+	 Num_Sep_Vertex_Pairs[] at Num_Sep_Vertex_Pairs[Num_Saved_LPres -1]. And also in
+	 UnUsed_Sep_Vertex_Pairs[] at UnUsed_Sep_Vertex_Pairs[Num_Saved_LPres -1]. (Later, 
+	 the value in UnUsed_Sep_Vertex_Pairs[Num_Saved_LPres -1] is decremented each time 
+	 a separating pair of vertices is selected for processing.)
+	***********************************************************************************/
+	
+	char			x,
+					y;
+					
+	unsigned char	*p,
+					*q;
+					
+	unsigned int	i,
+					Num_Sep_Pairs;
+	
+	Num_Sep_Pairs = 0;
+	p = SepVertexList;
+	
+	if(Micro_Print && (Num_Saved_LPres == 1))
+		printf("\nNote the initial presentation will be referred to as Presentation L1.\n");
+		
+	if(Sep_Pairs(0,0,1))
+		{
+		if(Micro_Print)
+			{
+			if(V1 & 1)
+				x = V1/2 + 97;
+			else
+				x = V1/2 + 65;
+			if(V2 & 1)
+				y = V2/2 + 97;
+			else
+				y = V2/2 + 65;
+			printf("\n(%c,%c)",x,y);
+			}
+		*p++ = V1;
+		*p++ = V2;
+		Num_Sep_Pairs ++;
+		while(Sep_Pairs(V1,V2,0))
+			{
+			if(Micro_Print)
+				{
+				if(V1 & 1)
+					x = V1/2 + 97;
+				else
+					x = V1/2 + 65;
+				if(V2 & 1)
+					y = V2/2 + 97;
+				else
+					y = V2/2 + 65;
+				printf(", (%c,%c)",x,y);
+				}
+			*p++ = V1;
+			*p++ = V2;	
+			Num_Sep_Pairs ++;
+			}
+		}
+	
+	Num_Sep_Vertex_Pairs[Num_Saved_LPres - 1] = Num_Sep_Pairs;
+	UnUsed_Sep_Vertex_Pairs[Num_Saved_LPres - 1] = Num_Sep_Pairs;
+	
+	if(SLR[Num_Saved_LPres - 1][0] != NULL) DisposeHandle((char **) SLR[Num_Saved_LPres - 1][0]);
+	SLR[Num_Saved_LPres - 1][0] = (unsigned char **) NewHandle(sizeof(char)*(2*Num_Sep_Pairs + 1));
+	if(SLR[Num_Saved_LPres - 1][0] == NULL) Mem_Error();
+	q = *SLR[Num_Saved_LPres - 1][0];		
+	for(i = 0,p = SepVertexList; i < 2*Num_Sep_Pairs; i++) *q++ = *p++;	
+		*q = VERTICES;
+		
+	if(Micro_Print)
+		{
+		if(Num_Sep_Pairs == 1)
+			printf(" is the only separating pair of vertices of the RWG of Presentation L%u.",Num_Saved_LPres);
+		else 
+			printf(" are the %u separating pairs of vertices of the RWG of Presentation L%u. ",
+			Num_Sep_Pairs,Num_Saved_LPres);
+		}
+	
+	return(Num_Sep_Pairs);	
+}
+
+int Is_Sep_Pair(unsigned int VL,unsigned int VR,unsigned int MyNum)
+{
+	/***************************************************************************************
+		This routine checks whether the pair of vertices (VL,VR) is a separating pair of
+	vertices of the Whitehead graph in SLR[MyNum][]. It scans the list of pairs of 
+	separating vertices in SLR[MyNum][0] and returns TRUE if the pair (VL,VR) appears.
+	Otherwise, it returns FALSE.
+	***************************************************************************************/
+	
+	unsigned char	*p,
+					*q;
+	
+	unsigned int	i;
+	
+	/***************************************************************************************
+		Separating pairs are listed in SLR[MyNum][0] as ordered pairs (VL,VR) with VL < VR.
+	Therefore, we swap VL and VR if necessary so VL < VR.	
+	***************************************************************************************/
+	
+	if(VL > VR)
+		{
+		i 		= VL;
+		VL 		= VR;
+		VR 		= i;
+		}
+		
+	p = *SLR[MyNum][0];	
+	q = p + 1;
+	while(*p < VERTICES)
+		{
+		if((*p == VL) && (*q == VR)) return(TRUE);
+		p += 2;
+		q += 2;
+		}
+	
+	return(FALSE);
+}
+
+void Micro_Print_Level_Transformations(unsigned int TheComp,unsigned int V1,unsigned int V2,
+	unsigned int Type)
+{
+    char            x,
+    				y;
+                                        
+    unsigned char   *p;
+    
+    int             i;
+    
+    if(V1 & 1)
+        x = V1/2 + 97;
+    else
+        x = V1/2 + 65;
+    if(V2 & 1)
+        y = V2/2 + 97;
+    else
+        y = V2/2 + 65;                
+    printf("\n\nVertices %c and %c form a Type %u separating pair.",x,y,Type);
+    
+    if(Temp9 != NULL) DisposeHandle((char **) Temp9);
+    Temp9 = (unsigned char **) NewHandle(2*VERTICES);
+    if(Temp9 == NULL) Mem_Error();
+    p = *Temp9;
+    
+    for(i = 0; i < Vertices; i++)
+        {
+        if(XX[i] == TheComp)
+            {
+            if(i & 1)
+                *p++ = i/2 + 97;
+            else
+                *p++ = i/2 + 65;
+            *p++ = ',';    
+            }
+        }
+    p--;
+    *p = EOS;
+  
+    printf("\nPerformed a level-transformation by sliding vertice(s):");
+    printf("\n{%s}",*Temp9);
+    printf("\nalong a path represented by: ");
+    printf("%s",*Temp8);
+    printf("\nto obtain Presentation L%u:\n",Num_Saved_LPres + 1);
+    Print_Relators(Relators,NumRelators);
+}
+
+unsigned int Slide_LComp(unsigned int VX, unsigned int VY, int TheComp, int SepType, unsigned int MyNum,
+    int F1, int F2, int F3)
+{	
+	unsigned int	i,
+					j;
+
+	switch(Find_Path(VX,VY,TheComp,SepType))
+		{
+		case 0:
+			break;
+		case TOO_LONG:
+			return(TOO_LONG);
+		case FATAL_ERROR:
+			return(FATAL_ERROR);	
+		case 1:
+			if(Found_L_Annulus && !TestRealizability4) 
+				{
+				if(Micro_Print) printf("\n\nFound another annulus.");
+				break;
+				}		
+			Found_L_Annulus = TRUE;	
+			if(TestRealizability4) return(13);			
+			if((SepType == 1) && (Slide_ValenceTwo_Comp(TheComp,VX,VY,MyNum))) break;
+			if((SepType == 1) && F3) return(4);
+			if(SepType == 2) XX[VY] = TheComp;
+			switch(Annulus(VX,VY,TheComp,F1))
+				{
+				case 0:
+					return(0);
+				case 1:
+					return(4);
+				case TOO_LONG:
+					return(TOO_LONG);	
+				}
+		}
+		
+	if(GetHandleSize((char **) Temp8) > 5)
+		{
+		if((SepType == 1) && (Do_Aut_L_Long(VX,VY,TheComp) == TOO_LONG)) return(TOO_LONG);
+		if((SepType == 2) && (Do_Aut_L_Long_2(VX,VY,TheComp) == TOO_LONG)) return(TOO_LONG);
+		}
+	else
+		{
+		for(i = 0; i < Vertices; i++)
+			{
+			if(XX[i] == TheComp)
+				YY[i] = 1;
+			else
+				YY[i] = 0;
+			}
+
+		if((SepType == 1) && (Do_Aut_L() == TOO_LONG)) return(TOO_LONG);	
+		if(SepType == 2)
+			{
+			YY[VY] = 1;
+			if(Do_Aut_L() == TOO_LONG) return(TOO_LONG);
+			}
+		}	
+	if(Micro_Print) 
+		{
+		if(SepType == 1) Micro_Print_Level_Transformations(TheComp,VX,VY,1);	
+		if(SepType == 2)
+			{
+			XX[VY] = TheComp;
+			Micro_Print_Level_Transformations(TheComp,VX,VY,2);
+			XX[VY] = VERTICES;
+			}		
+		}
+	
+	if((j = Level_Transformations(F1,F2,F3)) > 1) return(j);							
+	
+	return(0);	
+}
+
+int Random_Sep_Pair(unsigned int WhichSLRPres)
+{
+	char			x,
+					y;
+					
+	unsigned char	*p;
+	
+	unsigned int	j,
+					k,
+					jj,
+					kk;
+					
+	if((k = UnUsed_Sep_Vertex_Pairs[WhichSLRPres]) == 0) return(1);	
+	UnUsed_Sep_Vertex_Pairs[WhichSLRPres] --;
+	
+	j = abs(rand()) % k;
+	
+	p = *SLR[WhichSLRPres][0];
+	
+	jj = 2*j;
+	kk = 2*k - 2;
+	
+	V1 = p[jj];
+	V2 = p[jj+1];
+	
+	p[jj] 	= p[kk];
+	p[jj+1] = p[kk+1];
+	
+	p[kk] 	= V1;
+	p[kk+1] = V2;
+	
+	if(Micro_Print) 
+		{
+		if(V1 & 1)
+        	x = V1/2 + 97;
+		else
+			x = V1/2 + 65;
+		if(V2 & 1)
+			y = V2/2 + 97;
+		else
+			y = V2/2 + 65;     
+		printf("\nSelected Pair %u = (%c,%c) of %u untried pairs from %u of the RWG of Presentation L%u.",
+			j+1,x,y,k,Num_Sep_Vertex_Pairs[WhichSLRPres],WhichSLRPres + 1);
+		}	
+	
+	return(0);
+}
