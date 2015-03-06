@@ -1,0 +1,5 @@
+heegaard
+Heegaard_Results
+
+syntax: glob
+src/*.o
