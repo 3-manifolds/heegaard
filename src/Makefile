@@ -8,7 +8,7 @@ HDRS=Heegaard.h Heegaard_Dec.h
 CFLAGS=-g -Wall
 
 Heegaard: $(OBJS) $(HDRS)
-	cc -o ../heegaard -lm -lc $(OBJS)
+	$(CC) -o ../heegaard -lm -lc $(OBJS)
 
 all: Heegaard
 
