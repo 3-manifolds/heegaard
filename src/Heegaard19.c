@@ -289,7 +289,8 @@ unsigned long	SLength;
 		Relators[2] = (unsigned char **) NewHandle(GetHandleSize((char **) Copy_Of_Rel_3[2]));
 		p = *Relators[2];
 		q = *Copy_Of_Rel_3[2];
-		while( (*p++ = *q++) ) ;
+		while( (*p++ = *q++) )
+		    ;
     	DisposePtr((char *) ptr1);
     	DisposePtr((char *) ptr2);
     	}
@@ -1844,9 +1845,9 @@ int		i,
 		Q = Q % H1;	
 		R = H1 - Q;
 		GCD(H1,Q);
-		if(abs(Recip_Q) < Q) Q = abs(Recip_Q);
+		if(labs(Recip_Q) < Q) Q = labs(Recip_Q);
 		GCD(H1,R);
-		if(abs(Recip_Q) < R) R = abs(Recip_Q);
+		if(labs(Recip_Q) < R) R = labs(Recip_Q);
 		if(R < Q) Q = R;
 		}
 
