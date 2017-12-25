@@ -1538,6 +1538,7 @@ void Fatal_Error(void)
         Print_Relators(Relators,NumRelators,stdout);        
         fprintf(myout,"\n\nPresentation %d is not realizable.\n",
             ReadPres + 1);
+        Batch_Message("NO");
         }
     else
         {    
@@ -1546,6 +1547,7 @@ void Fatal_Error(void)
         Print_Relators(Relators,NumRelators,stdout);        
         fprintf(myout,"\n\nThis presentation obtained, from presentation %d, is not realizable.\n",
             ReadPres + 1);
+        Batch_Message("NO");
         }    
     Print_Relators(Relators,NumRelators,myout);    
 

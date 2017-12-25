@@ -135,7 +135,8 @@ extern  int             Do_Auts(unsigned int,unsigned int,unsigned int);
 extern  int             Do_Aut_L(void);
 extern  int             Do_Aut_L_Long(int,int,int);
 extern  int             Do_Aut_L_Long_2(int V1,int V2,int TheComp);                
-extern  int             Do_Initialization(void);            
+extern  int             Do_Initialization(int open_Heegaard_Results);
+extern  void            Batch_Message(char *ans); /* only relevant to batch mode */
 extern  void            DoPageSetUp(void);
 extern  void            Edit_MyOut(void);                        
 extern  int             Empty_Relator(void);

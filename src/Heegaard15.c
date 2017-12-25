@@ -1,7 +1,7 @@
 #include "Heegaard.h"
 #include "Heegaard_Dec.h"
 
-Do_Initialization()
+int Do_Initialization(int open_Heegaard_Results)
 {
 	register unsigned int 	i;
 	
@@ -280,14 +280,31 @@ Do_Initialization()
 	
 /*	printf("\f");
 	SetWTitle(FrontWindow(),"\pHEEGAARD");		*/
-	
-	if((myout = fopen("Heegaard_Results","a+")) == NULL)
-		printf("\nUnable to open the file 'Heegaard_Results'.");
+
+	/*  When in batch mode as "heegaard_is_realizable" we don't
+	 *  want to write to Heegaard_Results so we just set "myout"
+	 *  to be "stdout".
+	 */
+	if(open_Heegaard_Results)
+	    {
+		if((myout = fopen("Heegaard_Results","a+")) == NULL)
+		    printf("\nUnable to open the file 'Heegaard_Results'.");
+	    }
+	else
+	    {
+		myout = stdout;
+	    }
 		
 	Did_Exponent_Surgery 		= FALSE;
 	Did_Cutting_Disk_Surgery 	= FALSE;
 	
 	return(FALSE);	
+}
+
+void Batch_Message(char *ans){
+    if( myout == stdout ){
+	fprintf(stdout, "HEEGAARD_ANS: (%s)\n", ans);
+    }
 }
 
 int Generate_Orbits_Under_Auts(void)
