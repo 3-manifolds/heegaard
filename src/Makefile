@@ -9,17 +9,17 @@ OBJS2=Realizable1.o Heegaard2.o Heegaard3.o Heegaard4.o Realizable5.o Heegaard6.
 
 HDRS=Heegaard.h Heegaard_Dec.h
 
-CFLAGS = -Wall  -Wno-return-type -Wno-implicit-int -w
+CFLAGS = -Wall -Wno-return-type -Wno-implicit-int -w
 
 heegaard: $(OBJS) $(HDRS)
-	cc -o heegaard -lm -lc $(OBJS)
+	$(CC) -o heegaard -lm -lc $(OBJS)
 	cp heegaard ..
 
 heegaard_is_realizable: $(OBJS2) $(HDRS)
-	cc -o heegaard_is_realizable -lm -lc $(OBJS2)
-	cp heegaard_is_realizable ..
+	$(CC) -o heegaard_is_realizable -lm -lc $(OBJS2)
+	cp heegaard_is_realizable ../python/src/bin
 
 all: heegaard heegaard_is_realizable
 
 clean:
-	-rm heegaard heegaard_is_realizable  *.o
+	-rm -f heegaard heegaard_is_realizable  *.o
